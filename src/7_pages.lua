@@ -1,11 +1,12 @@
 --[[
 ============================================================
-  [7] PAGES (FINAL v6)
+  [7] PAGES (FINAL v7)
   - Esp tab: Enable Esp (master) → Esp Setting → Esp Object
   - Esp Setting: Show Distance, Show Health, Show Name
-  - Esp Object: Esp Supply, Esp Capture (hijau muda)
-  - Settings: Auto Claim (2 tombol) + Auto Join Team
-  - Config: Load Config Now kosong (fungsi disabled)
+  - Esp Object: Esp Supply, Esp Capture
+  - Settings: Auto Claim (2 tombol) + Auto Join Team (exclusive)
+  - Config: Auto Save (visual only) + Save Config Now + Delete Config
+  - Load Config Now DIHAPUS
 ============================================================
 ]]
 
@@ -241,54 +242,30 @@ S.Comp.makeToggle(visualContent, "No Fog", VV.NoFog, function(v) VV.NoFog = v sa
 
 local autoClaimContent = S.Comp.makeSection(pages["Settings"], "Auto Claim", false)
 S.Comp.makeButton(autoClaimContent, "Claim Quest Now", function()
-    if _G.STHAIN.ClaimQuests then
-        _G.STHAIN.ClaimQuests()
-    end
+    if _G.STHAIN.ClaimQuests then _G.STHAIN.ClaimQuests() end
 end)
 S.Comp.makeButton(autoClaimContent, "Claim All Code Now", function()
-    if _G.STHAIN.RedeemAllCodes then
-        _G.STHAIN.RedeemAllCodes()
-    end
+    if _G.STHAIN.RedeemAllCodes then _G.STHAIN.RedeemAllCodes() end
 end)
 
 local autoJoinContent = S.Comp.makeSection(pages["Settings"], "Auto Join Team", false)
 S.Comp.makeToggle(autoJoinContent, "Auto Join Defenders", false, function(v)
     if v then
         XX.AutoJoinTeam = "defender"
-        -- Exclusive: matiin Attacker
-        local attackerToggle = autoJoinContent:FindFirstChild("Toggle_Auto Join Attackers")
-        if attackerToggle then
-            local attackerBtn = attackerToggle:FindFirstChildOfClass("TextButton")
-            if attackerBtn then
-                attackerBtn.BackgroundColor3 = C.bg4
-                local knob = attackerBtn:FindFirstChildOfClass("Frame")
-                if knob then knob.Position = UDim2.new(0, 3, 0.5, -5) end
-                attackerToggle:SetAttribute("CA_State", false)
-            end
-        end
+        save()
     elseif XX.AutoJoinTeam == "defender" then
         XX.AutoJoinTeam = "none"
+        save()
     end
-    save()
 end)
 S.Comp.makeToggle(autoJoinContent, "Auto Join Attackers", false, function(v)
     if v then
         XX.AutoJoinTeam = "attacker"
-        -- Exclusive: matiin Defender
-        local defenderToggle = autoJoinContent:FindFirstChild("Toggle_Auto Join Defenders")
-        if defenderToggle then
-            local defenderBtn = defenderToggle:FindFirstChildOfClass("TextButton")
-            if defenderBtn then
-                defenderBtn.BackgroundColor3 = C.bg4
-                local knob = defenderBtn:FindFirstChildOfClass("Frame")
-                if knob then knob.Position = UDim2.new(0, 3, 0.5, -5) end
-                defenderToggle:SetAttribute("CA_State", false)
-            end
-        end
+        save()
     elseif XX.AutoJoinTeam == "attacker" then
         XX.AutoJoinTeam = "none"
+        save()
     end
-    save()
 end)
 
 local serverContent = S.Comp.makeSection(pages["Settings"], "Server", false)
@@ -323,24 +300,15 @@ local cfg = S.Config.Config
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", true)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave, function(v)
     cfg.AutoSave = v
-    if _G.STHAIN.SaveConfig then
-        task.spawn(_G.STHAIN.SaveConfig)
-    end
+    -- Save dimatikan sementara
 end)
 
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", true)
 S.Comp.makeButton(configMgmt, "Save Config Now", function()
-    if _G.STHAIN.SaveConfig then
-        _G.STHAIN.SaveConfig()
-    end
-end)
-S.Comp.makeButton(configMgmt, "Load Config Now", function()
-    warn("[Config] Load Config Now belum tersedia")
+    if _G.STHAIN.SaveConfig then _G.STHAIN.SaveConfig() end
 end)
 S.Comp.makeButton(configMgmt, "Delete Config", function()
-    if _G.STHAIN.DeleteConfig then
-        _G.STHAIN.DeleteConfig()
-    end
+    if _G.STHAIN.DeleteConfig then _G.STHAIN.DeleteConfig() end
 end)
 
 -- ============================================================
@@ -387,4 +355,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[STHAIN] Pages loaded - FINAL v6")
+print("[STHAIN] Pages loaded - FINAL v7")
