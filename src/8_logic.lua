@@ -1,11 +1,13 @@
 --[[
 ============================================================
-  [8] LOGIC LOOPS (FINAL FIX v5)
-  - Auto Redeem Code (Radio Times)
-  - Auto Claim Quest (Harian + Mingguan)
-  - Optimasi ESP loop (0.25s)
-  - Hapus Tracer
-  - AutoSave bind-to-close + interval 30s
+  [8] LOGIC LOOPS (FINAL v7)
+  - Master switch: Enable Esp kontrol semua ESP
+  - Chams: musuh merah, tim biru
+  - Format: username [ HP ] [ M ]
+  - Esp Object: Supply/Capture hijau muda (Highlight)
+  - Auto Claim Quest + Auto Redeem Code (1x per click)
+  - Auto Join Team (exclusive)
+  - Parser Radio Times fix
 ============================================================
 ]]
 
@@ -61,7 +63,6 @@ end)
 -- NOCLIP
 -- ============================================================
 local noclipOriginal = {}
-
 local function cleanupNoclip()
     for part, origVal in pairs(noclipOriginal) do
         if part and part.Parent then
@@ -75,9 +76,7 @@ Run.Heartbeat:Connect(function()
     local char = Utils.getChar()
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not (hrp and hum) then return end
-
+    if not hrp then return end
     if Config.Movement.Noclip then
         for _, part in pairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -90,7 +89,7 @@ Run.Heartbeat:Connect(function()
         State.Noclip = true
     elseif State.Noclip then
         cleanupNoclip()
-        if hrp then hrp.CanCollide = true end
+        hrp.CanCollide = true
         State.Noclip = false
     end
 end)
@@ -99,7 +98,6 @@ end)
 -- FLY
 -- ============================================================
 local flyConn, flyBV, flyBG = nil, nil, nil
-
 local function stopFly()
     if flyConn then flyConn:Disconnect() flyConn = nil end
     if flyBV then flyBV:Destroy() flyBV = nil end
@@ -111,9 +109,7 @@ local function stopFly()
         hrp.CanCollide = true
     end
     local hum = Utils.getHum()
-    if hum then
-        pcall(function() hum.PlatformStand = false end)
-    end
+    if hum then pcall(function() hum.PlatformStand = false end) end
 end
 
 local function startFly()
@@ -122,18 +118,15 @@ local function startFly()
     local hum = Utils.getHum()
     if not (hrp and hum) then return end
     hum.PlatformStand = true
-
     flyBV = Instance.new("BodyVelocity")
     flyBV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
     flyBV.Velocity = Vector3.zero
     flyBV.Parent = hrp
-
     flyBG = Instance.new("BodyGyro")
     flyBG.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
     flyBG.P = 10000
     flyBG.D = 100
     flyBG.Parent = hrp
-
     flyConn = Run.RenderStepped:Connect(function()
         if not Config.Movement.Fly then return end
         local hrp2 = Utils.getHRP()
@@ -153,11 +146,9 @@ end
 task.spawn(function()
     while task.wait(0.3) do
         if Config.Movement.Fly and not State.Fly then
-            startFly()
-            State.Fly = true
+            startFly(); State.Fly = true
         elseif not Config.Movement.Fly and State.Fly then
-            stopFly()
-            State.Fly = false
+            stopFly(); State.Fly = false
         end
     end
 end)
@@ -352,26 +343,33 @@ task.spawn(function()
                         end
                     end
                 end
-            else
-                for _, obj in pairs(tool:GetDescendants()) do
-                    if obj:IsA("NumberValue") or obj:IsA("IntValue") then
-                        if obj:GetAttribute("CA_Orig") then
-                            pcall(function() obj.Value = obj:GetAttribute("CA_Orig") end)
-                            obj:SetAttribute("CA_Orig", nil)
-                        end
-                    end
-                end
             end
         end
     end
 end)
 
 -- ============================================================
--- ESP (Box + Name + Health + Chams, NO Tracer)
--- 1 loop, update 0.25s
+-- ESP (MASTER SWITCH: Chams)
+-- Musuh = merah, Tim = biru
+-- Format: username [ HP ] [ M ]
 -- ============================================================
 local espCache = {}
 local espGuiParent = (gethui and gethui()) or game:GetService("CoreGui")
+
+local COLOR_ENEMY = Color3.fromRGB(255, 60, 60)
+local COLOR_TEAM = Color3.fromRGB(74, 158, 255)
+local COLOR_SUPPLY = Color3.fromRGB(144, 238, 144)
+
+local function isTeammate(model)
+    local plr = game.Players:GetPlayerFromCharacter(model)
+    if not plr then return false end
+    local myTeam = LP:GetAttribute("SelectedTeam") or (LP.Team and LP.Team.Name)
+    local theirTeam = plr:GetAttribute("SelectedTeam") or (plr.Team and plr.Team.Name)
+    if myTeam and theirTeam then
+        return myTeam == theirTeam
+    end
+    return false
+end
 
 local function cleanupESP()
     for _, objs in pairs(espCache) do
@@ -384,117 +382,154 @@ end
 
 task.spawn(function()
     while task.wait(0.25) do
-        local cfg = Config.Visual
-        local active = cfg.ESPBox or cfg.ESPHealth or cfg.ESPName or cfg.Chams
-
-        if not active then
-            if State.ESP then
-                cleanupESP()
-                State.ESP = false
-            end
+        -- MASTER SWITCH: Enable Esp = Chams
+        local masterOn = Config.Visual.Chams
+        
+        if not masterOn then
+            if next(espCache) then cleanupESP() end
         else
-            State.ESP = true
             local myChar = Utils.getChar()
-
+            local cam = workspace.CurrentCamera
+            local myHRP = Utils.getHRP()
+            
+            -- ============================================
+            -- ESP PLAYER
+            -- ============================================
             for _, model in pairs(workspace:GetChildren()) do
                 if model == myChar or not model:IsA("Model") then continue end
                 local hum = model:FindFirstChildOfClass("Humanoid")
                 if not hum or hum.Health <= 0 then continue end
                 local hrp = model:FindFirstChild("HumanoidRootPart")
                 if not hrp then continue end
-
+                
+                local isTeam = isTeammate(model)
+                local markerColor = isTeam and COLOR_TEAM or COLOR_ENEMY
+                
                 if not espCache[model] then
                     espCache[model] = {}
-
-                    if cfg.Chams then
-                        local hl = Instance.new("Highlight")
-                        hl.Name = "CA_ESP_HL"
-                        hl.FillColor = Color3.fromRGB(255, 0, 0)
-                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        hl.FillTransparency = 0.5
-                        hl.Adornee = model
-                        hl.Parent = espGuiParent
-                        espCache[model].hl = hl
-                    end
-
-                    if cfg.ESPBox then
-                        local boxBB = Instance.new("BillboardGui")
-                        boxBB.Name = "CA_ESP_Box"
-                        boxBB.Size = UDim2.new(0, 50, 0, 70)
-                        boxBB.StudsOffset = Vector3.new(0, 2, 0)
-                        boxBB.AlwaysOnTop = true
-                        boxBB.Adornee = hrp
-                        boxBB.Parent = espGuiParent
-                        local boxFrame = Instance.new("Frame")
-                        boxFrame.Size = UDim2.new(1, 0, 1, 0)
-                        boxFrame.BackgroundTransparency = 1
-                        boxFrame.BorderSizePixel = 0
-                        boxFrame.Parent = boxBB
-                        local stroke = Instance.new("UIStroke")
-                        stroke.Color = Color3.fromRGB(255, 60, 60)
-                        stroke.Thickness = 2
-                        stroke.Parent = boxFrame
-                        espCache[model].boxBB = boxBB
-                    end
-
-                    if cfg.ESPName then
+                    espCache[model].isTeam = isTeam
+                    
+                    -- Chams (Highlight) — WAJIB kalau master ON
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "CA_ESP_HL"
+                    hl.FillColor = markerColor
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.FillTransparency = 0.5
+                    hl.Adornee = model
+                    hl.Parent = espGuiParent
+                    espCache[model].hl = hl
+                    
+                    -- ESP Setting (BillboardGui)
+                    local anySetting = Config.Visual.ESPShowDistance or Config.Visual.ESPHealth or Config.Visual.ESPName
+                    if anySetting then
                         local bb = Instance.new("BillboardGui")
-                        bb.Name = "CA_ESP_Name"
-                        bb.Size = UDim2.new(0, 120, 0, 24)
-                        bb.StudsOffset = Vector3.new(0, 4.5, 0)
+                        bb.Name = "CA_ESP_Info"
+                        bb.Size = UDim2.new(0, 200, 0, 24)
+                        bb.StudsOffset = Vector3.new(0, 3.5, 0)
                         bb.AlwaysOnTop = true
                         bb.Adornee = hrp
                         bb.Parent = espGuiParent
+                        
                         local lbl = Instance.new("TextLabel")
                         lbl.Size = UDim2.new(1, 0, 1, 0)
-                        lbl.Text = model.Name
-                        lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        lbl.Text = ""
+                        lbl.TextColor3 = markerColor
                         lbl.TextStrokeTransparency = 0
-                        lbl.TextSize = 14
+                        lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                        lbl.TextSize = 13
                         lbl.Font = Enum.Font.GothamBold
                         lbl.BackgroundTransparency = 1
                         lbl.Parent = bb
-                        espCache[model].nameBB = bb
+                        
+                        espCache[model].infoBB = bb
+                        espCache[model].infoLbl = lbl
                     end
-
-                    if cfg.ESPHealth then
-                        local hb = Instance.new("BillboardGui")
-                        hb.Name = "CA_ESP_HP"
-                        hb.Size = UDim2.new(0, 60, 0, 6)
-                        hb.StudsOffset = Vector3.new(0, 3.5, 0)
-                        hb.AlwaysOnTop = true
-                        hb.Adornee = hrp
-                        hb.Parent = espGuiParent
-                        local bg = Instance.new("Frame")
-                        bg.Size = UDim2.new(1, 0, 1, 0)
-                        bg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                        bg.BorderSizePixel = 0
-                        bg.Parent = hb
-                        local fill = Instance.new("Frame")
-                        fill.Name = "Fill"
-                        fill.Size = UDim2.new(1, 0, 1, 0)
-                        fill.BackgroundColor3 = Color3.fromRGB(80, 220, 130)
-                        fill.BorderSizePixel = 0
-                        fill.Parent = bg
-                        espCache[model].healthBB = hb
+                end
+                
+                -- Update warna Highlight (kalau team berubah)
+                local cachedTeam = espCache[model].isTeam
+                if cachedTeam ~= isTeam and espCache[model].hl then
+                    espCache[model].hl.FillColor = markerColor
+                    espCache[model].isTeam = isTeam
+                end
+                
+                -- Update text
+                if espCache[model].infoLbl and myHRP then
+                    local parts = {}
+                    if Config.Visual.ESPName then
+                        table.insert(parts, model.Name)
+                    end
+                    if Config.Visual.ESPHealth then
+                        table.insert(parts, "[ "..math.floor(hum.Health).." HP ]")
+                    end
+                    if Config.Visual.ESPShowDistance then
+                        local dist = (hrp.Position - myHRP.Position).Magnitude
+                        table.insert(parts, "[ "..math.floor(dist).." M ]")
+                    end
+                    espCache[model].infoLbl.Text = table.concat(parts, " ")
+                    espCache[model].infoLbl.TextColor3 = markerColor
+                end
+            end
+            
+            -- ============================================
+            -- ESP OBJECT (Supply + Capture) — Highlight hijau muda
+            -- ============================================
+            local activeMap = workspace:FindFirstChild("ActiveMap")
+            if activeMap then
+                for _, mapChild in pairs(activeMap:GetChildren()) do
+                    if mapChild:IsA("Folder") or mapChild:IsA("Model") then
+                        local interactable = mapChild:FindFirstChild("Interactable")
+                        if interactable then
+                            -- Supply
+                            if Config.Visual.ESPSupply then
+                                local suppliesFolder = interactable:FindFirstChild("Supplies")
+                                if suppliesFolder then
+                                    for _, obj in pairs(suppliesFolder:GetChildren()) do
+                                        if obj:IsA("Model") and not espCache[obj] then
+                                            espCache[obj] = {}
+                                            local hl = Instance.new("Highlight")
+                                            hl.Name = "CA_ESP_Supply"
+                                            hl.FillColor = COLOR_SUPPLY
+                                            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                            hl.FillTransparency = 0.6
+                                            hl.Adornee = obj
+                                            hl.Parent = espGuiParent
+                                            espCache[obj].hl = hl
+                                        end
+                                    end
+                                end
+                            end
+                            -- Capture
+                            if Config.Visual.ESPCapture then
+                                local pointsFolder = interactable:FindFirstChild("Points")
+                                if pointsFolder then
+                                    for _, obj in pairs(pointsFolder:GetChildren()) do
+                                        if obj:IsA("Model") and not espCache[obj] then
+                                            espCache[obj] = {}
+                                            local hl = Instance.new("Highlight")
+                                            hl.Name = "CA_ESP_Capture"
+                                            hl.FillColor = COLOR_SUPPLY
+                                            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                            hl.FillTransparency = 0.6
+                                            hl.Adornee = obj
+                                            hl.Parent = espGuiParent
+                                            espCache[obj].hl = hl
+                                        end
+                                    end
+                                end
+                            end
+                        end
                     end
                 end
             end
-
+            
+            -- Cleanup ESP objects yang parent hilang
             for model, objs in pairs(espCache) do
                 if not model.Parent then
                     for _, obj in pairs(objs) do
                         if obj then pcall(function() obj:Destroy() end) end
                     end
                     espCache[model] = nil
-                else
-                    local hum = model:FindFirstChildOfClass("Humanoid")
-                    if hum and objs.healthBB then
-                        local fill = objs.healthBB:FindFirstChild("Fill", true)
-                        if fill then
-                            fill.Size = UDim2.new(hum.Health / hum.MaxHealth, 0, 1, 0)
-                        end
-                    end
                 end
             end
         end
@@ -505,7 +540,6 @@ end)
 -- FULLBRIGHT / NO FOG
 -- ============================================================
 local savedLighting = { Brightness=nil, Ambient=nil, OutdoorAmbient=nil, FogEnd=nil, FogStart=nil }
-
 task.spawn(function()
     while task.wait(0.5) do
         if Config.Visual.Fullbright then
@@ -527,7 +561,6 @@ task.spawn(function()
             end
             State.Fullbright = false
         end
-
         if Config.Visual.NoFog then
             if savedLighting.FogEnd == nil then
                 savedLighting.FogEnd = Lighting.FogEnd
@@ -621,37 +654,71 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO REDEEM CODE (Radio Times auto-update)
+-- AUTO CLAIM QUEST (1x per click)
 -- ============================================================
-local CODES_URL = "https://www.radiotimes.com/technology/gaming/command-an-army-codes/"
+function _G.STHAIN.ClaimQuests()
+    local PG = LP:WaitForChild("PlayerGui")
+    local interactable = PG:FindFirstChild("Interactable")
+    if not interactable then
+        warn("[Misi] Interactable ga ketemu")
+        return 0
+    end
+    local claimed = 0
+    local timeout = tick() + 3
+    local visited = 0
+    local function scan(root, depth)
+        if depth > 6 or tick() > timeout or claimed >= 30 then return end
+        for _, c in pairs(root:GetChildren()) do
+            visited = visited + 1
+            if visited > 5000 then return end
+            if c:IsA("TextButton") or c:IsA("ImageButton") then
+                local txt = (c.Text or ""):upper()
+                local nm = c.Name:lower()
+                if txt:find("KLAIM") or txt:find("CLAIM") or nm:find("claim") or nm:find("klaim") then
+                    if c.Visible and c.Active then
+                        pcall(function()
+                            if c:IsA("TextButton") then c.MouseButton1Click:Fire() end
+                        end)
+                        claimed = claimed + 1
+                        print(("[Misi] Klaim: %s | %s"):format(c.Name, c.Text))
+                        task.wait(0.3)
+                    end
+                end
+            end
+            if c:IsA("Frame") or c:IsA("ScrollingFrame") or c:IsA("CanvasGroup") then
+                scan(c, depth + 1)
+            end
+        end
+    end
+    scan(interactable, 1)
+    print(("[Misi] Selesai — Total klaim: %d | Visited: %d"):format(claimed, visited))
+    return claimed
+end
 
+-- ============================================================
+-- AUTO REDEEM CODE (Radio Times)
+-- ============================================================
 local function ambilCode()
-    local ok, html = pcall(game.HttpGet, game, CODES_URL)
+    local url = "https://www.radiotimes.com/technology/gaming/command-an-army-codes/"
+    local ok, html = pcall(game.HttpGet, game, url)
     if not ok or not html or #html < 500 then
-        warn("[Code] Gagal ambil code")
+        warn("[Code] Gagal fetch")
         return {}
     end
-
+    local startPos = html:find("Active codes")
+    local endPos = html:find("expired codes")
+    if not startPos then return {} end
+    local section = html:sub(startPos, endPos or #html)
     local codes = {}
     local seen = {}
-
-    local mulai = html:find("Active codes")
-    local selesai = html:find("expired codes")
-    if not mulai then return {} end
-
-    local bagian = html:sub(mulai, selesai or #html)
-
-    for li in bagian:gmatch("<li>(.-)</li>") do
-        local code = li:match("^%s*%-%s*([A-Z][A-Z0-9]+)")
-            or li:match("^%s*([A-Z][A-Z0-9]+)%s*%(")
-            or li:match("^%s*([A-Z][A-Z0-9]+)%s*%-")
+    for li in section:gmatch("<li[^>]*>(.-)</li>") do
+        local code = li:match("<strong>([A-Z][A-Z0-9]+)</strong>")
             or li:match("^%s*([A-Z][A-Z0-9]+)")
         if code and #code >= 3 and #code <= 20 and not seen[code] then
             seen[code] = true
             table.insert(codes, code)
         end
     end
-
     print(("[Code] Dapet %d code"):format(#codes))
     return codes
 end
@@ -664,32 +731,26 @@ local function cariCodeUI()
     if not codeUI then return nil, nil end
     local textBox = codeUI:FindFirstChild("TextBox")
     if not textBox then return nil, nil end
-
-    local tombolKlaim = nil
+    local btn = nil
     for _, c in pairs(codeUI:GetDescendants()) do
         if (c:IsA("TextButton") or c:IsA("ImageButton")) and c.Visible then
             local txt = string.lower(c.Text or "")
             local nm = string.lower(c.Name)
             if txt:find("claim") or txt:find("redeem") or txt:find("klaim")
             or nm:find("claim") or nm:find("redeem") or nm:find("klaim") then
-                tombolKlaim = c
+                btn = c
                 break
             end
         end
     end
-
-    return textBox, tombolKlaim
+    return textBox, btn
 end
 
 function _G.STHAIN.RedeemAllCodes()
     local codes = ambilCode()
     if #codes == 0 then warn("[Code] Ga ada code") return 0 end
-
     local tb, btn = cariCodeUI()
     if not tb then warn("[Code] TextBox ga ketemu") return 0 end
-
-    print(("[Code] Redeem %d code..."):format(#codes))
-
     local sukses = 0
     for i, code in ipairs(codes) do
         pcall(function()
@@ -700,7 +761,6 @@ function _G.STHAIN.RedeemAllCodes()
             tb:ReleaseFocus()
         end)
         task.wait(0.2)
-
         if btn then
             pcall(function() btn.MouseButton1Click:Fire() end)
         else
@@ -710,68 +770,36 @@ function _G.STHAIN.RedeemAllCodes()
         print(("[Code] [%d/%d] ✓ %s"):format(i, #codes, code))
         task.wait(1.2)
     end
-
     print(("[Code] Selesai — Sukses: %d"):format(sukses))
     return sukses
 end
 
 -- ============================================================
--- AUTO CLAIM QUEST (Harian + Mingguan)
+-- AUTO JOIN TEAM (Exclusive)
 -- ============================================================
-function _G.STHAIN.ClaimQuests()
+function _G.STHAIN.JoinTeam(teamName)
     local PG = LP:WaitForChild("PlayerGui")
-    local interactable = PG:FindFirstChild("Interactable")
-    if not interactable then
-        warn("[Misi] Interactable ga ketemu")
-        return 0
-    end
-
-    local claimed = 0
-
-    local function scanTombolKlaim(root, depth)
-        if depth > 8 then return end
-        for _, c in pairs(root:GetChildren()) do
-            if c:IsA("TextButton") or c:IsA("ImageButton") then
-                local txt = (c.Text or ""):upper()
-                local nm = c.Name:lower()
-                if txt:find("KLAIM") or txt:find("CLAIM")
-                or nm:find("claim") or nm:find("klaim") then
-                    if c.Visible and c.Active then
-                        pcall(function()
-                            if c:IsA("TextButton") then
-                                c.MouseButton1Click:Fire()
-                            end
-                        end)
-                        claimed = claimed + 1
-                        print(("[Misi] Klaim: %s | %s"):format(c.Name, c.Text))
-                        task.wait(0.3)
-                    end
-                end
-            end
-            if c:IsA("Frame") or c:IsA("ScrollingFrame") or c:IsA("CanvasGroup") then
-                scanTombolKlaim(c, depth + 1)
-            end
-        end
-    end
-
-    scanTombolKlaim(interactable, 1)
-
-    print(("[Misi] Selesai — Total klaim: %d"):format(claimed))
-    return claimed
+    local pickTeam = PG:FindFirstChild("PickTeam")
+    if not pickTeam then return false end
+    local target = nil
+    if teamName == "attacker" then target = pickTeam:FindFirstChild("Attacker")
+    elseif teamName == "defender" then target = pickTeam:FindFirstChild("Defender") end
+    if not target or not target.Visible then return false end
+    pcall(function()
+        if target:IsA("TextButton") then target.MouseButton1Click:Fire() end
+    end)
+    print("[Team] Join: "..tostring(teamName))
+    return true
 end
 
 task.spawn(function()
-    while task.wait(60) do
-        if Config.Misc.AutoClaimQuest then
-            pcall(function() _G.STHAIN.ClaimQuests() end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(60) do
-        if Config.Misc.AutoRedeemCode then
-            pcall(function() _G.STHAIN.RedeemAllCodes() end)
+    while task.wait(2) do
+        local team = Config.Misc.AutoJoinTeam
+        if team and team ~= "none" then
+            local PG = LP:WaitForChild("PlayerGui")
+            if PG:FindFirstChild("PickTeam") then
+                pcall(function() _G.STHAIN.JoinTeam(team) end)
+            end
         end
     end
 end)
@@ -783,10 +811,8 @@ local function getMapFolder()
     local activeMap = workspace:FindFirstChild("ActiveMap")
     if not activeMap then return nil end
     for _, child in pairs(activeMap:GetChildren()) do
-        if child:IsA("Folder") or child:IsA("Model") then
-            if child:FindFirstChild("Interactable") then
-                return child
-            end
+        if (child:IsA("Folder") or child:IsA("Model")) and child:FindFirstChild("Interactable") then
+            return child
         end
     end
     return nil
@@ -798,7 +824,6 @@ function _G.STHAIN.TeleportScan()
     if not mapFolder then return results end
     local interactable = mapFolder:FindFirstChild("Interactable")
     if not interactable then return results end
-
     local suppliesFolder = interactable:FindFirstChild("Supplies")
     if suppliesFolder then
         for _, obj in pairs(suppliesFolder:GetChildren()) do
@@ -807,27 +832,17 @@ function _G.STHAIN.TeleportScan()
                 local teamType = "unknown"
                 if n:find("attacker") then teamType = "attacker"
                 elseif n:find("defender") then teamType = "defender" end
-                table.insert(results.supplies, {
-                    name = obj.Name,
-                    instance = obj,
-                    capturePart = obj:FindFirstChild("CapturePoint"),
-                    team = teamType,
-                })
+                table.insert(results.supplies, {name = obj.Name, instance = obj, capturePart = obj:FindFirstChild("CapturePoint"), team = teamType})
             end
         end
     end
-
     local pointsFolder = interactable:FindFirstChild("Points")
     if pointsFolder then
         for _, obj in pairs(pointsFolder:GetChildren()) do
             if obj:IsA("Model") then
-                local capturePart = obj:FindFirstChild("CapturePoint")
-                if capturePart then
-                    table.insert(results.captures, {
-                        name = obj.Name,
-                        instance = capturePart,
-                        model = obj,
-                    })
+                local cp = obj:FindFirstChild("CapturePoint")
+                if cp then
+                    table.insert(results.captures, {name = obj.Name, instance = cp, model = obj})
                 end
             end
         end
@@ -836,15 +851,14 @@ function _G.STHAIN.TeleportScan()
 end
 
 function _G.STHAIN.GetMyTeam()
-    local Plr = game.Players.LocalPlayer
-    local selectedTeam = Plr:GetAttribute("SelectedTeam")
-    if selectedTeam then
-        local n = string.lower(tostring(selectedTeam))
+    local sel = LP:GetAttribute("SelectedTeam")
+    if sel then
+        local n = string.lower(tostring(sel))
         if n:find("attacker") then return "attacker" end
         if n:find("defender") then return "defender" end
     end
-    if Plr.Team then
-        local n = string.lower(Plr.Team.Name)
+    if LP.Team then
+        local n = string.lower(LP.Team.Name)
         if n:find("attacker") then return "attacker" end
         if n:find("defender") then return "defender" end
     end
@@ -857,8 +871,7 @@ function _G.STHAIN.TeleportTo(part)
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not (hrp and part) then return false end
     local targetPos
-    if typeof(part) == "Vector3" then
-        targetPos = part
+    if typeof(part) == "Vector3" then targetPos = part
     else
         if not part.Parent then return false end
         targetPos = part.Position
@@ -870,26 +883,20 @@ end
 
 function _G.STHAIN.TeleportToEnemySupply()
     local myTeam = _G.STHAIN.GetMyTeam()
-    if myTeam == "unknown" then warn("[TP] Team unknown") return false end
+    if myTeam == "unknown" then return false end
     local results = _G.STHAIN.TeleportScan()
-    if #results.supplies == 0 then warn("[TP] No supplies") return false end
     local enemyTeam = (myTeam == "attacker") and "defender" or "attacker"
-
     local enemySupplies = {}
     for _, sup in ipairs(results.supplies) do
-        if sup.team == enemyTeam then
-            table.insert(enemySupplies, sup)
-        end
+        if sup.team == enemyTeam then table.insert(enemySupplies, sup) end
     end
-    if #enemySupplies == 0 then warn("[TP] No enemy supply") return false end
-
+    if #enemySupplies == 0 then return false end
     if not _G.STHAIN._tpSupplyIndex then _G.STHAIN._tpSupplyIndex = 0 end
     _G.STHAIN._tpSupplyIndex = _G.STHAIN._tpSupplyIndex + 1
     if _G.STHAIN._tpSupplyIndex > #enemySupplies then _G.STHAIN._tpSupplyIndex = 1 end
-
     local target = enemySupplies[_G.STHAIN._tpSupplyIndex]
     _G.STHAIN.TeleportTo(target.capturePart or target.instance)
-    print(("[TP] TP enemy supply #%d/%d: %s"):format(_G.STHAIN._tpSupplyIndex, #enemySupplies, target.name))
+    print("[TP] Enemy supply:", target.name)
     return true
 end
 
@@ -907,33 +914,24 @@ function _G.STHAIN.TeleportToOwnSupply()
 end
 
 function _G.STHAIN.TeleportToNearestCapture()
-    local char = Utils.getChar()
     local hrp = Utils.getHRP()
-    if not (char and hrp) then return false end
+    if not hrp then return false end
     local results = _G.STHAIN.TeleportScan()
-    if #results.captures == 0 then warn("[TP] No captures") return false end
-    local nearest, nearestDist = nil, math.huge
+    local nearest, nd = nil, math.huge
     for _, cap in ipairs(results.captures) do
         if cap.instance and cap.instance.Parent then
-            local dist = (cap.instance.Position - hrp.Position).Magnitude
-            if dist < nearestDist then
-                nearest = cap
-                nearestDist = dist
-            end
+            local d = (cap.instance.Position - hrp.Position).Magnitude
+            if d < nd then nearest = cap nd = d end
         end
     end
-    if nearest then
-        _G.STHAIN.TeleportTo(nearest.instance)
-        print("[TP] TP capture:", nearest.name)
-        return true
-    end
+    if nearest then _G.STHAIN.TeleportTo(nearest.instance) return true end
     return false
 end
 
-local function tpToNamed(targetName)
+local function tpToNamed(name)
     local results = _G.STHAIN.TeleportScan()
     for _, cap in ipairs(results.captures) do
-        if string.lower(cap.name) == string.lower(targetName) then
+        if string.lower(cap.name) == string.lower(name) then
             _G.STHAIN.TeleportTo(cap.instance)
             return true
         end
@@ -945,7 +943,6 @@ function _G.STHAIN.TeleportToBase()
     if tpToNamed("base") then return true end
     if tpToNamed("pointa") then return true end
     if tpToNamed("pointb") then return true end
-    warn("[TP] Base not found")
     return false
 end
 
@@ -956,18 +953,15 @@ function _G.STHAIN.TeleportToNearestEnemy()
     local char = Utils.getChar()
     local hrp = Utils.getHRP()
     if not (char and hrp) then return false end
-    local nearest, nearestDist = nil, math.huge
+    local nearest, nd = nil, math.huge
     for _, model in pairs(workspace:GetChildren()) do
         if model ~= char and model:IsA("Model") then
             local hum = model:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 then
                 local thrp = model:FindFirstChild("HumanoidRootPart")
                 if thrp then
-                    local dist = (thrp.Position - hrp.Position).Magnitude
-                    if dist > 5 and dist < nearestDist then
-                        nearest = thrp
-                        nearestDist = dist
-                    end
+                    local d = (thrp.Position - hrp.Position).Magnitude
+                    if d > 5 and d < nd then nearest = thrp nd = d end
                 end
             end
         end
@@ -980,26 +974,22 @@ function _G.STHAIN.TeleportToTeammate()
     local char = Utils.getChar()
     local hrp = Utils.getHRP()
     if not (char and hrp) then return false end
-    local Plr = game.Players.LocalPlayer
     local myTeam = _G.STHAIN.GetMyTeam()
     if myTeam == "unknown" then return false end
-    local nearest, nearestDist = nil, math.huge
+    local nearest, nd = nil, math.huge
     for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= Plr and player.Character then
-            local playerTeam = ""
+        if player ~= LP and player.Character then
+            local pTeam = ""
             if player:GetAttribute("SelectedTeam") then
-                playerTeam = string.lower(tostring(player:GetAttribute("SelectedTeam")))
+                pTeam = string.lower(tostring(player:GetAttribute("SelectedTeam")))
             elseif player.Team then
-                playerTeam = string.lower(player.Team.Name)
+                pTeam = string.lower(player.Team.Name)
             end
-            if playerTeam:find(myTeam) then
+            if pTeam:find(myTeam) then
                 local thrp = player.Character:FindFirstChild("HumanoidRootPart")
                 if thrp then
-                    local dist = (thrp.Position - hrp.Position).Magnitude
-                    if dist < nearestDist then
-                        nearest = thrp
-                        nearestDist = dist
-                    end
+                    local d = (thrp.Position - hrp.Position).Magnitude
+                    if d < nd then nearest = thrp nd = d end
                 end
             end
         end
@@ -1009,17 +999,15 @@ function _G.STHAIN.TeleportToTeammate()
 end
 
 -- ============================================================
--- CONFIG SAVE / LOAD (FINAL)
+-- CONFIG SAVE / LOAD / DELETE
 -- ============================================================
 local CONFIG_FILE = "sthain_config.json"
-local configLoaded = false
 
 function _G.STHAIN.SaveConfig()
     if not writefile then return false end
     local ok = pcall(function()
         writefile(CONFIG_FILE, game:GetService("HttpService"):JSONEncode(_G.STHAIN.Config))
     end)
-    if ok then print("[Config] Saved") end
     return ok
 end
 
@@ -1031,11 +1019,7 @@ function _G.STHAIN.LoadConfig()
             return game:GetService("HttpService"):JSONDecode(data)
         end)
         if ok2 and type(dec) == "table" then
-            for k, v in pairs(dec) do
-                _G.STHAIN.Config[k] = v
-            end
-            configLoaded = true
-            print("[Config] Loaded")
+            for k, v in pairs(dec) do _G.STHAIN.Config[k] = v end
             return true
         end
     end
@@ -1045,35 +1029,26 @@ end
 function _G.STHAIN.DeleteConfig()
     if not delfile then return false end
     pcall(function() delfile(CONFIG_FILE) end)
-    configLoaded = false
-    print("[Config] Deleted")
     return true
 end
 
-task.spawn(function()
-    while task.wait(30) do
-        if _G.STHAIN.Config and _G.STHAIN.Config.Config and _G.STHAIN.Config.Config.AutoSave then
-            _G.STHAIN.SaveConfig()
-        end
-    end
-end)
-
-task.spawn(function()
-    pcall(function()
-        game:BindToClose(function()
-            if _G.STHAIN.Config and _G.STHAIN.Config.Config and _G.STHAIN.Config.Config.AutoSave then
-                _G.STHAIN.SaveConfig()
-            end
-        end)
-    end)
-end)
-
-task.spawn(function()
-    task.wait(2)
-    if not configLoaded then
-        _G.STHAIN.LoadConfig()
-    end
-end)
+-- Auto-save dimatikan sementara (cuma tampilan toggle di GUI)
+-- task.spawn(function()
+--     while task.wait(30) do
+--         if _G.STHAIN.Config and _G.STHAIN.Config.Config and _G.STHAIN.Config.Config.AutoSave then
+--             _G.STHAIN.SaveConfig()
+--         end
+--     end
+-- end)
+-- task.spawn(function()
+--     pcall(function()
+--         game:BindToClose(function()
+--             if _G.STHAIN.Config and _G.STHAIN.Config.Config and _G.STHAIN.Config.Config.AutoSave then
+--                 _G.STHAIN.SaveConfig()
+--             end
+--         end)
+--     end)
+-- end)
 
 -- ============================================================
 -- RESPAWN HANDLER
@@ -1086,7 +1061,6 @@ LP.CharacterAdded:Connect(function(char)
     if flyConn then stopFly() end
     cleanupESP()
     cleanupNoclip()
-    print("[STHAIN] Respawned, features reset")
 end)
 
-print("[STHAIN] Logic loaded - FINAL FIX v5")
+print("[STHAIN] Logic loaded - FINAL v7")
