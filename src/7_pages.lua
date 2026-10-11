@@ -1,10 +1,11 @@
 --[[
 ============================================================
-  [7] PAGES (FINAL FIX v5)
-  - Load Config Now dihapus
-  - Esp Tracer toggle dihapus
-  - Section Auto Claim di tab Settings
-  - AutoSave callback fix
+  [7] PAGES (FINAL v6)
+  - Esp tab: Enable Esp (master) → Esp Setting → Esp Object
+  - Esp Setting: Show Distance, Show Health, Show Name
+  - Esp Object: Esp Supply, Esp Capture (hijau muda)
+  - Settings: Auto Claim (2 tombol) + Auto Join Team
+  - Config: Load Config Now kosong (fungsi disabled)
 ============================================================
 ]]
 
@@ -156,9 +157,13 @@ local enableEsp = S.Comp.makeSection(pages["Esp"], "Enable Esp", true)
 S.Comp.makeToggle(enableEsp, "Enable Esp", VV.Chams, function(v) VV.Chams = v save() end)
 
 local espSetting = S.Comp.makeSection(pages["Esp"], "Esp Setting", true)
-S.Comp.makeToggle(espSetting, "Esp Box", VV.ESPBox, function(v) VV.ESPBox = v save() end)
-S.Comp.makeToggle(espSetting, "Esp Health", VV.ESPHealth, function(v) VV.ESPHealth = v save() end)
-S.Comp.makeToggle(espSetting, "Esp Name", VV.ESPName, function(v) VV.ESPName = v save() end)
+S.Comp.makeToggle(espSetting, "Show Distance", VV.ESPShowDistance, function(v) VV.ESPShowDistance = v save() end)
+S.Comp.makeToggle(espSetting, "Show Health", VV.ESPHealth, function(v) VV.ESPHealth = v save() end)
+S.Comp.makeToggle(espSetting, "Show Name", VV.ESPName, function(v) VV.ESPName = v save() end)
+
+local espObject = S.Comp.makeSection(pages["Esp"], "Esp Object", true)
+S.Comp.makeToggle(espObject, "Esp Supply", VV.ESPSupply, function(v) VV.ESPSupply = v save() end)
+S.Comp.makeToggle(espObject, "Esp Capture", VV.ESPCapture, function(v) VV.ESPCapture = v save() end)
 
 -- ============================================================
 -- TAB TELEPORT
@@ -234,6 +239,58 @@ local visualContent = S.Comp.makeSection(pages["Settings"], "Visuals", false)
 S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright, function(v) VV.Fullbright = v save() end)
 S.Comp.makeToggle(visualContent, "No Fog", VV.NoFog, function(v) VV.NoFog = v save() end)
 
+local autoClaimContent = S.Comp.makeSection(pages["Settings"], "Auto Claim", false)
+S.Comp.makeButton(autoClaimContent, "Claim Quest Now", function()
+    if _G.STHAIN.ClaimQuests then
+        _G.STHAIN.ClaimQuests()
+    end
+end)
+S.Comp.makeButton(autoClaimContent, "Claim All Code Now", function()
+    if _G.STHAIN.RedeemAllCodes then
+        _G.STHAIN.RedeemAllCodes()
+    end
+end)
+
+local autoJoinContent = S.Comp.makeSection(pages["Settings"], "Auto Join Team", false)
+S.Comp.makeToggle(autoJoinContent, "Auto Join Defenders", false, function(v)
+    if v then
+        XX.AutoJoinTeam = "defender"
+        -- Exclusive: matiin Attacker
+        local attackerToggle = autoJoinContent:FindFirstChild("Toggle_Auto Join Attackers")
+        if attackerToggle then
+            local attackerBtn = attackerToggle:FindFirstChildOfClass("TextButton")
+            if attackerBtn then
+                attackerBtn.BackgroundColor3 = C.bg4
+                local knob = attackerBtn:FindFirstChildOfClass("Frame")
+                if knob then knob.Position = UDim2.new(0, 3, 0.5, -5) end
+                attackerToggle:SetAttribute("CA_State", false)
+            end
+        end
+    elseif XX.AutoJoinTeam == "defender" then
+        XX.AutoJoinTeam = "none"
+    end
+    save()
+end)
+S.Comp.makeToggle(autoJoinContent, "Auto Join Attackers", false, function(v)
+    if v then
+        XX.AutoJoinTeam = "attacker"
+        -- Exclusive: matiin Defender
+        local defenderToggle = autoJoinContent:FindFirstChild("Toggle_Auto Join Defenders")
+        if defenderToggle then
+            local defenderBtn = defenderToggle:FindFirstChildOfClass("TextButton")
+            if defenderBtn then
+                defenderBtn.BackgroundColor3 = C.bg4
+                local knob = defenderBtn:FindFirstChildOfClass("Frame")
+                if knob then knob.Position = UDim2.new(0, 3, 0.5, -5) end
+                defenderToggle:SetAttribute("CA_State", false)
+            end
+        end
+    elseif XX.AutoJoinTeam == "attacker" then
+        XX.AutoJoinTeam = "none"
+    end
+    save()
+end)
+
 local serverContent = S.Comp.makeSection(pages["Settings"], "Server", false)
 S.Comp.makeButton(serverContent, "Rejoin Server", function()
     pcall(function()
@@ -258,26 +315,6 @@ S.Comp.makeButton(serverContent, "Server Hop (Find Small Server)", function()
     end)
 end)
 
-local autoClaimContent = S.Comp.makeSection(pages["Settings"], "Auto Claim", true)
-S.Comp.makeToggle(autoClaimContent, "Auto Claim Quest", XX.AutoClaimQuest or false, function(v)
-    XX.AutoClaimQuest = v
-    save()
-end)
-S.Comp.makeButton(autoClaimContent, "Claim Quest Now", function()
-    if _G.STHAIN.ClaimQuests then
-        _G.STHAIN.ClaimQuests()
-    end
-end)
-S.Comp.makeToggle(autoClaimContent, "Auto Redeem Code", XX.AutoRedeemCode or false, function(v)
-    XX.AutoRedeemCode = v
-    save()
-end)
-S.Comp.makeButton(autoClaimContent, "Claim All Code Now", function()
-    if _G.STHAIN.RedeemAllCodes then
-        _G.STHAIN.RedeemAllCodes()
-    end
-end)
-
 -- ============================================================
 -- TAB CONFIG
 -- ============================================================
@@ -296,6 +333,9 @@ S.Comp.makeButton(configMgmt, "Save Config Now", function()
     if _G.STHAIN.SaveConfig then
         _G.STHAIN.SaveConfig()
     end
+end)
+S.Comp.makeButton(configMgmt, "Load Config Now", function()
+    warn("[Config] Load Config Now belum tersedia")
 end)
 S.Comp.makeButton(configMgmt, "Delete Config", function()
     if _G.STHAIN.DeleteConfig then
@@ -347,4 +387,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[STHAIN] Pages loaded - FINAL v5")
+print("[STHAIN] Pages loaded - FINAL v6")
