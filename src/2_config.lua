@@ -28,24 +28,32 @@ local Config = {
         JumpPower = 50,
     },
     Visual = {
-        ESPBox          = false,
-        ESPTracer       = false,
-        ESPHealth       = false,
-        ESPName         = false,
-        Chams           = false,
-        Fullbright      = false,
-        NoFog           = false,
-        Invisible       = false,
-        SelfHitbox      = false,
-        EnemyHitbox     = false,
-        SelfHitboxSize  = 15,
-        EnemyHitboxSize = 20,
+        -- Master switch
+        Chams            = false,
+
+        -- Esp Object (section baru)
+        ESPSupply        = false,
+        ESPCapture       = false,
+
+        -- Esp Setting (section baru)
+        ESPShowDistance  = false,
+        ESPHealth        = false,
+        ESPName          = false,
+
+        -- Visual lain
+        Fullbright       = false,
+        NoFog            = false,
+        Invisible        = false,
+        SelfHitbox       = false,
+        EnemyHitbox      = false,
+        SelfHitboxSize   = 15,
+        EnemyHitboxSize  = 20,
     },
     Misc = {
         WeaponRange     = false,
         AutoTP          = false,
         AntiAFK         = true,
-        AutoClaimQuest  = false,
+        AutoJoinTeam    = "none",
         RangeMultiplier = 3,
         AutoTPRange     = 100,
     },
