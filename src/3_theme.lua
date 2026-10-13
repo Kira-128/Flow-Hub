@@ -1,25 +1,25 @@
 --[[
 ============================================================
-  [3] THEME — Dark Grey Monochrome
+  [3] THEME — Flow Hub (Mint Accent)
 ============================================================
 ]]
 
 local Theme = {
     Colors = {
-        -- Background hierarchy
-        bg       = Color3.fromRGB(18, 18, 21),
-        bg2      = Color3.fromRGB(26, 26, 30),
-        bg3      = Color3.fromRGB(32, 32, 36),
-        bg4      = Color3.fromRGB(38, 38, 43),
-        panel    = Color3.fromRGB(22, 22, 26),
+        -- Background hierarchy (dark grey dari logo)
+        bg       = Color3.fromRGB(20, 20, 22),
+        bg2      = Color3.fromRGB(26, 26, 28),
+        bg3      = Color3.fromRGB(32, 32, 35),
+        bg4      = Color3.fromRGB(38, 38, 42),
+        panel    = Color3.fromRGB(24, 24, 26),
 
-        -- Accent (putih keabuan)
-        accent   = Color3.fromRGB(224, 224, 230),
+        -- Accent (mint dari logo Flow Hub)
+        accent   = Color3.fromRGB(110, 231, 183),  -- #6EE7B7
 
         -- Text hierarchy
-        text     = Color3.fromRGB(240, 240, 245),
-        textDim  = Color3.fromRGB(160, 160, 170),
-        textDim2 = Color3.fromRGB(110, 110, 120),
+        text     = Color3.fromRGB(245, 245, 245),
+        textDim  = Color3.fromRGB(160, 160, 165),
+        textDim2 = Color3.fromRGB(110, 110, 115),
 
         -- Status colors
         green    = Color3.fromRGB(80, 220, 130),
@@ -28,8 +28,8 @@ local Theme = {
         blue     = Color3.fromRGB(80, 160, 240),
 
         -- Border / stroke
-        stroke   = Color3.fromRGB(45, 45, 52),
-        stroke2  = Color3.fromRGB(58, 58, 66),
+        stroke   = Color3.fromRGB(45, 45, 50),
+        stroke2  = Color3.fromRGB(58, 58, 64),
     },
 
     Icons = {
@@ -39,23 +39,26 @@ local Theme = {
         config   = "rbxassetid://112330254035751",
         teleport = "rbxassetid://90293255250749",
         search   = "rbxassetid://72296609649861",
-        logo     = "rbxassetid://140310198502249",
+
+        -- Flow Hub assets
+        logo     = "rbxassetid://101516376369531",   -- logo Flow Hub
+        icon     = "rbxassetid://80944443292236",    -- icon header
     },
 
     Font = {
-        bold = Enum.Font.GothamBold,
-        norm = Enum.Font.Gotham,
+        bold   = Enum.Font.GothamBold,
+        norm   = Enum.Font.Gotham,
         medium = Enum.Font.GothamMedium,
     },
 
     Radius = {
-        small = UDim.new(0, 4),
+        small  = UDim.new(0, 4),
         medium = UDim.new(0, 6),
-        large = UDim.new(0, 10),
-        round = UDim.new(1, 0),
+        large  = UDim.new(0, 10),
+        round  = UDim.new(1, 0),
     },
 }
 
 _G.STHAIN.Theme = Theme
 
-print("[STHAIN] Theme loaded (Dark Grey Monochrome)")
+print("[FLOW] Theme loaded (Mint Accent)")
