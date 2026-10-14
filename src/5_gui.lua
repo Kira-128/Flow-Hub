@@ -1,12 +1,14 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub Style) v9
+  [5] GUI (Flow Hub Style v10)
   - Header: Flow [icon transparan] | Command An Army [− mint]
-  - Garis 1 (full width bawah header)
+  - Garis 1 full width bawah header
   - Search "Search feature.."
   - Accent line ▎ vertikal pemisah search & title
-  - Garis 2 (di bawah title, dari divider ke kanan)
-  - Background transparan 0.1
+  - Garis 2 di bawah title (full width dari divider ke kanan)
+  - Sidebar & content panel TRANSPARAN
+  - Background panel 0.1
+  - Fix ruang kosong di bawah title
 ============================================================
 ]]
 
@@ -178,6 +180,7 @@ line1.Name = "HeaderLine"
 line1.Size = UDim2.new(1, 0, 0, 1)
 line1.Position = UDim2.new(0, 0, 0, HEADER_H)
 line1.BackgroundColor3 = C.stroke
+line1.BackgroundTransparency = 0.3
 line1.BorderSizePixel = 0
 line1.Parent = mainFrame
 
@@ -228,7 +231,7 @@ vDivider.BorderSizePixel = 0
 vDivider.Parent = mainFrame
 Instance.new("UICorner", vDivider).CornerRadius = UDim.new(1, 0)
 
--- CONTENT TITLE (sejajar search, geser ke kanan buat kasih gap dari divider)
+-- CONTENT TITLE (sejajar search, geser ke kanan buat gap dari divider)
 local cTitle = Instance.new("TextLabel")
 cTitle.Size = UDim2.new(1, -200, 0, 26)
 cTitle.Position = UDim2.new(0, 190, 0, ROW_Y)
@@ -246,45 +249,63 @@ line2.Name = "TitleLine"
 line2.Size = UDim2.new(1, -200, 0, 1)
 line2.Position = UDim2.new(0, 190, 0, ROW_Y + 28)
 line2.BackgroundColor3 = C.stroke
-line2.BackgroundTransparency = 0.4
+line2.BackgroundTransparency = 0.3
 line2.BorderSizePixel = 0
 line2.Parent = mainFrame
 
 -- ============================================================
--- SIDEBAR
+-- SIDEBAR (TRANSPARAN)
 -- ============================================================
 local SIDEBAR_Y = ROW_Y + 38  -- 82
 
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
 sidebar.Position = UDim2.new(0, 10, 0, SIDEBAR_Y)
-sidebar.BackgroundColor3 = C.bg2
-sidebar.BackgroundTransparency = 0.1
+sidebar.BackgroundTransparency = 1  -- TRANSPARAN
 sidebar.BorderSizePixel = 0
 sidebar.Parent = mainFrame
-Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 6)
 
 local sLayout = Instance.new("UIListLayout")
-sLayout.Padding = UDim.new(0, 2)
+sLayout.Padding = UDim.new(0, 4)
 sLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 sLayout.Parent = sidebar
 
 local sPad = Instance.new("UIPadding")
-sPad.PaddingTop = UDim.new(0, 6)
-sPad.PaddingBottom = UDim.new(0, 6)
+sPad.PaddingTop = UDim.new(0, 4)
+sPad.PaddingBottom = UDim.new(0, 4)
 sPad.Parent = sidebar
 
 -- ============================================================
--- CONTENT PANEL
+-- CONTENT PANEL (TRANSPARAN)
 -- ============================================================
 local contentPanel = Instance.new("Frame")
 contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10))
 contentPanel.Position = UDim2.new(0, 130, 0, SIDEBAR_Y)
-contentPanel.BackgroundColor3 = C.bg2
-contentPanel.BackgroundTransparency = 0.1
+contentPanel.BackgroundTransparency = 1  -- TRANSPARAN
 contentPanel.BorderSizePixel = 0
 contentPanel.Parent = mainFrame
-Instance.new("UICorner", contentPanel).CornerRadius = UDim.new(0, 6)
+
+-- ScrollFrame buat content
+local contentScroll = Instance.new("ScrollingFrame")
+contentScroll.Name = "ContentScroll"
+contentScroll.Size = UDim2.new(1, 0, 1, 0)
+contentScroll.Position = UDim2.new(0, 0, 0, 0)
+contentScroll.BackgroundTransparency = 1
+contentScroll.BorderSizePixel = 0
+contentScroll.ScrollBarThickness = 3
+contentScroll.ScrollBarImageColor3 = C.accent
+contentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+contentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+contentScroll.Parent = contentPanel
+
+local cLayout = Instance.new("UIListLayout")
+cLayout.Padding = UDim.new(0, 6)  -- gap antar section
+cLayout.SortOrder = Enum.SortOrder.LayoutOrder
+cLayout.Parent = contentScroll
+
+local cPad = Instance.new("UIPadding")
+cPad.PaddingRight = UDim.new(0, 6)
+cPad.Parent = contentScroll
 
 -- ============================================================
 -- EXPORT
@@ -295,10 +316,11 @@ S.GUI = {
     MainFrame = mainFrame,
     Sidebar = sidebar,
     Content = contentPanel,
+    ContentScroll = contentScroll,   -- BARU: dipake 7_pages
     ContentTitle = cTitle,
-    TitleLine = line2,        -- update ref
-    HeaderLine = line1,       -- baru
-    TitleDivider = vDivider,  -- baru
+    TitleLine = line2,
+    HeaderLine = line1,
+    TitleDivider = vDivider,
     MinBtn = minBtn,
     CloseBtn = nil,
 }
