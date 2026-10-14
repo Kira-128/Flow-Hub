@@ -1,9 +1,12 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub Style)
-  Header: Flow [icon] | Command An Army
-  Content title sejajar search
-  Background transparan
+  [5] GUI (Flow Hub Style) v9
+  - Header: Flow [icon transparan] | Command An Army [− mint]
+  - Garis 1 (full width bawah header)
+  - Search "Search feature.."
+  - Accent line ▎ vertikal pemisah search & title
+  - Garis 2 (di bawah title, dari divider ke kanan)
+  - Background transparan 0.1
 ============================================================
 ]]
 
@@ -33,7 +36,6 @@ floatBtn.Parent = gui
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
 fIcon.Size = UDim2.new(1, 0, 1, 0)
-fIcon.Position = UDim2.new(0, 0, 0, 0)
 fIcon.BackgroundTransparency = 1
 fIcon.BorderSizePixel = 0
 fIcon.Image = I.logo
@@ -90,10 +92,12 @@ mStroke.Transparency = 0.3
 mStroke.Parent = mainFrame
 
 -- ============================================================
--- HEADER — Flow [icon] | Command An Army
+-- HEADER — Flow [icon] | Command An Army [−]
 -- ============================================================
+local HEADER_H = 36
+
 local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 36)
+header.Size = UDim2.new(1, 0, 0, HEADER_H)
 header.BackgroundColor3 = C.bg2
 header.BackgroundTransparency = 0.1
 header.BorderSizePixel = 0
@@ -108,7 +112,7 @@ hFix.BackgroundTransparency = 0.1
 hFix.BorderSizePixel = 0
 hFix.Parent = header
 
--- TEXT "Flow" (di kiri)
+-- TEXT "Flow"
 local lText = Instance.new("TextLabel")
 lText.Size = UDim2.new(0, 60, 1, 0)
 lText.Position = UDim2.new(0, 12, 0, 0)
@@ -120,32 +124,22 @@ lText.TextXAlignment = Enum.TextXAlignment.Left
 lText.BackgroundTransparency = 1
 lText.Parent = header
 
--- ICON (setelah text)
-local logoBox = Instance.new("Frame")
-logoBox.Name = "LogoBox"
-logoBox.Size = UDim2.new(0, 22, 0, 22)
-logoBox.Position = UDim2.new(0, 52, 0.5, -11)
-logoBox.BackgroundColor3 = C.bg3
-logoBox.BackgroundTransparency = 0.2
-logoBox.BorderSizePixel = 0
-logoBox.Parent = header
-Instance.new("UICorner", logoBox).CornerRadius = UDim.new(0, 4)
-
+-- ICON (transparan, ga di kotak)
 local lIcon = Instance.new("ImageLabel")
 lIcon.Name = "LogoHeader"
-lIcon.Size = UDim2.new(1, -4, 1, -4)
-lIcon.Position = UDim2.new(0, 2, 0, 2)
+lIcon.Size = UDim2.new(0, 18, 0, 18)
+lIcon.Position = UDim2.new(0, 52, 0.5, -9)
 lIcon.BackgroundTransparency = 1
 lIcon.BorderSizePixel = 0
 lIcon.Image = I.icon
-lIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+lIcon.ImageColor3 = C.accent
 lIcon.ScaleType = Enum.ScaleType.Fit
-lIcon.Parent = logoBox
+lIcon.Parent = header
 
--- SEPARATOR
+-- SEPARATOR "|"
 local sep = Instance.new("Frame")
 sep.Size = UDim2.new(0, 1, 0, 18)
-sep.Position = UDim2.new(0, 84, 0.5, -9)
+sep.Position = UDim2.new(0, 78, 0.5, -9)
 sep.BackgroundColor3 = C.stroke
 sep.BorderSizePixel = 0
 sep.Parent = header
@@ -153,7 +147,7 @@ sep.Parent = header
 -- GAME NAME
 local sub = Instance.new("TextLabel")
 sub.Size = UDim2.new(0, 200, 1, 0)
-sub.Position = UDim2.new(0, 94, 0, 0)
+sub.Position = UDim2.new(0, 88, 0, 0)
 sub.Text = "Command An Army"
 sub.TextColor3 = C.textDim
 sub.TextSize = 10
@@ -162,12 +156,12 @@ sub.TextXAlignment = Enum.TextXAlignment.Left
 sub.BackgroundTransparency = 1
 sub.Parent = header
 
--- MINIMIZE BUTTON (cuma − )
+-- MINIMIZE (mint)
 local minBtn = Instance.new("TextButton")
 minBtn.Size = UDim2.new(0, 22, 0, 22)
 minBtn.Position = UDim2.new(1, -30, 0.5, -11)
 minBtn.Text = "−"
-minBtn.TextColor3 = C.textDim
+minBtn.TextColor3 = C.accent
 minBtn.TextSize = 14
 minBtn.Font = F.bold
 minBtn.BackgroundColor3 = C.bg3
@@ -177,11 +171,25 @@ minBtn.Parent = header
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 4)
 
 -- ============================================================
--- SEARCH + CONTENT TITLE (sejajar)
+-- GARIS 1 (full width, tepat di bawah header)
 -- ============================================================
+local line1 = Instance.new("Frame")
+line1.Name = "HeaderLine"
+line1.Size = UDim2.new(1, 0, 0, 1)
+line1.Position = UDim2.new(0, 0, 0, HEADER_H)
+line1.BackgroundColor3 = C.stroke
+line1.BorderSizePixel = 0
+line1.Parent = mainFrame
+
+-- ============================================================
+-- SEARCH + TITLE (sejajar) + ACCENT LINE ▎ + GARIS 2
+-- ============================================================
+local ROW_Y = HEADER_H + 8  -- 44
+
+-- SEARCH FRAME
 local searchFrame = Instance.new("Frame")
 searchFrame.Size = UDim2.new(0, 160, 0, 26)
-searchFrame.Position = UDim2.new(0, 10, 0, 44)
+searchFrame.Position = UDim2.new(0, 10, 0, ROW_Y)
 searchFrame.BackgroundColor3 = C.bg2
 searchFrame.BackgroundTransparency = 0.1
 searchFrame.BorderSizePixel = 0
@@ -200,7 +208,7 @@ local searchBox = Instance.new("TextBox")
 searchBox.Size = UDim2.new(1, -30, 1, 0)
 searchBox.Position = UDim2.new(0, 26, 0, 0)
 searchBox.Text = ""
-searchBox.PlaceholderText = "Search..."
+searchBox.PlaceholderText = "Search feature.."
 searchBox.PlaceholderColor3 = C.textDim2
 searchBox.TextColor3 = C.text
 searchBox.TextSize = 10
@@ -210,10 +218,20 @@ searchBox.TextXAlignment = Enum.TextXAlignment.Left
 searchBox.ClearTextOnFocus = false
 searchBox.Parent = searchFrame
 
--- CONTENT TITLE (sejajar search, di kanan)
+-- ACCENT LINE VERTIKAL ▎ (pemisah search & title)
+local vDivider = Instance.new("Frame")
+vDivider.Name = "TitleDivider"
+vDivider.Size = UDim2.new(0, 2, 0, 18)
+vDivider.Position = UDim2.new(0, 180, 0, ROW_Y + 4)
+vDivider.BackgroundColor3 = C.accent
+vDivider.BorderSizePixel = 0
+vDivider.Parent = mainFrame
+Instance.new("UICorner", vDivider).CornerRadius = UDim.new(1, 0)
+
+-- CONTENT TITLE (sejajar search, geser ke kanan buat kasih gap dari divider)
 local cTitle = Instance.new("TextLabel")
-cTitle.Size = UDim2.new(1, -180, 0, 26)
-cTitle.Position = UDim2.new(0, 180, 0, 44)
+cTitle.Size = UDim2.new(1, -200, 0, 26)
+cTitle.Position = UDim2.new(0, 190, 0, ROW_Y)
 cTitle.Text = "Combat"
 cTitle.TextColor3 = C.text
 cTitle.TextSize = 12
@@ -222,20 +240,24 @@ cTitle.TextXAlignment = Enum.TextXAlignment.Left
 cTitle.BackgroundTransparency = 1
 cTitle.Parent = mainFrame
 
-local tLine = Instance.new("Frame")
-tLine.Size = UDim2.new(0, 25, 0, 2)
-tLine.Position = UDim2.new(0, 180, 0, 68)
-tLine.BackgroundColor3 = C.accent
-tLine.BorderSizePixel = 0
-tLine.Parent = mainFrame
-Instance.new("UICorner", tLine).CornerRadius = UDim.new(1, 0)
+-- GARIS 2 (di bawah title, dari x=190 ke ujung kanan)
+local line2 = Instance.new("Frame")
+line2.Name = "TitleLine"
+line2.Size = UDim2.new(1, -200, 0, 1)
+line2.Position = UDim2.new(0, 190, 0, ROW_Y + 28)
+line2.BackgroundColor3 = C.stroke
+line2.BackgroundTransparency = 0.4
+line2.BorderSizePixel = 0
+line2.Parent = mainFrame
 
 -- ============================================================
 -- SIDEBAR
 -- ============================================================
+local SIDEBAR_Y = ROW_Y + 38  -- 82
+
 local sidebar = Instance.new("Frame")
-sidebar.Size = UDim2.new(0, 120, 1, -110)
-sidebar.Position = UDim2.new(0, 10, 0, 78)
+sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
+sidebar.Position = UDim2.new(0, 10, 0, SIDEBAR_Y)
 sidebar.BackgroundColor3 = C.bg2
 sidebar.BackgroundTransparency = 0.1
 sidebar.BorderSizePixel = 0
@@ -256,8 +278,8 @@ sPad.Parent = sidebar
 -- CONTENT PANEL
 -- ============================================================
 local contentPanel = Instance.new("Frame")
-contentPanel.Size = UDim2.new(1, -140, 1, -110)
-contentPanel.Position = UDim2.new(0, 130, 0, 78)
+contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10))
+contentPanel.Position = UDim2.new(0, 130, 0, SIDEBAR_Y)
 contentPanel.BackgroundColor3 = C.bg2
 contentPanel.BackgroundTransparency = 0.1
 contentPanel.BorderSizePixel = 0
@@ -274,7 +296,9 @@ S.GUI = {
     Sidebar = sidebar,
     Content = contentPanel,
     ContentTitle = cTitle,
-    TitleLine = tLine,
+    TitleLine = line2,        -- update ref
+    HeaderLine = line1,       -- baru
+    TitleDivider = vDivider,  -- baru
     MinBtn = minBtn,
-    CloseBtn = nil,  -- close dihapus
+    CloseBtn = nil,
 }
