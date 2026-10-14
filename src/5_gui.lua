@@ -1,13 +1,13 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub Style v10)
+  [5] GUI (Flow Hub Style v10.1)
   - Header: Flow [icon transparan] | Command An Army [− mint]
   - Garis 1 full width bawah header
   - Search "Search feature.."
   - Accent line ▎ vertikal pemisah search & title
-  - Garis 2 di bawah title (full width dari divider ke kanan)
+  - Garis 2 di bawah title
   - Sidebar & content panel TRANSPARAN
-  - Background panel 0.1
+  - Fix section ketinggalan (PaddingTop=0, VerticalAlignment=Top)
   - Fix ruang kosong di bawah title
 ============================================================
 ]]
@@ -94,7 +94,7 @@ mStroke.Transparency = 0.3
 mStroke.Parent = mainFrame
 
 -- ============================================================
--- HEADER — Flow [icon] | Command An Army [−]
+-- HEADER
 -- ============================================================
 local HEADER_H = 36
 
@@ -114,7 +114,6 @@ hFix.BackgroundTransparency = 0.1
 hFix.BorderSizePixel = 0
 hFix.Parent = header
 
--- TEXT "Flow"
 local lText = Instance.new("TextLabel")
 lText.Size = UDim2.new(0, 60, 1, 0)
 lText.Position = UDim2.new(0, 12, 0, 0)
@@ -126,7 +125,6 @@ lText.TextXAlignment = Enum.TextXAlignment.Left
 lText.BackgroundTransparency = 1
 lText.Parent = header
 
--- ICON (transparan, ga di kotak)
 local lIcon = Instance.new("ImageLabel")
 lIcon.Name = "LogoHeader"
 lIcon.Size = UDim2.new(0, 18, 0, 18)
@@ -138,7 +136,6 @@ lIcon.ImageColor3 = C.accent
 lIcon.ScaleType = Enum.ScaleType.Fit
 lIcon.Parent = header
 
--- SEPARATOR "|"
 local sep = Instance.new("Frame")
 sep.Size = UDim2.new(0, 1, 0, 18)
 sep.Position = UDim2.new(0, 78, 0.5, -9)
@@ -146,7 +143,6 @@ sep.BackgroundColor3 = C.stroke
 sep.BorderSizePixel = 0
 sep.Parent = header
 
--- GAME NAME
 local sub = Instance.new("TextLabel")
 sub.Size = UDim2.new(0, 200, 1, 0)
 sub.Position = UDim2.new(0, 88, 0, 0)
@@ -158,7 +154,6 @@ sub.TextXAlignment = Enum.TextXAlignment.Left
 sub.BackgroundTransparency = 1
 sub.Parent = header
 
--- MINIMIZE (mint)
 local minBtn = Instance.new("TextButton")
 minBtn.Size = UDim2.new(0, 22, 0, 22)
 minBtn.Position = UDim2.new(1, -30, 0.5, -11)
@@ -173,7 +168,7 @@ minBtn.Parent = header
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 4)
 
 -- ============================================================
--- GARIS 1 (full width, tepat di bawah header)
+-- GARIS 1
 -- ============================================================
 local line1 = Instance.new("Frame")
 line1.Name = "HeaderLine"
@@ -185,11 +180,10 @@ line1.BorderSizePixel = 0
 line1.Parent = mainFrame
 
 -- ============================================================
--- SEARCH + TITLE (sejajar) + ACCENT LINE ▎ + GARIS 2
+-- SEARCH + TITLE + ACCENT LINE + GARIS 2
 -- ============================================================
 local ROW_Y = HEADER_H + 8  -- 44
 
--- SEARCH FRAME
 local searchFrame = Instance.new("Frame")
 searchFrame.Size = UDim2.new(0, 160, 0, 26)
 searchFrame.Position = UDim2.new(0, 10, 0, ROW_Y)
@@ -221,7 +215,6 @@ searchBox.TextXAlignment = Enum.TextXAlignment.Left
 searchBox.ClearTextOnFocus = false
 searchBox.Parent = searchFrame
 
--- ACCENT LINE VERTIKAL ▎ (pemisah search & title)
 local vDivider = Instance.new("Frame")
 vDivider.Name = "TitleDivider"
 vDivider.Size = UDim2.new(0, 2, 0, 18)
@@ -231,7 +224,6 @@ vDivider.BorderSizePixel = 0
 vDivider.Parent = mainFrame
 Instance.new("UICorner", vDivider).CornerRadius = UDim.new(1, 0)
 
--- CONTENT TITLE (sejajar search, geser ke kanan buat gap dari divider)
 local cTitle = Instance.new("TextLabel")
 cTitle.Size = UDim2.new(1, -200, 0, 26)
 cTitle.Position = UDim2.new(0, 190, 0, ROW_Y)
@@ -243,7 +235,6 @@ cTitle.TextXAlignment = Enum.TextXAlignment.Left
 cTitle.BackgroundTransparency = 1
 cTitle.Parent = mainFrame
 
--- GARIS 2 (di bawah title, dari x=190 ke ujung kanan)
 local line2 = Instance.new("Frame")
 line2.Name = "TitleLine"
 line2.Size = UDim2.new(1, -200, 0, 1)
@@ -261,31 +252,33 @@ local SIDEBAR_Y = ROW_Y + 38  -- 82
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
 sidebar.Position = UDim2.new(0, 10, 0, SIDEBAR_Y)
-sidebar.BackgroundTransparency = 1  -- TRANSPARAN
+sidebar.BackgroundTransparency = 1
 sidebar.BorderSizePixel = 0
 sidebar.Parent = mainFrame
 
 local sLayout = Instance.new("UIListLayout")
 sLayout.Padding = UDim.new(0, 4)
 sLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+sLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+sLayout.SortOrder = Enum.SortOrder.LayoutOrder
 sLayout.Parent = sidebar
 
 local sPad = Instance.new("UIPadding")
-sPad.PaddingTop = UDim.new(0, 4)
+sPad.PaddingTop = UDim.new(0, 0)
 sPad.PaddingBottom = UDim.new(0, 4)
 sPad.Parent = sidebar
 
 -- ============================================================
--- CONTENT PANEL (TRANSPARAN)
+-- CONTENT PANEL (TRANSPARAN) + SCROLL
 -- ============================================================
 local contentPanel = Instance.new("Frame")
 contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10))
 contentPanel.Position = UDim2.new(0, 130, 0, SIDEBAR_Y)
-contentPanel.BackgroundTransparency = 1  -- TRANSPARAN
+contentPanel.BackgroundTransparency = 1
 contentPanel.BorderSizePixel = 0
+contentPanel.ClipsDescendants = true
 contentPanel.Parent = mainFrame
 
--- ScrollFrame buat content
 local contentScroll = Instance.new("ScrollingFrame")
 contentScroll.Name = "ContentScroll"
 contentScroll.Size = UDim2.new(1, 0, 1, 0)
@@ -294,17 +287,23 @@ contentScroll.BackgroundTransparency = 1
 contentScroll.BorderSizePixel = 0
 contentScroll.ScrollBarThickness = 3
 contentScroll.ScrollBarImageColor3 = C.accent
+contentScroll.ScrollBarImageTransparency = 0.5
 contentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 contentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 contentScroll.Parent = contentPanel
 
 local cLayout = Instance.new("UIListLayout")
-cLayout.Padding = UDim.new(0, 6)  -- gap antar section
+cLayout.Padding = UDim.new(0, 6)
 cLayout.SortOrder = Enum.SortOrder.LayoutOrder
+cLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+cLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 cLayout.Parent = contentScroll
 
 local cPad = Instance.new("UIPadding")
+cPad.PaddingTop = UDim.new(0, 0)
+cPad.PaddingLeft = UDim.new(0, 0)
 cPad.PaddingRight = UDim.new(0, 6)
+cPad.PaddingBottom = UDim.new(0, 6)
 cPad.Parent = contentScroll
 
 -- ============================================================
@@ -316,7 +315,7 @@ S.GUI = {
     MainFrame = mainFrame,
     Sidebar = sidebar,
     Content = contentPanel,
-    ContentScroll = contentScroll,   -- BARU: dipake 7_pages
+    ContentScroll = contentScroll,
     ContentTitle = cTitle,
     TitleLine = line2,
     HeaderLine = line1,
