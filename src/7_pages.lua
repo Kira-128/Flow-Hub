@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES (FLOW v9)
+  [7] PAGES (FLOW v10)
   - Tab sidebar accent line rapi (padding 6px, size 3px)
   - Print [FLOW]
 ============================================================
@@ -59,7 +59,6 @@ local function makeTab(iconId, name)
     btn.Parent = S.GUI.Sidebar
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
 
-    -- Accent line kiri (rapi — padding 6px, size 3px, rounded)
     local acc = Instance.new("Frame")
     acc.Name = "AccentLine"
     acc.Size = UDim2.new(0, 3, 0, 0)
@@ -351,4 +350,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[FLOW] Pages loaded - v9")
+print("[FLOW] Pages loaded - v10")
