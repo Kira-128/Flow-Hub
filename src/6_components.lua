@@ -1,8 +1,11 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub Style v3)
-  - Card dipisah-pisah (jarak 6px)
-  - Background transparan
+  [6] COMPONENTS (Flow Hub Style v4)
+  - Section = 1 card solid (bg3)
+  - Header + items nyatu dalam card yang sama
+  - Divider tipis 1px antar item
+  - Item transparan (no bg)
+  - Antara section ada gap 6px
 ============================================================
 ]]
 
@@ -12,17 +15,21 @@ local F = S.Theme.Font
 
 local Comp = {}
 
-local CARD_PADDING = 6
-local CARD_TRANSPARENCY = 0.15
+local CARD_PADDING = 6         -- gap antar section
+local CARD_BG = C.bg3          -- warna card solid
+local CARD_TRANS = 0.15        -- transparency card
+local DIVIDER_TRANS = 0.6      -- transparency divider antar item
+local ITEM_H = 34              -- tinggi 1 item
 
-local function recalcSection(content)
-    if not content or not content.Parent then return end
-    local section = content.Parent
-    if not section:IsA("Frame") then return end
+-- ============================================================
+-- HELPER: Recalculate section height
+-- ============================================================
+local function recalcSection(card, content)
+    if not card or not card.Parent then return end
 
     if not content.Visible then
-        content.Size = UDim2.new(1, 0, 0, 0)
-        section.Size = UDim2.new(1, -4, 0, 28)
+        -- collapsed: cuma header
+        card.Size = UDim2.new(1, 0, 0, 32)
         return
     end
 
@@ -30,39 +37,51 @@ local function recalcSection(content)
     local totalH = 0
     if layout then
         totalH = layout.AbsoluteContentSize.Y
-    else
-        for _, child in pairs(content:GetChildren()) do
-            if child:IsA("GuiObject") then
-                totalH = totalH + child.Size.Y.Offset + CARD_PADDING
-            end
-        end
     end
 
-    content.Size = UDim2.new(1, 0, 0, totalH)
-    section.Size = UDim2.new(1, -4, 0, 28 + totalH + CARD_PADDING)
+    -- header (32) + content + padding bawah (4)
+    card.Size = UDim2.new(1, 0, 0, 32 + totalH + 4)
 end
 
-local function hookAutoRecalc(content)
+-- ============================================================
+-- HELPER: Auto recalc saat child ditambahin
+-- ============================================================
+local function hookAutoRecalc(card, content)
     content.ChildAdded:Connect(function()
         task.defer(function()
             task.wait(0.02)
-            recalcSection(content)
+            recalcSection(card, content)
         end)
     end)
 end
 
+-- ============================================================
+-- HELPER: Bikin divider tipis
+-- ============================================================
+local function makeDivider(parent)
+    local d = Instance.new("Frame")
+    d.Name = "Divider"
+    d.Size = UDim2.new(1, -20, 0, 1)
+    d.BackgroundColor3 = C.stroke
+    d.BackgroundTransparency = DIVIDER_TRANS
+    d.BorderSizePixel = 0
+    d.Parent = parent
+    return d
+end
+
+-- ============================================================
+-- TOGGLE (item di dalam section, transparan)
+-- ============================================================
 function Comp.makeToggle(parent, name, default, callback)
     local f = Instance.new("Frame")
     f.Name = "Toggle_" .. name
-    f.Size = UDim2.new(1, 0, 0, 34)
-    f.BackgroundColor3 = C.bg3
-    f.BackgroundTransparency = CARD_TRANSPARENCY
+    f.Size = UDim2.new(1, 0, 0, ITEM_H)
+    f.BackgroundTransparency = 1
     f.BorderSizePixel = 0
     f.Parent = parent
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
 
     local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.7, 0, 1, 0)
+    l.Size = UDim2.new(0.7, -12, 1, 0)
     l.Position = UDim2.new(0, 12, 0, 0)
     l.Text = name
     l.TextColor3 = C.text
@@ -103,18 +122,19 @@ function Comp.makeToggle(parent, name, default, callback)
     end)
 end
 
+-- ============================================================
+-- INPUT (item transparan)
+-- ============================================================
 function Comp.makeInput(parent, name, default, callback)
     local f = Instance.new("Frame")
     f.Name = "Input_" .. name
-    f.Size = UDim2.new(1, 0, 0, 34)
-    f.BackgroundColor3 = C.bg3
-    f.BackgroundTransparency = CARD_TRANSPARENCY
+    f.Size = UDim2.new(1, 0, 0, ITEM_H)
+    f.BackgroundTransparency = 1
     f.BorderSizePixel = 0
     f.Parent = parent
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
 
     local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.55, 0, 1, 0)
+    l.Size = UDim2.new(0.55, -12, 1, 0)
     l.Position = UDim2.new(0, 12, 0, 0)
     l.Text = name
     l.TextColor3 = C.text
@@ -143,48 +163,52 @@ function Comp.makeInput(parent, name, default, callback)
     end)
 end
 
+-- ============================================================
+-- BUTTON (item transparan, hover subtle)
+-- ============================================================
 function Comp.makeButton(parent, name, callback)
     local b = Instance.new("TextButton")
     b.Name = "Button_" .. name
-    b.Size = UDim2.new(1, 0, 0, 34)
+    b.Size = UDim2.new(1, 0, 0, ITEM_H)
     b.Text = name
     b.TextColor3 = C.text
     b.TextSize = 11
     b.Font = F.norm
-    b.BackgroundColor3 = C.bg3
-    b.BackgroundTransparency = CARD_TRANSPARENCY
+    b.BackgroundTransparency = 1
     b.BorderSizePixel = 0
     b.AutoButtonColor = false
     b.Parent = parent
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
 
     b.MouseButton1Click:Connect(function()
         pcall(callback)
     end)
     b.MouseEnter:Connect(function()
         S.Services.TS:Create(b, TweenInfo.new(0.15), {
-            BackgroundColor3 = C.bg4
+            BackgroundColor3 = C.bg4,
+            BackgroundTransparency = 0.6
         }):Play()
     end)
     b.MouseLeave:Connect(function()
         S.Services.TS:Create(b, TweenInfo.new(0.15), {
-            BackgroundColor3 = C.bg3
+            BackgroundTransparency = 1
         }):Play()
     end)
 end
 
+-- ============================================================
+-- DROPDOWN (item transparan)
+-- ============================================================
 function Comp.makeDropdown(parent, name, options, callback)
     local f = Instance.new("Frame")
     f.Name = "Dropdown_" .. name
-    f.Size = UDim2.new(1, 0, 0, 34)
-    f.BackgroundColor3 = C.bg3
-    f.BackgroundTransparency = CARD_TRANSPARENCY
+    f.Size = UDim2.new(1, 0, 0, ITEM_H)
+    f.BackgroundTransparency = 1
     f.BorderSizePixel = 0
+    f.ClipsDescendants = false
     f.Parent = parent
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
 
     local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.5, 0, 1, 0)
+    l.Size = UDim2.new(0.5, -12, 1, 0)
     l.Position = UDim2.new(0, 12, 0, 0)
     l.Text = name
     l.TextColor3 = C.text
@@ -195,7 +219,7 @@ function Comp.makeDropdown(parent, name, options, callback)
     l.Parent = f
 
     local selected = Instance.new("TextLabel")
-    selected.Size = UDim2.new(0.45, 0, 1, 0)
+    selected.Size = UDim2.new(0.45, -12, 1, 0)
     selected.Position = UDim2.new(0.52, 0, 0, 0)
     selected.Text = options[1] or "None"
     selected.TextColor3 = C.accent
@@ -212,8 +236,8 @@ function Comp.makeDropdown(parent, name, options, callback)
     b.Parent = f
 
     local popup = Instance.new("Frame")
-    popup.Size = UDim2.new(1, -4, 0, 0)
-    popup.Position = UDim2.new(0, 0, 1, 2)
+    popup.Size = UDim2.new(1, -8, 0, 0)
+    popup.Position = UDim2.new(0, 4, 1, 4)
     popup.BackgroundColor3 = C.bg4
     popup.BorderSizePixel = 0
     popup.Visible = false
@@ -244,7 +268,7 @@ function Comp.makeDropdown(parent, name, options, callback)
             pcall(callback, opt)
         end)
     end
-    popup.Size = UDim2.new(1, -4, 0, #options * 28 + 4)
+    popup.Size = UDim2.new(1, -8, 0, #options * 28 + 4)
 
     local isOpen = false
     b.MouseButton1Click:Connect(function()
@@ -253,68 +277,80 @@ function Comp.makeDropdown(parent, name, options, callback)
     end)
 end
 
+-- ============================================================
+-- SECTION: 1 card solid (header + content nyatu)
+-- ============================================================
 function Comp.makeSection(parent, title, defaultOpen)
-    local section = Instance.new("Frame")
-    section.Name = "Section_" .. title
-    section.Size = UDim2.new(1, -4, 0, 28)
-    section.BackgroundTransparency = 1
-    section.Parent = parent
+    -- CARD UTAMA (yang solid)
+    local card = Instance.new("Frame")
+    card.Name = "Section_" .. title
+    card.Size = UDim2.new(1, 0, 0, 32)
+    card.BackgroundColor3 = CARD_BG
+    card.BackgroundTransparency = CARD_TRANS
+    card.BorderSizePixel = 0
+    card.ClipsDescendants = true  -- biar item ga keluar card
+    card.Parent = parent
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
 
-    local sectionLayout = Instance.new("UIListLayout")
-    sectionLayout.Padding = UDim.new(0, CARD_PADDING)
-    sectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    sectionLayout.Parent = section
-
+    -- HEADER (klik buat toggle)
     local header = Instance.new("TextButton")
     header.Name = "Header"
-    header.LayoutOrder = 1
-    header.Size = UDim2.new(1, 0, 0, 30)
+    header.Size = UDim2.new(1, 0, 0, 32)
+    header.Position = UDim2.new(0, 0, 0, 0)
     header.Text = ""
-    header.BackgroundColor3 = C.bg3
-    header.BackgroundTransparency = CARD_TRANSPARENCY
+    header.BackgroundTransparency = 1
     header.BorderSizePixel = 0
     header.AutoButtonColor = false
-    header.Parent = section
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 6)
+    header.ZIndex = 2
+    header.Parent = card
 
     local arrow = Instance.new("TextLabel")
     arrow.Size = UDim2.new(0, 16, 1, 0)
-    arrow.Position = UDim2.new(0, 8, 0, 0)
+    arrow.Position = UDim2.new(0, 10, 0, 0)
     arrow.Text = defaultOpen and "▼" or "▶"
     arrow.TextColor3 = C.accent
     arrow.TextSize = 10
     arrow.Font = F.bold
     arrow.BackgroundTransparency = 1
+    arrow.ZIndex = 3
     arrow.Parent = header
 
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -30, 1, 0)
-    titleLbl.Position = UDim2.new(0, 26, 0, 0)
+    titleLbl.Position = UDim2.new(0, 28, 0, 0)
     titleLbl.Text = title
     titleLbl.TextColor3 = C.text
     titleLbl.TextSize = 11
     titleLbl.Font = F.bold
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left
     titleLbl.BackgroundTransparency = 1
+    titleLbl.ZIndex = 3
     titleLbl.Parent = header
 
+    -- CONTENT (nyatu di dalam card, di bawah header)
     local content = Instance.new("Frame")
     content.Name = "Content"
-    content.LayoutOrder = 2
     content.Size = UDim2.new(1, 0, 0, 0)
+    content.Position = UDim2.new(0, 0, 0, 32)
     content.BackgroundTransparency = 1
     content.ClipsDescendants = false
     content.Visible = defaultOpen
-    content.Parent = section
+    content.ZIndex = 2
+    content.Parent = card
 
     local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, CARD_PADDING)
+    contentLayout.Padding = UDim.new(0, 0)  -- no gap, divider yang misahin
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = content
 
-    local isOpen = defaultOpen
+    -- Padding atas content
+    local cPad = Instance.new("UIPadding")
+    cPad.PaddingTop = UDim.new(0, 4)
+    cPad.PaddingBottom = UDim.new(0, 4)
+    cPad.Parent = content
 
-    hookAutoRecalc(content)
+    local isOpen = defaultOpen
+    hookAutoRecalc(card, content)
 
     header.MouseButton1Click:Connect(function()
         isOpen = not isOpen
@@ -322,16 +358,16 @@ function Comp.makeSection(parent, title, defaultOpen)
         content.Visible = isOpen
         task.defer(function()
             task.wait(0.02)
-            recalcSection(content)
+            recalcSection(card, content)
         end)
     end)
 
     task.defer(function()
         task.wait(0.15)
-        if defaultOpen then recalcSection(content) end
+        if defaultOpen then recalcSection(card, content) end
     end)
 
-    return content, function() recalcSection(content) end, section
+    return content, function() recalcSection(card, content) end, card, makeDivider
 end
 
 S.Comp = Comp
