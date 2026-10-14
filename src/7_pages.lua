@@ -1,10 +1,8 @@
 --[[
 ============================================================
-  [7] PAGES (FLOW v8)
-  - defaultOpen semua = false
-  - CloseBtn handler dihapus (fix error)
+  [7] PAGES (FLOW v9)
+  - Tab sidebar accent line rapi (padding 6px, size 3px)
   - Print [FLOW]
-  - Print [STHAIN] → [FLOW]
 ============================================================
 ]]
 
@@ -48,10 +46,6 @@ local function switchPage(name)
         p.Visible = (n == name)
     end
     S.GUI.ContentTitle.Text = name
-    S.GUI.TitleLine.Size = UDim2.new(0, 0, 0, 2)
-    S.Services.TS:Create(S.GUI.TitleLine, TweenInfo.new(0.25), {
-        Size = UDim2.new(0, 25, 0, 2)
-    }):Play()
 end
 
 local function makeTab(iconId, name)
@@ -59,14 +53,18 @@ local function makeTab(iconId, name)
     btn.Size = UDim2.new(1, -10, 0, 30)
     btn.Text = ""
     btn.BackgroundColor3 = C.bg2
+    btn.BackgroundTransparency = 1
     btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
     btn.Parent = S.GUI.Sidebar
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
 
+    -- Accent line kiri (rapi — padding 6px, size 3px, rounded)
     local acc = Instance.new("Frame")
-    acc.Size = UDim2.new(0, 2, 0, 0)
-    acc.Position = UDim2.new(0, 0, 0.5, 0)
+    acc.Name = "AccentLine"
+    acc.Size = UDim2.new(0, 3, 0, 0)
+    acc.Position = UDim2.new(0, 6, 0.5, 0)
+    acc.AnchorPoint = Vector2.new(0, 0.5)
     acc.BackgroundColor3 = C.accent
     acc.BorderSizePixel = 0
     acc.Visible = false
@@ -74,16 +72,16 @@ local function makeTab(iconId, name)
     Instance.new("UICorner", acc).CornerRadius = UDim.new(1, 0)
 
     local ic = Instance.new("ImageLabel")
-    ic.Size = UDim2.new(0, 13, 0, 13)
-    ic.Position = UDim2.new(0, 9, 0.5, -6)
+    ic.Size = UDim2.new(0, 14, 0, 14)
+    ic.Position = UDim2.new(0, 16, 0.5, -7)
     ic.BackgroundTransparency = 1
     ic.Image = iconId
     ic.ImageColor3 = C.textDim
     ic.Parent = btn
 
     local tx = Instance.new("TextLabel")
-    tx.Size = UDim2.new(1, -30, 1, 0)
-    tx.Position = UDim2.new(0, 28, 0, 0)
+    tx.Size = UDim2.new(1, -40, 1, 0)
+    tx.Position = UDim2.new(0, 38, 0, 0)
     tx.Text = name
     tx.TextColor3 = C.textDim
     tx.TextSize = 10
@@ -95,17 +93,19 @@ local function makeTab(iconId, name)
     btn.MouseButton1Click:Connect(function()
         for _, t in pairs(tabs) do
             t.btn.BackgroundColor3 = C.bg2
+            t.btn.BackgroundTransparency = 1
             t.icon.ImageColor3 = C.textDim
             t.text.TextColor3 = C.textDim
             t.bar.Visible = false
         end
         btn.BackgroundColor3 = C.bg3
+        btn.BackgroundTransparency = 0.3
         ic.ImageColor3 = C.accent
         tx.TextColor3 = C.text
         acc.Visible = true
-        acc.Size = UDim2.new(0, 2, 0, 0)
+        acc.Size = UDim2.new(0, 3, 0, 0)
         S.Services.TS:Create(acc, TweenInfo.new(0.2), {
-            Size = UDim2.new(0, 2, 0, 16)
+            Size = UDim2.new(0, 3, 0, 18)
         }):Play()
         switchPage(name)
     end)
@@ -298,7 +298,6 @@ local cfg = S.Config.Config
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave, function(v)
     cfg.AutoSave = v
-    -- Save dimatikan sementara
 end)
 
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
@@ -352,4 +351,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[FLOW] Pages loaded - FINAL v8")
+print("[FLOW] Pages loaded - v9")
