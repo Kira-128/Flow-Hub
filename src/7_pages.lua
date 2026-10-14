@@ -1,12 +1,10 @@
 --[[
 ============================================================
-  [7] PAGES (FINAL v7)
-  - Esp tab: Enable Esp (master) → Esp Setting → Esp Object
-  - Esp Setting: Show Distance, Show Health, Show Name
-  - Esp Object: Esp Supply, Esp Capture
-  - Settings: Auto Claim (2 tombol) + Auto Join Team (exclusive)
-  - Config: Auto Save (visual only) + Save Config Now + Delete Config
-  - Load Config Now DIHAPUS
+  [7] PAGES (FLOW v8)
+  - defaultOpen semua = false
+  - CloseBtn handler dihapus (fix error)
+  - Print [FLOW]
+  - Print [STHAIN] → [FLOW]
 ============================================================
 ]]
 
@@ -132,12 +130,12 @@ makeTab(I.config, "Config")
 -- ============================================================
 local CC = S.Config.Combat
 
-local autoCombat = S.Comp.makeSection(pages["Combat"], "Auto Combat", true)
+local autoCombat = S.Comp.makeSection(pages["Combat"], "Auto Combat", false)
 S.Comp.makeToggle(autoCombat, "Auto Attack (V)", CC.AutoAttack, function(v) CC.AutoAttack = v save() end)
 S.Comp.makeToggle(autoCombat, "Auto Rush (B)", CC.AutoRush, function(v) CC.AutoRush = v save() end)
 S.Comp.makeToggle(autoCombat, "Inf Ammo", CC.InfAmmo, function(v) CC.InfAmmo = v save() end)
 
-local pvpSection = S.Comp.makeSection(pages["Combat"], "PvP", true)
+local pvpSection = S.Comp.makeSection(pages["Combat"], "PvP", false)
 S.Comp.makeToggle(pvpSection, "Kill Aura", CC.KillAura, function(v) CC.KillAura = v save() end)
 S.Comp.makeToggle(pvpSection, "Target Lock", CC.TargetLock, function(v) CC.TargetLock = v save() end)
 S.Comp.makeToggle(pvpSection, "Auto Heal", CC.AutoHeal, function(v) CC.AutoHeal = v save() end)
@@ -154,15 +152,15 @@ S.Comp.makeInput(combatDelay, "Heal Threshold", CC.HealThreshold, function(v) CC
 -- ============================================================
 local VV = S.Config.Visual
 
-local enableEsp = S.Comp.makeSection(pages["Esp"], "Enable Esp", true)
+local enableEsp = S.Comp.makeSection(pages["Esp"], "Enable Esp", false)
 S.Comp.makeToggle(enableEsp, "Enable Esp", VV.Chams, function(v) VV.Chams = v save() end)
 
-local espSetting = S.Comp.makeSection(pages["Esp"], "Esp Setting", true)
+local espSetting = S.Comp.makeSection(pages["Esp"], "Esp Setting", false)
 S.Comp.makeToggle(espSetting, "Show Distance", VV.ESPShowDistance, function(v) VV.ESPShowDistance = v save() end)
 S.Comp.makeToggle(espSetting, "Show Health", VV.ESPHealth, function(v) VV.ESPHealth = v save() end)
 S.Comp.makeToggle(espSetting, "Show Name", VV.ESPName, function(v) VV.ESPName = v save() end)
 
-local espObject = S.Comp.makeSection(pages["Esp"], "Esp Object", true)
+local espObject = S.Comp.makeSection(pages["Esp"], "Esp Object", false)
 S.Comp.makeToggle(espObject, "Esp Supply", VV.ESPSupply, function(v) VV.ESPSupply = v save() end)
 S.Comp.makeToggle(espObject, "Esp Capture", VV.ESPCapture, function(v) VV.ESPCapture = v save() end)
 
@@ -171,12 +169,12 @@ S.Comp.makeToggle(espObject, "Esp Capture", VV.ESPCapture, function(v) VV.ESPCap
 -- ============================================================
 local TT = S.Config.Teleport
 
-local tpSetting = S.Comp.makeSection(pages["Teleport"], "Teleport Setting", true)
+local tpSetting = S.Comp.makeSection(pages["Teleport"], "Teleport Setting", false)
 S.Comp.makeToggle(tpSetting, "Enable Teleport", TT.Enabled, function(v) TT.Enabled = v save() end)
 S.Comp.makeInput(tpSetting, "Smooth Steps", TT.SmoothSteps, function(v) TT.SmoothSteps = v save() end)
 S.Comp.makeInput(tpSetting, "Offset Y", TT.OffsetY, function(v) TT.OffsetY = v save() end)
 
-local tpCapture = S.Comp.makeSection(pages["Teleport"], "Capture Point", true)
+local tpCapture = S.Comp.makeSection(pages["Teleport"], "Capture Point", false)
 S.Comp.makeButton(tpCapture, "TP to Nearest Capture", function()
     if _G.STHAIN.TeleportToNearestCapture then _G.STHAIN.TeleportToNearestCapture() end
 end)
@@ -190,7 +188,7 @@ S.Comp.makeButton(tpCapture, "TP to Point B", function()
     if _G.STHAIN.TeleportToPointB then _G.STHAIN.TeleportToPointB() end
 end)
 
-local tpSupply = S.Comp.makeSection(pages["Teleport"], "Supply", true)
+local tpSupply = S.Comp.makeSection(pages["Teleport"], "Supply", false)
 S.Comp.makeButton(tpSupply, "TP to Enemy Supply", function()
     if _G.STHAIN.TeleportToEnemySupply then _G.STHAIN.TeleportToEnemySupply() end
 end)
@@ -220,7 +218,7 @@ end)
 local MM = S.Config.Movement
 local XX = S.Config.Misc
 
-local utilityContent = S.Comp.makeSection(pages["Settings"], "Player Utility", true)
+local utilityContent = S.Comp.makeSection(pages["Settings"], "Player Utility", false)
 S.Comp.makeInput(utilityContent, "Speed Value", MM.WalkSpeed, function(v) MM.WalkSpeed = v save() end)
 S.Comp.makeToggle(utilityContent, "No Clip", MM.Noclip, function(v) MM.Noclip = v save() end)
 S.Comp.makeToggle(utilityContent, "Fly", MM.Fly, function(v) MM.Fly = v save() end)
@@ -297,13 +295,13 @@ end)
 -- ============================================================
 local cfg = S.Config.Config
 
-local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", true)
+local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave, function(v)
     cfg.AutoSave = v
     -- Save dimatikan sementara
 end)
 
-local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", true)
+local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 S.Comp.makeButton(configMgmt, "Save Config Now", function()
     if _G.STHAIN.SaveConfig then _G.STHAIN.SaveConfig() end
 end)
@@ -338,7 +336,7 @@ S.GUI.MainFrame.InputEnded:Connect(function(input)
 end)
 
 -- ============================================================
--- MINIMIZE / CLOSE / OPEN
+-- MINIMIZE / OPEN
 -- ============================================================
 switchPage("Combat")
 
@@ -346,7 +344,6 @@ S.GUI.MinBtn.MouseButton1Click:Connect(function()
     S.GUI.MainFrame.Visible = false
     S.GUI.FloatBtn.Visible = true
 end)
-S.GUI.CloseBtn.MouseButton1Click:Connect(function() S.GUI.Screen:Destroy() end)
 S.GUI.FloatBtn.MouseButton1Click:Connect(function()
     S.GUI.FloatBtn.Visible = false
     S.GUI.MainFrame.Visible = true
@@ -355,4 +352,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[STHAIN] Pages loaded - FINAL v7")
+print("[FLOW] Pages loaded - FINAL v8")
