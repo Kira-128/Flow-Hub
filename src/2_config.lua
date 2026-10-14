@@ -23,7 +23,7 @@ local Config = {
         Noclip    = false,
         InfJump   = false,
         WalkSpeed = 16,
-        HipHeight = 2,
+        HipHeight = 0,
         FlySpeed  = 60,
         JumpPower = 50,
     },
