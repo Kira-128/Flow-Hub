@@ -1,14 +1,14 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub Style v10.1)
+  [5] GUI (Flow Hub Style v10.2)
   - Header: Flow [icon transparan] | Command An Army [− mint]
   - Garis 1 full width bawah header
   - Search "Search feature.."
   - Accent line ▎ vertikal pemisah search & title
   - Garis 2 di bawah title
   - Sidebar & content panel TRANSPARAN
-  - Fix section ketinggalan (PaddingTop=0, VerticalAlignment=Top)
-  - Fix ruang kosong di bawah title
+  - ContentScroll = Frame biasa (container), bukan ScrollingFrame
+  - Fix ruang kosong (PaddingTop=0, VerticalAlignment=Top)
 ============================================================
 ]]
 
@@ -45,7 +45,7 @@ fIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
 fIcon.ScaleType = Enum.ScaleType.Fit
 fIcon.Parent = floatBtn
 
--- DRAG
+-- DRAG FLOAT BUTTON
 local dragging, dragStart, startPos
 floatBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
@@ -269,7 +269,7 @@ sPad.PaddingBottom = UDim.new(0, 4)
 sPad.Parent = sidebar
 
 -- ============================================================
--- CONTENT PANEL (TRANSPARAN) + SCROLL
+-- CONTENT PANEL (TRANSPARAN) + CONTAINER
 -- ============================================================
 local contentPanel = Instance.new("Frame")
 contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10))
@@ -279,32 +279,16 @@ contentPanel.BorderSizePixel = 0
 contentPanel.ClipsDescendants = true
 contentPanel.Parent = mainFrame
 
-local contentScroll = Instance.new("ScrollingFrame")
+-- CONTAINER (Frame biasa, bukan ScrollingFrame)
+-- 7_pages.lua bakal parent page (ScrollingFrame) ke sini
+local contentScroll = Instance.new("Frame")
 contentScroll.Name = "ContentScroll"
 contentScroll.Size = UDim2.new(1, 0, 1, 0)
 contentScroll.Position = UDim2.new(0, 0, 0, 0)
 contentScroll.BackgroundTransparency = 1
 contentScroll.BorderSizePixel = 0
-contentScroll.ScrollBarThickness = 3
-contentScroll.ScrollBarImageColor3 = C.accent
-contentScroll.ScrollBarImageTransparency = 0.5
-contentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-contentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+contentScroll.ClipsDescendants = true
 contentScroll.Parent = contentPanel
-
-local cLayout = Instance.new("UIListLayout")
-cLayout.Padding = UDim.new(0, 6)
-cLayout.SortOrder = Enum.SortOrder.LayoutOrder
-cLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-cLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-cLayout.Parent = contentScroll
-
-local cPad = Instance.new("UIPadding")
-cPad.PaddingTop = UDim.new(0, 0)
-cPad.PaddingLeft = UDim.new(0, 0)
-cPad.PaddingRight = UDim.new(0, 6)
-cPad.PaddingBottom = UDim.new(0, 6)
-cPad.Parent = contentScroll
 
 -- ============================================================
 -- EXPORT
@@ -320,6 +304,7 @@ S.GUI = {
     TitleLine = line2,
     HeaderLine = line1,
     TitleDivider = vDivider,
+    SearchBox = searchBox,
     MinBtn = minBtn,
     CloseBtn = nil,
 }
