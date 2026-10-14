@@ -1,6 +1,8 @@
 --[[
 ============================================================
-  [6] COMPONENTS (FIXED v2 - Auto Recalc Height)
+  [6] COMPONENTS (Flow Hub Style v3)
+  - Card dipisah-pisah (jarak 6px)
+  - Background transparan
 ============================================================
 ]]
 
@@ -10,7 +12,9 @@ local F = S.Theme.Font
 
 local Comp = {}
 
--- Recalc tinggi section berdasarkan AbsoluteContentSize dari UIListLayout
+local CARD_PADDING = 6
+local CARD_TRANSPARENCY = 0.15
+
 local function recalcSection(content)
     if not content or not content.Parent then return end
     local section = content.Parent
@@ -29,16 +33,15 @@ local function recalcSection(content)
     else
         for _, child in pairs(content:GetChildren()) do
             if child:IsA("GuiObject") then
-                totalH = totalH + child.Size.Y.Offset + 3
+                totalH = totalH + child.Size.Y.Offset + CARD_PADDING
             end
         end
     end
 
     content.Size = UDim2.new(1, 0, 0, totalH)
-    section.Size = UDim2.new(1, -4, 0, 28 + totalH + 3)
+    section.Size = UDim2.new(1, -4, 0, 28 + totalH + CARD_PADDING)
 end
 
--- Setiap komponen baru masuk ke content → otomatis recalc
 local function hookAutoRecalc(content)
     content.ChildAdded:Connect(function()
         task.defer(function()
@@ -48,32 +51,30 @@ local function hookAutoRecalc(content)
     end)
 end
 
--- ============================================================
--- TOGGLE
--- ============================================================
 function Comp.makeToggle(parent, name, default, callback)
     local f = Instance.new("Frame")
     f.Name = "Toggle_" .. name
-    f.Size = UDim2.new(1, -4, 0, 30)
+    f.Size = UDim2.new(1, 0, 0, 34)
     f.BackgroundColor3 = C.bg3
+    f.BackgroundTransparency = CARD_TRANSPARENCY
     f.BorderSizePixel = 0
     f.Parent = parent
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
 
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(0.7, 0, 1, 0)
-    l.Position = UDim2.new(0, 8, 0, 0)
+    l.Position = UDim2.new(0, 12, 0, 0)
     l.Text = name
     l.TextColor3 = C.text
-    l.TextSize = 10
+    l.TextSize = 11
     l.Font = F.norm
     l.TextXAlignment = Enum.TextXAlignment.Left
     l.BackgroundTransparency = 1
     l.Parent = f
 
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0, 28, 0, 16)
-    b.Position = UDim2.new(1, -36, 0.5, -8)
+    b.Size = UDim2.new(0, 30, 0, 18)
+    b.Position = UDim2.new(1, -42, 0.5, -9)
     b.Text = ""
     b.BackgroundColor3 = default and C.accent or C.bg4
     b.BorderSizePixel = 0
@@ -82,8 +83,8 @@ function Comp.makeToggle(parent, name, default, callback)
     Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
 
     local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 10, 0, 10)
-    knob.Position = default and UDim2.new(1, -12, 0.5, -5) or UDim2.new(0, 3, 0.5, -5)
+    knob.Size = UDim2.new(0, 12, 0, 12)
+    knob.Position = default and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
     knob.BackgroundColor3 = C.text
     knob.BorderSizePixel = 0
     knob.Parent = b
@@ -96,41 +97,39 @@ function Comp.makeToggle(parent, name, default, callback)
             BackgroundColor3 = state and C.accent or C.bg4
         }):Play()
         S.Services.TS:Create(knob, TweenInfo.new(0.2), {
-            Position = state and UDim2.new(1, -12, 0.5, -5) or UDim2.new(0, 3, 0.5, -5)
+            Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
         }):Play()
         pcall(callback, state)
     end)
 end
 
--- ============================================================
--- INPUT
--- ============================================================
 function Comp.makeInput(parent, name, default, callback)
     local f = Instance.new("Frame")
     f.Name = "Input_" .. name
-    f.Size = UDim2.new(1, -4, 0, 30)
+    f.Size = UDim2.new(1, 0, 0, 34)
     f.BackgroundColor3 = C.bg3
+    f.BackgroundTransparency = CARD_TRANSPARENCY
     f.BorderSizePixel = 0
     f.Parent = parent
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
 
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(0.55, 0, 1, 0)
-    l.Position = UDim2.new(0, 8, 0, 0)
+    l.Position = UDim2.new(0, 12, 0, 0)
     l.Text = name
     l.TextColor3 = C.text
-    l.TextSize = 10
+    l.TextSize = 11
     l.Font = F.norm
     l.TextXAlignment = Enum.TextXAlignment.Left
     l.BackgroundTransparency = 1
     l.Parent = f
 
     local b = Instance.new("TextBox")
-    b.Size = UDim2.new(0, 50, 0, 20)
-    b.Position = UDim2.new(1, -58, 0.5, -10)
+    b.Size = UDim2.new(0, 55, 0, 22)
+    b.Position = UDim2.new(1, -67, 0.5, -11)
     b.Text = tostring(default)
     b.TextColor3 = C.text
-    b.TextSize = 10
+    b.TextSize = 11
     b.Font = F.norm
     b.BackgroundColor3 = C.bg4
     b.BorderSizePixel = 0
@@ -144,52 +143,52 @@ function Comp.makeInput(parent, name, default, callback)
     end)
 end
 
--- ============================================================
--- BUTTON
--- ============================================================
 function Comp.makeButton(parent, name, callback)
     local b = Instance.new("TextButton")
     b.Name = "Button_" .. name
-    b.Size = UDim2.new(1, -4, 0, 30)
+    b.Size = UDim2.new(1, 0, 0, 34)
     b.Text = name
     b.TextColor3 = C.text
-    b.TextSize = 10
+    b.TextSize = 11
     b.Font = F.norm
     b.BackgroundColor3 = C.bg3
+    b.BackgroundTransparency = CARD_TRANSPARENCY
     b.BorderSizePixel = 0
     b.AutoButtonColor = false
     b.Parent = parent
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
 
     b.MouseButton1Click:Connect(function()
         pcall(callback)
     end)
     b.MouseEnter:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = C.bg4}):Play()
+        S.Services.TS:Create(b, TweenInfo.new(0.15), {
+            BackgroundColor3 = C.bg4
+        }):Play()
     end)
     b.MouseLeave:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = C.bg3}):Play()
+        S.Services.TS:Create(b, TweenInfo.new(0.15), {
+            BackgroundColor3 = C.bg3
+        }):Play()
     end)
 end
 
--- ============================================================
--- DROPDOWN
--- ============================================================
 function Comp.makeDropdown(parent, name, options, callback)
     local f = Instance.new("Frame")
     f.Name = "Dropdown_" .. name
-    f.Size = UDim2.new(1, -4, 0, 30)
+    f.Size = UDim2.new(1, 0, 0, 34)
     f.BackgroundColor3 = C.bg3
+    f.BackgroundTransparency = CARD_TRANSPARENCY
     f.BorderSizePixel = 0
     f.Parent = parent
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 6)
 
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(0.5, 0, 1, 0)
-    l.Position = UDim2.new(0, 8, 0, 0)
+    l.Position = UDim2.new(0, 12, 0, 0)
     l.Text = name
     l.TextColor3 = C.text
-    l.TextSize = 10
+    l.TextSize = 11
     l.Font = F.norm
     l.TextXAlignment = Enum.TextXAlignment.Left
     l.BackgroundTransparency = 1
@@ -200,7 +199,7 @@ function Comp.makeDropdown(parent, name, options, callback)
     selected.Position = UDim2.new(0.52, 0, 0, 0)
     selected.Text = options[1] or "None"
     selected.TextColor3 = C.accent
-    selected.TextSize = 10
+    selected.TextSize = 11
     selected.Font = F.norm
     selected.TextXAlignment = Enum.TextXAlignment.Right
     selected.BackgroundTransparency = 1
@@ -228,10 +227,10 @@ function Comp.makeDropdown(parent, name, options, callback)
 
     for i, opt in ipairs(options) do
         local optBtn = Instance.new("TextButton")
-        optBtn.Size = UDim2.new(1, -8, 0, 24)
+        optBtn.Size = UDim2.new(1, -8, 0, 26)
         optBtn.Text = opt
         optBtn.TextColor3 = C.text
-        optBtn.TextSize = 10
+        optBtn.TextSize = 11
         optBtn.Font = F.norm
         optBtn.BackgroundColor3 = C.bg4
         optBtn.BorderSizePixel = 0
@@ -245,7 +244,7 @@ function Comp.makeDropdown(parent, name, options, callback)
             pcall(callback, opt)
         end)
     end
-    popup.Size = UDim2.new(1, -4, 0, #options * 26 + 4)
+    popup.Size = UDim2.new(1, -4, 0, #options * 28 + 4)
 
     local isOpen = false
     b.MouseButton1Click:Connect(function()
@@ -254,9 +253,6 @@ function Comp.makeDropdown(parent, name, options, callback)
     end)
 end
 
--- ============================================================
--- SECTION
--- ============================================================
 function Comp.makeSection(parent, title, defaultOpen)
     local section = Instance.new("Frame")
     section.Name = "Section_" .. title
@@ -265,24 +261,25 @@ function Comp.makeSection(parent, title, defaultOpen)
     section.Parent = parent
 
     local sectionLayout = Instance.new("UIListLayout")
-    sectionLayout.Padding = UDim.new(0, 3)
+    sectionLayout.Padding = UDim.new(0, CARD_PADDING)
     sectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
     sectionLayout.Parent = section
 
     local header = Instance.new("TextButton")
     header.Name = "Header"
     header.LayoutOrder = 1
-    header.Size = UDim2.new(1, 0, 0, 28)
+    header.Size = UDim2.new(1, 0, 0, 30)
     header.Text = ""
-    header.BackgroundColor3 = C.bg2
+    header.BackgroundColor3 = C.bg3
+    header.BackgroundTransparency = CARD_TRANSPARENCY
     header.BorderSizePixel = 0
     header.AutoButtonColor = false
     header.Parent = section
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 6)
 
     local arrow = Instance.new("TextLabel")
     arrow.Size = UDim2.new(0, 16, 1, 0)
-    arrow.Position = UDim2.new(0, 6, 0, 0)
+    arrow.Position = UDim2.new(0, 8, 0, 0)
     arrow.Text = defaultOpen and "▼" or "▶"
     arrow.TextColor3 = C.accent
     arrow.TextSize = 10
@@ -292,7 +289,7 @@ function Comp.makeSection(parent, title, defaultOpen)
 
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -30, 1, 0)
-    titleLbl.Position = UDim2.new(0, 24, 0, 0)
+    titleLbl.Position = UDim2.new(0, 26, 0, 0)
     titleLbl.Text = title
     titleLbl.TextColor3 = C.text
     titleLbl.TextSize = 11
@@ -311,7 +308,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     content.Parent = section
 
     local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 3)
+    contentLayout.Padding = UDim.new(0, CARD_PADDING)
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = content
 
