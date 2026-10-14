@@ -1,7 +1,7 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub Style v4)
-  Section = 1 kotak, item nyatu dengan divider
+  [6] COMPONENTS (Flow v5)
+  Section = 1 kotak solid, item nyatu dengan divider tipis
 ============================================================
 ]]
 
@@ -11,12 +11,10 @@ local F = S.Theme.Font
 
 local Comp = {}
 
-local SECTION_BG = C.bg2
-local SECTION_TRANSP = 0.15
 local DIVIDER_COLOR = C.stroke
 local DIVIDER_TRANSP = 0.5
 
--- Recalc tinggi section
+-- Recalc section
 local function recalcSection(content)
     if not content or not content.Parent then return end
     local section = content.Parent
@@ -24,7 +22,7 @@ local function recalcSection(content)
 
     if not content.Visible then
         content.Size = UDim2.new(1, 0, 0, 0)
-        section.Size = UDim2.new(1, -4, 0, 34)
+        section.Size = UDim2.new(1, -4, 0, 36)
         return
     end
 
@@ -34,14 +32,14 @@ local function recalcSection(content)
         totalH = layout.AbsoluteContentSize.Y
     else
         for _, child in pairs(content:GetChildren()) do
-            if child:IsA("GuiObject") and not child:IsA("UIListLayout") then
+            if child:IsA("GuiObject") then
                 totalH = totalH + child.Size.Y.Offset
             end
         end
     end
 
     content.Size = UDim2.new(1, 0, 0, totalH)
-    section.Size = UDim2.new(1, -4, 0, 34 + totalH)
+    section.Size = UDim2.new(1, -4, 0, 36 + totalH)
 end
 
 local function hookAutoRecalc(content)
@@ -53,12 +51,13 @@ local function hookAutoRecalc(content)
     end)
 end
 
--- Helper: bikin divider tipis di bawah item
-local function addDivider(parent)
+-- Divider tipis di bawah item
+local function addDivider(parent, isLast)
+    if isLast then return end
     local d = Instance.new("Frame")
     d.Name = "Divider"
-    d.Size = UDim2.new(1, -20, 0, 1)
-    d.Position = UDim2.new(0, 10, 1, -1)
+    d.Size = UDim2.new(1, -24, 0, 1)
+    d.Position = UDim2.new(0, 12, 1, -1)
     d.BackgroundColor3 = DIVIDER_COLOR
     d.BackgroundTransparency = DIVIDER_TRANSP
     d.BorderSizePixel = 0
@@ -183,7 +182,7 @@ function Comp.makeButton(parent, name, callback)
     b.MouseEnter:Connect(function()
         S.Services.TS:Create(b, TweenInfo.new(0.15), {
             BackgroundColor3 = C.bg4,
-            BackgroundTransparency = 0.5
+            BackgroundTransparency = 0.7
         }):Play()
     end)
     b.MouseLeave:Connect(function()
@@ -283,9 +282,9 @@ end
 function Comp.makeSection(parent, title, defaultOpen)
     local section = Instance.new("Frame")
     section.Name = "Section_" .. title
-    section.Size = UDim2.new(1, -4, 0, 34)
-    section.BackgroundColor3 = SECTION_BG
-    section.BackgroundTransparency = SECTION_TRANSP
+    section.Size = UDim2.new(1, -4, 0, 36)
+    section.BackgroundColor3 = C.bg2
+    section.BackgroundTransparency = 0.15
     section.BorderSizePixel = 0
     section.Parent = parent
     Instance.new("UICorner", section).CornerRadius = UDim.new(0, 8)
@@ -293,7 +292,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     local stroke = Instance.new("UIStroke")
     stroke.Color = DIVIDER_COLOR
     stroke.Thickness = 1
-    stroke.Transparency = 0.5
+    stroke.Transparency = 0.6
     stroke.Parent = section
 
     local sectionLayout = Instance.new("UIListLayout")
@@ -305,18 +304,18 @@ function Comp.makeSection(parent, title, defaultOpen)
     local header = Instance.new("TextButton")
     header.Name = "Header"
     header.LayoutOrder = 1
-    header.Size = UDim2.new(1, 0, 0, 34)
+    header.Size = UDim2.new(1, 0, 0, 36)
     header.Text = ""
     header.BackgroundTransparency = 1
     header.BorderSizePixel = 0
     header.AutoButtonColor = false
     header.Parent = section
 
-    -- Accent line kiri
+    -- Accent line kiri section
     local accLine = Instance.new("Frame")
     accLine.Name = "AccentLine"
-    accLine.Size = UDim2.new(0, 3, 0, 18)
-    accLine.Position = UDim2.new(0, 10, 0.5, -9)
+    accLine.Size = UDim2.new(0, 3, 0, 16)
+    accLine.Position = UDim2.new(0, 12, 0.5, -8)
     accLine.BackgroundColor3 = C.accent
     accLine.BorderSizePixel = 0
     accLine.Parent = header
@@ -336,7 +335,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     -- Title
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -80, 1, 0)
-    titleLbl.Position = UDim2.new(0, 22, 0, 0)
+    titleLbl.Position = UDim2.new(0, 24, 0, 0)
     titleLbl.Text = title
     titleLbl.TextColor3 = C.text
     titleLbl.TextSize = 12
