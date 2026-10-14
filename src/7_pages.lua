@@ -1,7 +1,9 @@
 --[[
 ============================================================
-  [7] PAGES (FLOW v9)
-  - Tab sidebar accent line rapi (padding 6px, size 3px)
+  [7] PAGES (FLOW v11)
+  - Fix: page parent ke ContentScroll, no offset Y
+  - Fix: Auto Join Team exclusive toggle
+  - Tab sidebar accent line rapi
   - Print [FLOW]
 ============================================================
 ]]
@@ -20,22 +22,37 @@ local function save()
     end
 end
 
+-- ============================================================
+-- CREATE PAGE
+-- ============================================================
 local function createPage(name)
     local page = Instance.new("ScrollingFrame")
     page.Name = "Page_" .. name
-    page.Size = UDim2.new(1, -18, 1, -38)
-    page.Position = UDim2.new(0, 9, 0, 34)
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.Position = UDim2.new(0, 0, 0, 0)
     page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
     page.ScrollBarThickness = 3
     page.ScrollBarImageColor3 = C.accent
+    page.ScrollBarImageTransparency = 0.5
     page.CanvasSize = UDim2.new(0, 0, 0, 0)
     page.AutomaticCanvasSize = Enum.AutomaticSize.Y
     page.Visible = false
-    page.Parent = S.GUI.Content
+    page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
     layout.Padding = UDim.new(0, 4)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    layout.VerticalAlignment = Enum.VerticalAlignment.Top
     layout.Parent = page
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingTop = UDim.new(0, 0)
+    pad.PaddingLeft = UDim.new(0, 0)
+    pad.PaddingRight = UDim.new(0, 6)
+    pad.PaddingBottom = UDim.new(0, 6)
+    pad.Parent = page
 
     pages[name] = page
     return page
@@ -48,6 +65,9 @@ local function switchPage(name)
     S.GUI.ContentTitle.Text = name
 end
 
+-- ============================================================
+-- MAKE TAB
+-- ============================================================
 local function makeTab(iconId, name)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 30)
@@ -59,7 +79,6 @@ local function makeTab(iconId, name)
     btn.Parent = S.GUI.Sidebar
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
 
-    -- Accent line kiri (rapi — padding 6px, size 3px, rounded)
     local acc = Instance.new("Frame")
     acc.Name = "AccentLine"
     acc.Size = UDim2.new(0, 3, 0, 0)
@@ -246,19 +265,32 @@ S.Comp.makeButton(autoClaimContent, "Claim All Code Now", function()
     if _G.STHAIN.RedeemAllCodes then _G.STHAIN.RedeemAllCodes() end
 end)
 
+-- ============================================================
+-- AUTO JOIN TEAM (EXCLUSIVE)
+-- ============================================================
 local autoJoinContent = S.Comp.makeSection(pages["Settings"], "Auto Join Team", false)
-S.Comp.makeToggle(autoJoinContent, "Auto Join Defenders", false, function(v)
+
+local setJoinDefender, setJoinAttacker
+
+local initialTeam = XX.AutoJoinTeam or "none"
+local initDef = (initialTeam == "defender")
+local initAtt = (initialTeam == "attacker")
+
+setJoinDefender = S.Comp.makeToggle(autoJoinContent, "Auto Join Defenders", initDef, function(v)
     if v then
         XX.AutoJoinTeam = "defender"
+        if setJoinAttacker then setJoinAttacker(false, true) end
         save()
     elseif XX.AutoJoinTeam == "defender" then
         XX.AutoJoinTeam = "none"
         save()
     end
 end)
-S.Comp.makeToggle(autoJoinContent, "Auto Join Attackers", false, function(v)
+
+setJoinAttacker = S.Comp.makeToggle(autoJoinContent, "Auto Join Attackers", initAtt, function(v)
     if v then
         XX.AutoJoinTeam = "attacker"
+        if setJoinDefender then setJoinDefender(false, true) end
         save()
     elseif XX.AutoJoinTeam == "attacker" then
         XX.AutoJoinTeam = "none"
@@ -266,6 +298,9 @@ S.Comp.makeToggle(autoJoinContent, "Auto Join Attackers", false, function(v)
     end
 end)
 
+-- ============================================================
+-- SERVER
+-- ============================================================
 local serverContent = S.Comp.makeSection(pages["Settings"], "Server", false)
 S.Comp.makeButton(serverContent, "Rejoin Server", function()
     pcall(function()
@@ -351,4 +386,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[FLOW] Pages loaded - v9")
+print("[FLOW] Pages loaded - v11")
