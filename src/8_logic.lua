@@ -1,12 +1,13 @@
 --[[
 ============================================================
-  [8] LOGIC LOOPS (FLOW v8)
-  - ESP: setting langsung aktif tanpa OFF-ON Enable Esp
-  - Aimbot: smooth + prediction + team check
-  - TP: godmode biar ga kena damage
-  - Auto Join Team: path fix (Root.PickTeam)
-  - Claim Quest: pakai firesignal + filter visible
-  - Redeem Code: path fix + firesignal
+  [8] LOGIC LOOPS (FLOW v9)
+  - Auto Join Team: PlayerGui.PickTeam
+  - Claim Quest: PlayerGui.Interactable.QuestUI
+  - Redeem Code: PlayerGui.Interactable.CodeUI
+  - ESP Object: destroy langsung pas OFF
+  - ESP Setting: langsung aktif tanpa OFF-ON
+  - TP Godmode: restore ke MaxHealth + delay
+  - Aimbot: smooth + prediction
 ============================================================
 ]]
 
@@ -33,7 +34,7 @@ local State = {
 }
 
 -- ============================================================
--- GODMODE (buat TP aman)
+-- GODMODE (buat TP aman) — restore ke MaxHealth
 -- ============================================================
 local function godmodeOn()
     local char = Utils.getChar()
@@ -46,17 +47,23 @@ local function godmodeOn()
         Health = hum.Health,
     }
     
+    local GOD_HP = 1000000
+    
     pcall(function()
-        hum.MaxHealth = math.huge
-        hum.Health = math.huge
+        hum.MaxHealth = GOD_HP
+        hum.Health = GOD_HP
     end)
     
     local lockConn
-    lockConn = Run.Heartbeat:Connect(function()
+    lockConn = Run.Stepped:Connect(function()
         if hum and hum.Parent then
             pcall(function()
-                hum.MaxHealth = math.huge
-                hum.Health = math.huge
+                if hum.MaxHealth < GOD_HP then
+                    hum.MaxHealth = GOD_HP
+                end
+                if hum.Health < GOD_HP then
+                    hum.Health = GOD_HP
+                end
             end)
         end
     end)
@@ -67,7 +74,8 @@ local function godmodeOn()
             if hum and hum.Parent then
                 pcall(function()
                     hum.MaxHealth = original.MaxHealth
-                    hum.Health = math.min(original.Health, original.MaxHealth)
+                    -- Restore ke HP penuh
+                    hum.Health = original.MaxHealth
                 end)
             end
         end
@@ -290,7 +298,7 @@ local aimLock, aimLostAt, aimSmoothCF = nil, 0, nil
 
 local function aimAlive(p)
     if not p.Character then return false end
-    local hum = p.Character:FindFirstChild("Humanoid")
+    local hum = p.Character:FindFirstChildOfClass("Humanoid")
     if not hum or hum.Health <= 0 then return false end
     return p.Character:FindFirstChild("Head") ~= nil
 end
@@ -469,7 +477,9 @@ end
 local function cleanupESP()
     for _, objs in pairs(espCache) do
         for _, obj in pairs(objs) do
-            if obj then pcall(function() obj:Destroy() end) end
+            if obj and typeof(obj) == "Instance" then 
+                pcall(function() obj:Destroy() end) 
+            end
         end
     end
     espCache = {}
@@ -499,12 +509,10 @@ task.spawn(function()
                 local isTeam = isTeammate(model)
                 local markerColor = isTeam and COLOR_TEAM or COLOR_ENEMY
                 
-                -- Init cache kalau belum ada
                 if not espCache[model] then
                     espCache[model] = {}
                     espCache[model].isTeam = isTeam
                     
-                    -- Chams (Highlight)
                     local hl = Instance.new("Highlight")
                     hl.Name = "CA_ESP_HL"
                     hl.FillColor = markerColor
@@ -551,7 +559,7 @@ task.spawn(function()
                     espCache[model].infoLbl = nil
                 end
                 
-                -- Update warna Highlight (kalau team berubah)
+                -- Update warna Highlight
                 local cachedTeam = espCache[model].isTeam
                 if cachedTeam ~= isTeam and espCache[model].hl then
                     espCache[model].hl.FillColor = markerColor
@@ -577,20 +585,21 @@ task.spawn(function()
             end
             
             -- ============================================
-            -- ESP OBJECT (Supply + Capture)
+            -- ESP OBJECT (Supply + Capture) — destroy langsung pas OFF
             -- ============================================
             local activeMap = workspace:FindFirstChild("ActiveMap")
             if activeMap then
                 for _, mapChild in pairs(activeMap:GetChildren()) do
-                    if mapChild:IsA("Folder") or mapChild:IsA("Model") then
-                        local interactable = mapChild:FindFirstChild("Interactable")
-                        if interactable then
-                            if Config.Visual.ESPSupply then
-                                local suppliesFolder = interactable:FindFirstChild("Supplies")
-                                if suppliesFolder then
-                                    for _, obj in pairs(suppliesFolder:GetChildren()) do
-                                        if obj:IsA("Model") and not espCache[obj] then
-                                            espCache[obj] = {}
+                    local inter = mapChild:FindFirstChild("Interactable")
+                    if inter then
+                        -- SUPPLY
+                        local supplies = inter:FindFirstChild("Supplies")
+                        if supplies then
+                            for _, obj in pairs(supplies:GetChildren()) do
+                                if obj:IsA("Model") then
+                                    if Config.Visual.ESPSupply then
+                                        if not espCache[obj] then
+                                            espCache[obj] = { isObject = true }
                                             local hl = Instance.new("Highlight")
                                             hl.Name = "CA_ESP_Supply"
                                             hl.FillColor = COLOR_SUPPLY
@@ -600,15 +609,27 @@ task.spawn(function()
                                             hl.Parent = espGuiParent
                                             espCache[obj].hl = hl
                                         end
+                                    else
+                                        -- OFF → destroy langsung
+                                        if espCache[obj] and espCache[obj].isObject then
+                                            if espCache[obj].hl then
+                                                pcall(function() espCache[obj].hl:Destroy() end)
+                                            end
+                                            espCache[obj] = nil
+                                        end
                                     end
                                 end
                             end
-                            if Config.Visual.ESPCapture then
-                                local pointsFolder = interactable:FindFirstChild("Points")
-                                if pointsFolder then
-                                    for _, obj in pairs(pointsFolder:GetChildren()) do
-                                        if obj:IsA("Model") and not espCache[obj] then
-                                            espCache[obj] = {}
+                        end
+                        
+                        -- CAPTURE
+                        local points = inter:FindFirstChild("Points")
+                        if points then
+                            for _, obj in pairs(points:GetChildren()) do
+                                if obj:IsA("Model") then
+                                    if Config.Visual.ESPCapture then
+                                        if not espCache[obj] then
+                                            espCache[obj] = { isObject = true }
                                             local hl = Instance.new("Highlight")
                                             hl.Name = "CA_ESP_Capture"
                                             hl.FillColor = COLOR_SUPPLY
@@ -618,6 +639,13 @@ task.spawn(function()
                                             hl.Parent = espGuiParent
                                             espCache[obj].hl = hl
                                         end
+                                    else
+                                        if espCache[obj] and espCache[obj].isObject then
+                                            if espCache[obj].hl then
+                                                pcall(function() espCache[obj].hl:Destroy() end)
+                                            end
+                                            espCache[obj] = nil
+                                        end
                                     end
                                 end
                             end
@@ -626,11 +654,13 @@ task.spawn(function()
                 end
             end
             
-            -- Cleanup ESP objects yang parent hilang
+            -- Cleanup object yang parent hilang
             for model, objs in pairs(espCache) do
                 if not model.Parent then
                     for _, obj in pairs(objs) do
-                        if obj then pcall(function() obj:Destroy() end) end
+                        if obj and typeof(obj) == "Instance" then 
+                            pcall(function() obj:Destroy() end) 
+                        end
                     end
                     espCache[model] = nil
                 end
@@ -757,58 +787,67 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO CLAIM QUEST (FIXED)
+-- AUTO CLAIM QUEST (FIXED: PlayerGui.Interactable)
 -- ============================================================
 function _G.STHAIN.ClaimQuests()
     local PG = LP:FindFirstChild("PlayerGui")
     if not PG then return 0 end
     
-    -- Buka Quest UI (pakai HUD.RightBar.Quest)
-    local root = PG:FindFirstChild("Root")
-    if root then
-        local hud = root:FindFirstChild("HUD")
-        if hud then
-            local rightBar = hud:FindFirstChild("RightBar")
-            if rightBar then
-                local questBtn = rightBar:FindFirstChild("Quest")
-                if questBtn then
-                    pcall(function()
-                        if firesignal then
-                            firesignal(questBtn.MouseButton1Click)
-                        else
-                            questBtn:Activate()
-                        end
-                    end)
-                    task.wait(0.8)
-                end
+    -- Buka Quest UI via HUD.RightBar.Quest
+    local hud = PG:FindFirstChild("HUD")
+    if hud then
+        local rightBar = hud:FindFirstChild("RightBar")
+        if rightBar then
+            local questBtn = rightBar:FindFirstChild("Quest")
+            if questBtn then
+                pcall(function()
+                    if firesignal then
+                        firesignal(questBtn.MouseButton1Click)
+                    else
+                        questBtn:Activate()
+                    end
+                end)
+                print("[FLOW][Quest] Buka Quest UI")
+                task.wait(1.2)
             end
         end
     end
     
-    local interactable = root and root:FindFirstChild("Interactable")
-    if not interactable then return 0 end
+    -- Interactable LANGSUNG di PlayerGui
+    local interactable = PG:FindFirstChild("Interactable")
+    if not interactable then 
+        warn("[FLOW][Quest] Interactable ga ketemu")
+        return 0 
+    end
+    
     local questUI = interactable:FindFirstChild("QuestUI")
-    if not questUI then return 0 end
+    if not questUI then 
+        warn("[FLOW][Quest] QuestUI ga ketemu")
+        return 0 
+    end
     
     local claimed = 0
+    local found = 0
+    
     local function scanClaim(r, depth)
         if depth > 10 then return end
         for _, c in pairs(r:GetChildren()) do
-            if (c:IsA("ImageButton") or c:IsA("TextButton"))
-               and c.Name == "Claim"
-               and c.Visible
-               and c.Parent
-               and not c.Parent.Name:find("Template") then
-                pcall(function()
-                    if firesignal then
-                        firesignal(c.MouseButton1Click)
-                    else
-                        c:Activate()
+            if c.Name == "Claim" and (c:IsA("ImageButton") or c:IsA("TextButton")) then
+                found = found + 1
+                if c.Visible then
+                    local ok = pcall(function()
+                        if firesignal then
+                            firesignal(c.MouseButton1Click)
+                        elseif c.Activate then
+                            c:Activate()
+                        end
+                    end)
+                    if ok then
+                        claimed = claimed + 1
+                        print(("[FLOW][Quest] Claim: %s"):format(c.Parent.Parent.Name))
+                        task.wait(0.5)
                     end
-                end)
-                claimed = claimed + 1
-                print(("[FLOW] Claim: %s"):format(c.Parent.Parent.Name))
-                task.wait(0.4)
+                end
             end
             if c:IsA("Frame") or c:IsA("ScrollingFrame") or c:IsA("CanvasGroup") then
                 scanClaim(c, depth + 1)
@@ -819,6 +858,7 @@ function _G.STHAIN.ClaimQuests()
     local list = questUI:FindFirstChild("List")
     if list then scanClaim(list, 0) end
     
+    -- Battlepass juga
     local invUI = interactable:FindFirstChild("InventoryUI")
     if invUI then
         local bpTab = invUI:FindFirstChild("BattlepassTab")
@@ -828,31 +868,31 @@ function _G.STHAIN.ClaimQuests()
         end
     end
     
-    -- Tutup Quest UI
+    print(("[FLOW][Quest] Found: %d | Claimed: %d"):format(found, claimed))
+    
     task.wait(0.3)
     local exitBtn = questUI:FindFirstChild("Exit")
     if exitBtn then
         pcall(function()
             if firesignal then
                 firesignal(exitBtn.MouseButton1Click)
-            else
+            elseif exitBtn.Activate then
                 exitBtn:Activate()
             end
         end)
     end
     
-    print(("[FLOW] Claim Quest done: %d"):format(claimed))
     return claimed
 end
 
 -- ============================================================
--- AUTO REDEEM CODE (FIXED)
+-- AUTO REDEEM CODE (FIXED: PlayerGui.Interactable)
 -- ============================================================
 local function ambilCode()
     local url = "https://www.radiotimes.com/technology/gaming/command-an-army-codes/"
     local ok, html = pcall(game.HttpGet, game, url)
     if not ok or not html or #html < 500 then
-        warn("[FLOW] Fetch code gagal")
+        warn("[FLOW][Code] Fetch gagal")
         return {}
     end
     local startPos = html:find("Active codes")
@@ -869,71 +909,77 @@ local function ambilCode()
             table.insert(codes, code)
         end
     end
-    print(("[FLOW] Dapet %d code"):format(#codes))
+    print(("[FLOW][Code] Dapet %d code"):format(#codes))
     return codes
 end
 
 local function cariCodeUI()
     local PG = LP:FindFirstChild("PlayerGui")
     if not PG then return nil, nil end
-    local root = PG:FindFirstChild("Root")
-    if not root then return nil, nil end
-    local interactable = root:FindFirstChild("Interactable")
+    
+    -- Interactable LANGSUNG di PlayerGui
+    local interactable = PG:FindFirstChild("Interactable")
     if not interactable then return nil, nil end
+    
     local codeUI = interactable:FindFirstChild("CodeUI")
     if not codeUI then return nil, nil end
+    
     return codeUI:FindFirstChild("TextBox"), codeUI:FindFirstChild("Claim")
 end
 
 function _G.STHAIN.RedeemAllCodes()
     local codes = ambilCode()
-    if #codes == 0 then warn("[FLOW] Ga ada code") return 0 end
+    if #codes == 0 then 
+        warn("[FLOW][Code] Ga ada code")
+        return 0 
+    end
     
-    -- Buka CodeUI dulu (kalau ketutup)
+    -- Buka CodeUI via HUD.RightBar.Code
     local PG = LP:FindFirstChild("PlayerGui")
     if PG then
-        local root = PG:FindFirstChild("Root")
-        if root then
-            local hud = root:FindFirstChild("HUD")
-            if hud then
-                local rightBar = hud:FindFirstChild("RightBar")
-                if rightBar then
-                    local codeBtn = rightBar:FindFirstChild("Code")
-                    if codeBtn and codeBtn.Visible then
-                        pcall(function()
-                            if firesignal then
-                                firesignal(codeBtn.MouseButton1Click)
-                            else
-                                codeBtn:Activate()
-                            end
-                        end)
-                        task.wait(0.5)
-                    end
+        local hud = PG:FindFirstChild("HUD")
+        if hud then
+            local rightBar = hud:FindFirstChild("RightBar")
+            if rightBar then
+                local codeBtn = rightBar:FindFirstChild("Code")
+                if codeBtn and codeBtn.Visible then
+                    pcall(function()
+                        if firesignal then
+                            firesignal(codeBtn.MouseButton1Click)
+                        elseif codeBtn.Activate then
+                            codeBtn:Activate()
+                        end
+                    end)
+                    print("[FLOW][Code] Buka CodeUI")
+                    task.wait(1)
                 end
             end
         end
     end
     
     local tb, btn = cariCodeUI()
-    if not tb then warn("[FLOW] TextBox ga ketemu") return 0 end
+    if not tb then 
+        warn("[FLOW][Code] TextBox ga ketemu")
+        return 0 
+    end
     
     local sukses = 0
     for i, code in ipairs(codes) do
         pcall(function()
             tb:CaptureFocus()
-            task.wait(0.1)
+            task.wait(0.15)
             tb.Text = code
-            task.wait(0.1)
+            task.wait(0.15)
             tb:ReleaseFocus()
         end)
-        task.wait(0.3)
+        task.wait(0.4)
         
         local fired = false
         if btn then
             fired = pcall(function()
                 if firesignal then
                     firesignal(btn.MouseButton1Click)
-                else
+                elseif btn.Activate then
                     btn:Activate()
                 end
             end)
@@ -941,32 +987,25 @@ function _G.STHAIN.RedeemAllCodes()
         
         if fired then
             sukses = sukses + 1
-            print(("[FLOW] Code [%d/%d] OK: %s"):format(i, #codes, code))
+            print(("[FLOW][Code] [%d/%d] OK: %s"):format(i, #codes, code))
         else
-            print(("[FLOW] Code [%d/%d] FAIL: %s"):format(i, #codes, code))
+            print(("[FLOW][Code] [%d/%d] FAIL: %s"):format(i, #codes, code))
         end
         task.wait(1.5)
     end
-    print(("[FLOW] Redeem done: %d"):format(sukses))
+    print(("[FLOW][Code] Redeem done: %d/%d"):format(sukses, #codes))
     return sukses
 end
 
 -- ============================================================
--- AUTO JOIN TEAM (FIXED PATH)
+-- AUTO JOIN TEAM (FIXED: PlayerGui.PickTeam)
 -- ============================================================
 function _G.STHAIN.JoinTeam(teamName)
     local PG = LP:FindFirstChild("PlayerGui")
     if not PG then return false end
     
-    -- Cari PickTeam di PlayerGui atau di Root
+    -- PickTeam LANGSUNG di PlayerGui
     local pickTeam = PG:FindFirstChild("PickTeam")
-    if not pickTeam then
-        local root = PG:FindFirstChild("Root")
-        if root then
-            pickTeam = root:FindFirstChild("PickTeam")
-        end
-    end
-    
     if not pickTeam then return false end
     if not pickTeam.Visible then return false end
     
@@ -988,7 +1027,7 @@ function _G.STHAIN.JoinTeam(teamName)
     end)
     
     if ok then
-        print("[FLOW] Join request: "..tostring(teamName))
+        print("[FLOW][Team] Join: "..tostring(teamName))
         return true
     end
     return false
@@ -1004,7 +1043,7 @@ task.spawn(function()
             if ok == true then
                 task.wait(2)
                 Config.Misc.AutoJoinTeam = "none"
-                print("[FLOW] AutoJoinTeam reset ke none")
+                print("[FLOW][Team] Reset ke none")
             end
         end
     end
@@ -1085,8 +1124,17 @@ function _G.STHAIN.TeleportTo(part)
     end
     local offY = (Config.Teleport and Config.Teleport.OffsetY) or 5
     
-    -- Godmode ON
+    -- 🔥 GODMODE ON
     local god = godmodeOn()
+    
+    -- Noclip temporary
+    local savedCollide = {}
+    for _, p in pairs(char:GetDescendants()) do
+        if p:IsA("BasePart") then
+            savedCollide[p] = p.CanCollide
+            p.CanCollide = false
+        end
+    end
     
     -- Reset velocity
     pcall(function()
@@ -1099,8 +1147,8 @@ function _G.STHAIN.TeleportTo(part)
         hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, offY, 0)) 
     end)
     
-    -- Tunggu sync
-    task.wait(0.5)
+    -- Tunggu sync (lebih lama biar HP bar game sinkron)
+    task.wait(1.5)
     
     -- Reset velocity lagi
     pcall(function()
@@ -1108,8 +1156,16 @@ function _G.STHAIN.TeleportTo(part)
         hrp.RotVelocity = Vector3.zero
     end)
     
-    -- Godmode OFF
-    task.wait(0.5)
+    task.wait(1)
+    
+    -- Restore noclip
+    for p, cc in pairs(savedCollide) do
+        if p and p.Parent then
+            pcall(function() p.CanCollide = cc end)
+        end
+    end
+    
+    -- 🔥 GODMODE OFF (restore ke HP penuh)
     if god then god.restore() end
     
     return true
@@ -1206,7 +1262,7 @@ end
 
 function _G.STHAIN.TeleportToTeammate()
     local char = Utils.getChar()
-    local hrp = Utils.getHRP()
+    local hrp = Utils.GetHRP and Utils.getHRP() or Utils.getHRP()
     if not (char and hrp) then return false end
     local myTeam = _G.STHAIN.GetMyTeam()
     if myTeam == "unknown" then return false end
@@ -1279,4 +1335,4 @@ LP.CharacterAdded:Connect(function(char)
     cleanupNoclip()
 end)
 
-print("[FLOW] Logic loaded - v8")
+print("[FLOW] Logic loaded - v9")
