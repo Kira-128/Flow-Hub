@@ -1,19 +1,18 @@
 --[[
 ============================================================
-  [8] LOGIC LOOPS (FINAL v7)
-  - Master switch: Enable Esp kontrol semua ESP
-  - Chams: musuh merah, tim biru
-  - Format: username [ HP ] [ M ]
-  - Esp Object: Supply/Capture hijau muda (Highlight)
-  - Auto Claim Quest + Auto Redeem Code (1x per click)
-  - Auto Join Team (exclusive)
-  - Parser Radio Times fix
+  [8] LOGIC LOOPS (FLOW v8)
+  - ESP: setting langsung aktif tanpa OFF-ON Enable Esp
+  - Aimbot: smooth + prediction + team check
+  - TP: godmode biar ga kena damage
+  - Auto Join Team: path fix (Root.PickTeam)
+  - Claim Quest: pakai firesignal + filter visible
+  - Redeem Code: path fix + firesignal
 ============================================================
 ]]
 
 local S = _G.STHAIN
 if not S then
-    warn("[STHAIN] _G.STHAIN nil! Stop logic.")
+    warn("[FLOW] _G.STHAIN nil! Stop logic.")
     return
 end
 
@@ -24,7 +23,7 @@ local Lighting = S.Services.Lighting
 local Cam = S.Cam
 local LP = S.LP
 
-print("[STHAIN] Logic starting...")
+print("[FLOW] Logic starting...")
 
 local State = {
     Fly = false, Noclip = false, Invisible = false,
@@ -33,9 +32,51 @@ local State = {
     ESP = false, TargetLock = false,
 }
 
+-- ============================================================
+-- GODMODE (buat TP aman)
+-- ============================================================
+local function godmodeOn()
+    local char = Utils.getChar()
+    if not char then return nil end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return nil end
+    
+    local original = {
+        MaxHealth = hum.MaxHealth,
+        Health = hum.Health,
+    }
+    
+    pcall(function()
+        hum.MaxHealth = math.huge
+        hum.Health = math.huge
+    end)
+    
+    local lockConn
+    lockConn = Run.Heartbeat:Connect(function()
+        if hum and hum.Parent then
+            pcall(function()
+                hum.MaxHealth = math.huge
+                hum.Health = math.huge
+            end)
+        end
+    end)
+    
+    return {
+        restore = function()
+            if lockConn then lockConn:Disconnect() end
+            if hum and hum.Parent then
+                pcall(function()
+                    hum.MaxHealth = original.MaxHealth
+                    hum.Health = math.min(original.Health, original.MaxHealth)
+                end)
+            end
+        end
+    }
+end
+
 task.spawn(function()
     repeat task.wait(0.1) until LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    print("[STHAIN] Character loaded!")
+    print("[FLOW] Character loaded!")
 end)
 
 -- ============================================================
@@ -243,40 +284,96 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- TARGET LOCK
+-- TARGET LOCK (SMOOTH AIMBOT)
 -- ============================================================
-task.spawn(function()
-    while task.wait(0.1) do
-        if Config.Combat.TargetLock then
-            local char = Utils.getChar()
-            local hrp = Utils.getHRP()
-            if not (char and hrp) then continue end
-            local nearest, nearestDist = nil, 150
-            for _, model in pairs(workspace:GetChildren()) do
-                if model == char or not model:IsA("Model") then continue end
-                local hum = model:FindFirstChildOfClass("Humanoid")
-                if not hum or hum.Health <= 0 then continue end
-                local thrp = model:FindFirstChild("HumanoidRootPart")
-                if not thrp then continue end
-                local dist = (thrp.Position - hrp.Position).Magnitude
-                if dist < 5 then continue end
-                if dist < nearestDist then
-                    nearest = thrp
-                    nearestDist = dist
+local aimLock, aimLostAt, aimSmoothCF = nil, 0, nil
+
+local function aimAlive(p)
+    if not p.Character then return false end
+    local hum = p.Character:FindFirstChild("Humanoid")
+    if not hum or hum.Health <= 0 then return false end
+    return p.Character:FindFirstChild("Head") ~= nil
+end
+
+local function aimValid(p)
+    if not p or not aimAlive(p) then return false end
+    if p.Team == LP.Team and p.Team ~= nil then return false end
+    local part = p.Character:FindFirstChild("Head")
+    if not part then return false end
+    local d = (part.Position - Cam.CFrame.Position).Magnitude
+    if d > 500 then return false end
+    return true
+end
+
+local function aimClosest()
+    local best, bd = nil, math.huge
+    local ctr = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= LP and aimValid(p) then
+            local part = p.Character:FindFirstChild("Head")
+            local sp, on = Cam:WorldToViewportPoint(part.Position)
+            if on then
+                local m = (Vector2.new(sp.X, sp.Y) - ctr).Magnitude
+                if m < 300 and m < bd then
+                    best = p
+                    bd = m
                 end
             end
-            if nearest then
-                Cam.CameraType = Enum.CameraType.Scriptable
-                Cam.CFrame = CFrame.new(Cam.CFrame.Position, nearest.Position)
-            end
-            State.TargetLock = true
-        elseif State.TargetLock then
-            if Cam.CameraType == Enum.CameraType.Scriptable then
-                Cam.CameraType = Enum.CameraType.Custom
-            end
-            State.TargetLock = false
         end
     end
+    return best
+end
+
+local function aimPredict(part)
+    local v = part.AssemblyLinearVelocity or Vector3.new()
+    return part.Position + (v * 0.18)
+end
+
+Run.RenderStepped:Connect(function(dt)
+    if not Config.Combat.TargetLock then
+        if State.TargetLock then
+            aimLock = nil
+            aimSmoothCF = nil
+            State.TargetLock = false
+        end
+        return
+    end
+
+    if not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    if not aimSmoothCF then aimSmoothCF = Cam.CFrame end
+
+    if aimLock then
+        if aimValid(aimLock) then
+            -- keep lock
+        else
+            aimLock = nil
+            aimLostAt = tick()
+        end
+    end
+    if not aimLock and (tick() - aimLostAt) >= 0.5 then
+        local t = aimClosest()
+        if t then aimLock = t end
+    end
+
+    if not aimLock then return end
+
+    local part = aimLock.Character and aimLock.Character:FindFirstChild("Head")
+    if not part then return end
+
+    local target = CFrame.lookAt(Cam.CFrame.Position, aimPredict(part))
+    local a = 1 - math.pow(0.15, dt * 60)
+    a = math.clamp(a, 0, 1)
+
+    aimSmoothCF = aimSmoothCF:Lerp(target, a)
+    Cam.CFrame = aimSmoothCF
+    State.TargetLock = true
+end)
+
+LP.CharacterAdded:Connect(function()
+    aimSmoothCF = nil
+    aimLock = nil
+    aimLostAt = 0
 end)
 
 -- ============================================================
@@ -350,8 +447,6 @@ end)
 
 -- ============================================================
 -- ESP (MASTER SWITCH: Chams)
--- Musuh = merah, Tim = biru
--- Format: username [ HP ] [ M ]
 -- ============================================================
 local espCache = {}
 local espGuiParent = (gethui and gethui()) or game:GetService("CoreGui")
@@ -382,7 +477,6 @@ end
 
 task.spawn(function()
     while task.wait(0.25) do
-        -- MASTER SWITCH: Enable Esp = Chams
         local masterOn = Config.Visual.Chams
         
         if not masterOn then
@@ -405,11 +499,12 @@ task.spawn(function()
                 local isTeam = isTeammate(model)
                 local markerColor = isTeam and COLOR_TEAM or COLOR_ENEMY
                 
+                -- Init cache kalau belum ada
                 if not espCache[model] then
                     espCache[model] = {}
                     espCache[model].isTeam = isTeam
                     
-                    -- Chams (Highlight) — WAJIB kalau master ON
+                    -- Chams (Highlight)
                     local hl = Instance.new("Highlight")
                     hl.Name = "CA_ESP_HL"
                     hl.FillColor = markerColor
@@ -418,32 +513,42 @@ task.spawn(function()
                     hl.Adornee = model
                     hl.Parent = espGuiParent
                     espCache[model].hl = hl
+                end
+                
+                local anySetting = Config.Visual.ESPShowDistance 
+                    or Config.Visual.ESPHealth 
+                    or Config.Visual.ESPName
+                
+                -- Bikin BillboardGui kalau setting ON tapi belum ada
+                if anySetting and not espCache[model].infoBB then
+                    local bb = Instance.new("BillboardGui")
+                    bb.Name = "CA_ESP_Info"
+                    bb.Size = UDim2.new(0, 200, 0, 24)
+                    bb.StudsOffset = Vector3.new(0, 3.5, 0)
+                    bb.AlwaysOnTop = true
+                    bb.Adornee = hrp
+                    bb.Parent = espGuiParent
                     
-                    -- ESP Setting (BillboardGui)
-                    local anySetting = Config.Visual.ESPShowDistance or Config.Visual.ESPHealth or Config.Visual.ESPName
-                    if anySetting then
-                        local bb = Instance.new("BillboardGui")
-                        bb.Name = "CA_ESP_Info"
-                        bb.Size = UDim2.new(0, 200, 0, 24)
-                        bb.StudsOffset = Vector3.new(0, 3.5, 0)
-                        bb.AlwaysOnTop = true
-                        bb.Adornee = hrp
-                        bb.Parent = espGuiParent
-                        
-                        local lbl = Instance.new("TextLabel")
-                        lbl.Size = UDim2.new(1, 0, 1, 0)
-                        lbl.Text = ""
-                        lbl.TextColor3 = markerColor
-                        lbl.TextStrokeTransparency = 0
-                        lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                        lbl.TextSize = 13
-                        lbl.Font = Enum.Font.GothamBold
-                        lbl.BackgroundTransparency = 1
-                        lbl.Parent = bb
-                        
-                        espCache[model].infoBB = bb
-                        espCache[model].infoLbl = lbl
-                    end
+                    local lbl = Instance.new("TextLabel")
+                    lbl.Size = UDim2.new(1, 0, 1, 0)
+                    lbl.Text = ""
+                    lbl.TextColor3 = markerColor
+                    lbl.TextStrokeTransparency = 0
+                    lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                    lbl.TextSize = 13
+                    lbl.Font = Enum.Font.GothamBold
+                    lbl.BackgroundTransparency = 1
+                    lbl.Parent = bb
+                    
+                    espCache[model].infoBB = bb
+                    espCache[model].infoLbl = lbl
+                end
+                
+                -- Destroy BillboardGui kalau setting OFF semua
+                if not anySetting and espCache[model].infoBB then
+                    pcall(function() espCache[model].infoBB:Destroy() end)
+                    espCache[model].infoBB = nil
+                    espCache[model].infoLbl = nil
                 end
                 
                 -- Update warna Highlight (kalau team berubah)
@@ -472,7 +577,7 @@ task.spawn(function()
             end
             
             -- ============================================
-            -- ESP OBJECT (Supply + Capture) — Highlight hijau muda
+            -- ESP OBJECT (Supply + Capture)
             -- ============================================
             local activeMap = workspace:FindFirstChild("ActiveMap")
             if activeMap then
@@ -480,7 +585,6 @@ task.spawn(function()
                     if mapChild:IsA("Folder") or mapChild:IsA("Model") then
                         local interactable = mapChild:FindFirstChild("Interactable")
                         if interactable then
-                            -- Supply
                             if Config.Visual.ESPSupply then
                                 local suppliesFolder = interactable:FindFirstChild("Supplies")
                                 if suppliesFolder then
@@ -499,7 +603,6 @@ task.spawn(function()
                                     end
                                 end
                             end
-                            -- Capture
                             if Config.Visual.ESPCapture then
                                 local pointsFolder = interactable:FindFirstChild("Points")
                                 if pointsFolder then
@@ -654,55 +757,102 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO CLAIM QUEST (1x per click)
+-- AUTO CLAIM QUEST (FIXED)
 -- ============================================================
 function _G.STHAIN.ClaimQuests()
-    local PG = LP:WaitForChild("PlayerGui")
-    local interactable = PG:FindFirstChild("Interactable")
-    if not interactable then
-        warn("[Misi] Interactable ga ketemu")
-        return 0
-    end
-    local claimed = 0
-    local timeout = tick() + 3
-    local visited = 0
-    local function scan(root, depth)
-        if depth > 6 or tick() > timeout or claimed >= 30 then return end
-        for _, c in pairs(root:GetChildren()) do
-            visited = visited + 1
-            if visited > 5000 then return end
-            if c:IsA("TextButton") or c:IsA("ImageButton") then
-                local txt = (c.Text or ""):upper()
-                local nm = c.Name:lower()
-                if txt:find("KLAIM") or txt:find("CLAIM") or nm:find("claim") or nm:find("klaim") then
-                    if c.Visible and c.Active then
-                        pcall(function()
-                            if c:IsA("TextButton") then c.MouseButton1Click:Fire() end
-                        end)
-                        claimed = claimed + 1
-                        print(("[Misi] Klaim: %s | %s"):format(c.Name, c.Text))
-                        task.wait(0.3)
-                    end
+    local PG = LP:FindFirstChild("PlayerGui")
+    if not PG then return 0 end
+    
+    -- Buka Quest UI (pakai HUD.RightBar.Quest)
+    local root = PG:FindFirstChild("Root")
+    if root then
+        local hud = root:FindFirstChild("HUD")
+        if hud then
+            local rightBar = hud:FindFirstChild("RightBar")
+            if rightBar then
+                local questBtn = rightBar:FindFirstChild("Quest")
+                if questBtn then
+                    pcall(function()
+                        if firesignal then
+                            firesignal(questBtn.MouseButton1Click)
+                        else
+                            questBtn:Activate()
+                        end
+                    end)
+                    task.wait(0.8)
                 end
-            end
-            if c:IsA("Frame") or c:IsA("ScrollingFrame") or c:IsA("CanvasGroup") then
-                scan(c, depth + 1)
             end
         end
     end
-    scan(interactable, 1)
-    print(("[Misi] Selesai — Total klaim: %d | Visited: %d"):format(claimed, visited))
+    
+    local interactable = root and root:FindFirstChild("Interactable")
+    if not interactable then return 0 end
+    local questUI = interactable:FindFirstChild("QuestUI")
+    if not questUI then return 0 end
+    
+    local claimed = 0
+    local function scanClaim(r, depth)
+        if depth > 10 then return end
+        for _, c in pairs(r:GetChildren()) do
+            if (c:IsA("ImageButton") or c:IsA("TextButton"))
+               and c.Name == "Claim"
+               and c.Visible
+               and c.Parent
+               and not c.Parent.Name:find("Template") then
+                pcall(function()
+                    if firesignal then
+                        firesignal(c.MouseButton1Click)
+                    else
+                        c:Activate()
+                    end
+                end)
+                claimed = claimed + 1
+                print(("[FLOW] Claim: %s"):format(c.Parent.Parent.Name))
+                task.wait(0.4)
+            end
+            if c:IsA("Frame") or c:IsA("ScrollingFrame") or c:IsA("CanvasGroup") then
+                scanClaim(c, depth + 1)
+            end
+        end
+    end
+    
+    local list = questUI:FindFirstChild("List")
+    if list then scanClaim(list, 0) end
+    
+    local invUI = interactable:FindFirstChild("InventoryUI")
+    if invUI then
+        local bpTab = invUI:FindFirstChild("BattlepassTab")
+        if bpTab then
+            local bpQuest = bpTab:FindFirstChild("Quest")
+            if bpQuest then scanClaim(bpQuest, 0) end
+        end
+    end
+    
+    -- Tutup Quest UI
+    task.wait(0.3)
+    local exitBtn = questUI:FindFirstChild("Exit")
+    if exitBtn then
+        pcall(function()
+            if firesignal then
+                firesignal(exitBtn.MouseButton1Click)
+            else
+                exitBtn:Activate()
+            end
+        end)
+    end
+    
+    print(("[FLOW] Claim Quest done: %d"):format(claimed))
     return claimed
 end
 
 -- ============================================================
--- AUTO REDEEM CODE (Radio Times)
+-- AUTO REDEEM CODE (FIXED)
 -- ============================================================
 local function ambilCode()
     local url = "https://www.radiotimes.com/technology/gaming/command-an-army-codes/"
     local ok, html = pcall(game.HttpGet, game, url)
     if not ok or not html or #html < 500 then
-        warn("[Code] Gagal fetch")
+        warn("[FLOW] Fetch code gagal")
         return {}
     end
     local startPos = html:find("Active codes")
@@ -719,38 +869,54 @@ local function ambilCode()
             table.insert(codes, code)
         end
     end
-    print(("[Code] Dapet %d code"):format(#codes))
+    print(("[FLOW] Dapet %d code"):format(#codes))
     return codes
 end
 
 local function cariCodeUI()
-    local PG = LP:WaitForChild("PlayerGui")
-    local interactable = PG:FindFirstChild("Interactable")
+    local PG = LP:FindFirstChild("PlayerGui")
+    if not PG then return nil, nil end
+    local root = PG:FindFirstChild("Root")
+    if not root then return nil, nil end
+    local interactable = root:FindFirstChild("Interactable")
     if not interactable then return nil, nil end
     local codeUI = interactable:FindFirstChild("CodeUI")
     if not codeUI then return nil, nil end
-    local textBox = codeUI:FindFirstChild("TextBox")
-    if not textBox then return nil, nil end
-    local btn = nil
-    for _, c in pairs(codeUI:GetDescendants()) do
-        if (c:IsA("TextButton") or c:IsA("ImageButton")) and c.Visible then
-            local txt = string.lower(c.Text or "")
-            local nm = string.lower(c.Name)
-            if txt:find("claim") or txt:find("redeem") or txt:find("klaim")
-            or nm:find("claim") or nm:find("redeem") or nm:find("klaim") then
-                btn = c
-                break
-            end
-        end
-    end
-    return textBox, btn
+    return codeUI:FindFirstChild("TextBox"), codeUI:FindFirstChild("Claim")
 end
 
 function _G.STHAIN.RedeemAllCodes()
     local codes = ambilCode()
-    if #codes == 0 then warn("[Code] Ga ada code") return 0 end
+    if #codes == 0 then warn("[FLOW] Ga ada code") return 0 end
+    
+    -- Buka CodeUI dulu (kalau ketutup)
+    local PG = LP:FindFirstChild("PlayerGui")
+    if PG then
+        local root = PG:FindFirstChild("Root")
+        if root then
+            local hud = root:FindFirstChild("HUD")
+            if hud then
+                local rightBar = hud:FindFirstChild("RightBar")
+                if rightBar then
+                    local codeBtn = rightBar:FindFirstChild("Code")
+                    if codeBtn and codeBtn.Visible then
+                        pcall(function()
+                            if firesignal then
+                                firesignal(codeBtn.MouseButton1Click)
+                            else
+                                codeBtn:Activate()
+                            end
+                        end)
+                        task.wait(0.5)
+                    end
+                end
+            end
+        end
+    end
+    
     local tb, btn = cariCodeUI()
-    if not tb then warn("[Code] TextBox ga ketemu") return 0 end
+    if not tb then warn("[FLOW] TextBox ga ketemu") return 0 end
+    
     local sukses = 0
     for i, code in ipairs(codes) do
         pcall(function()
@@ -760,52 +926,92 @@ function _G.STHAIN.RedeemAllCodes()
             task.wait(0.1)
             tb:ReleaseFocus()
         end)
-        task.wait(0.2)
+        task.wait(0.3)
+        
+        local fired = false
         if btn then
-            pcall(function() btn.MouseButton1Click:Fire() end)
-        else
-            pcall(function() tb.FocusLost:Fire(true) end)
+            fired = pcall(function()
+                if firesignal then
+                    firesignal(btn.MouseButton1Click)
+                else
+                    btn:Activate()
+                end
+            end)
         end
-        sukses = sukses + 1
-        print(("[Code] [%d/%d] ✓ %s"):format(i, #codes, code))
-        task.wait(1.2)
+        
+        if fired then
+            sukses = sukses + 1
+            print(("[FLOW] Code [%d/%d] OK: %s"):format(i, #codes, code))
+        else
+            print(("[FLOW] Code [%d/%d] FAIL: %s"):format(i, #codes, code))
+        end
+        task.wait(1.5)
     end
-    print(("[Code] Selesai — Sukses: %d"):format(sukses))
+    print(("[FLOW] Redeem done: %d"):format(sukses))
     return sukses
 end
 
 -- ============================================================
--- AUTO JOIN TEAM (Exclusive)
+-- AUTO JOIN TEAM (FIXED PATH)
 -- ============================================================
 function _G.STHAIN.JoinTeam(teamName)
-    local PG = LP:WaitForChild("PlayerGui")
+    local PG = LP:FindFirstChild("PlayerGui")
+    if not PG then return false end
+    
+    -- Cari PickTeam di PlayerGui atau di Root
     local pickTeam = PG:FindFirstChild("PickTeam")
+    if not pickTeam then
+        local root = PG:FindFirstChild("Root")
+        if root then
+            pickTeam = root:FindFirstChild("PickTeam")
+        end
+    end
+    
     if not pickTeam then return false end
+    if not pickTeam.Visible then return false end
+    
     local target = nil
-    if teamName == "attacker" then target = pickTeam:FindFirstChild("Attacker")
-    elseif teamName == "defender" then target = pickTeam:FindFirstChild("Defender") end
+    if teamName == "attacker" then
+        target = pickTeam:FindFirstChild("Attacker")
+    elseif teamName == "defender" then
+        target = pickTeam:FindFirstChild("Defender")
+    end
+    
     if not target or not target.Visible then return false end
-    pcall(function()
-        if target:IsA("TextButton") then target.MouseButton1Click:Fire() end
+    
+    local ok = pcall(function()
+        if firesignal then
+            firesignal(target.MouseButton1Click)
+        else
+            target:Activate()
+        end
     end)
-    print("[Team] Join: "..tostring(teamName))
-    return true
+    
+    if ok then
+        print("[FLOW] Join request: "..tostring(teamName))
+        return true
+    end
+    return false
 end
 
 task.spawn(function()
     while task.wait(2) do
         local team = Config.Misc.AutoJoinTeam
         if team and team ~= "none" then
-            local PG = LP:WaitForChild("PlayerGui")
-            if PG:FindFirstChild("PickTeam") then
-                pcall(function() _G.STHAIN.JoinTeam(team) end)
+            local ok = pcall(function() 
+                return _G.STHAIN.JoinTeam(team) 
+            end)
+            if ok == true then
+                task.wait(2)
+                Config.Misc.AutoJoinTeam = "none"
+                print("[FLOW] AutoJoinTeam reset ke none")
             end
         end
     end
 end)
 
 -- ============================================================
--- TELEPORT SYSTEM
+-- TELEPORT SYSTEM (GODMODE SAFE)
 -- ============================================================
 local function getMapFolder()
     local activeMap = workspace:FindFirstChild("ActiveMap")
@@ -870,6 +1076,7 @@ function _G.STHAIN.TeleportTo(part)
     if not char then return false end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not (hrp and part) then return false end
+    
     local targetPos
     if typeof(part) == "Vector3" then targetPos = part
     else
@@ -877,7 +1084,34 @@ function _G.STHAIN.TeleportTo(part)
         targetPos = part.Position
     end
     local offY = (Config.Teleport and Config.Teleport.OffsetY) or 5
-    pcall(function() hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, offY, 0)) end)
+    
+    -- Godmode ON
+    local god = godmodeOn()
+    
+    -- Reset velocity
+    pcall(function()
+        hrp.Velocity = Vector3.zero
+        hrp.RotVelocity = Vector3.zero
+    end)
+    
+    -- TP
+    pcall(function() 
+        hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, offY, 0)) 
+    end)
+    
+    -- Tunggu sync
+    task.wait(0.5)
+    
+    -- Reset velocity lagi
+    pcall(function()
+        hrp.Velocity = Vector3.zero
+        hrp.RotVelocity = Vector3.zero
+    end)
+    
+    -- Godmode OFF
+    task.wait(0.5)
+    if god then god.restore() end
+    
     return true
 end
 
@@ -896,7 +1130,7 @@ function _G.STHAIN.TeleportToEnemySupply()
     if _G.STHAIN._tpSupplyIndex > #enemySupplies then _G.STHAIN._tpSupplyIndex = 1 end
     local target = enemySupplies[_G.STHAIN._tpSupplyIndex]
     _G.STHAIN.TeleportTo(target.capturePart or target.instance)
-    print("[TP] Enemy supply:", target.name)
+    print("[FLOW] TP Enemy supply:", target.name)
     return true
 end
 
@@ -1032,24 +1266,6 @@ function _G.STHAIN.DeleteConfig()
     return true
 end
 
--- Auto-save dimatikan sementara (cuma tampilan toggle di GUI)
--- task.spawn(function()
---     while task.wait(30) do
---         if _G.STHAIN.Config and _G.STHAIN.Config.Config and _G.STHAIN.Config.Config.AutoSave then
---             _G.STHAIN.SaveConfig()
---         end
---     end
--- end)
--- task.spawn(function()
---     pcall(function()
---         game:BindToClose(function()
---             if _G.STHAIN.Config and _G.STHAIN.Config.Config and _G.STHAIN.Config.Config.AutoSave then
---                 _G.STHAIN.SaveConfig()
---             end
---         end)
---     end)
--- end)
-
 -- ============================================================
 -- RESPAWN HANDLER
 -- ============================================================
@@ -1063,4 +1279,4 @@ LP.CharacterAdded:Connect(function(char)
     cleanupNoclip()
 end)
 
-print("[STHAIN] Logic loaded - FINAL v7")
+print("[FLOW] Logic loaded - v8")
