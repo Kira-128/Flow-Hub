@@ -1,73 +1,67 @@
 --[[
 ============================================================
-  [2] CONFIG
+  [2] CONFIG — Command An Army
 ============================================================
 ]]
 
 local Config = {
     Combat = {
-        AutoAttack     = false,
-        AutoRush       = false,
-        AutoFollow     = false,
-        KillAura       = false,
-        TargetLock     = false,
-        AutoHeal       = false,
-        AntiStun       = false,
-        AttackDelay    = 0.35,
-        RushDelay      = 0.5,
-        FollowDelay    = 0.35,
-        KillAuraRange  = 20,
-        HealThreshold  = 30,
+        AutoAttack = false,
+        AutoRush = false,
+        AutoFollow = false,
+
+        KillAura = false,
+        TargetLock = false,
+        AutoHeal = false,
+        AntiStun = false,
+
+        AttackDelay = 0.35,
+        RushDelay = 0.5,
+        FollowDelay = 0.35,
+
+        KillAuraRange = 20,
+        HealThreshold = 30,
     },
+
+    Spawn = {
+        UnitSlot = 1,
+    },
+
+    Visual = {
+        Chams = false,
+        ESPSupply = false,
+        ESPCapture = false,
+        ESPShowDistance = false,
+        ESPHealth = false,
+        ESPName = false,
+        Fullbright = false,
+        NoFog = false,
+    },
+
+    Teleport = {
+        OffsetY = 5,
+        SupplyTarget = "Enemy",
+    },
+
     Movement = {
-        Fly       = false,
-        Noclip    = false,
-        InfJump   = false,
         WalkSpeed = 16,
+        Noclip = false,
+        Fly = false,
+        InfJump = false,
+        FlySpeed = 60,
         HipHeight = 0,
-        FlySpeed  = 60,
         JumpPower = 50,
     },
-    Visual = {
-        -- Master switch
-        Chams            = false,
 
-        -- Esp Object (section baru)
-        ESPSupply        = false,
-        ESPCapture       = false,
-
-        -- Esp Setting (section baru)
-        ESPShowDistance  = false,
-        ESPHealth        = false,
-        ESPName          = false,
-
-        -- Visual lain
-        Fullbright       = false,
-        NoFog            = false,
-        Invisible        = false,
-        SelfHitbox       = false,
-        EnemyHitbox      = false,
-        SelfHitboxSize   = 15,
-        EnemyHitboxSize  = 20,
-    },
     Misc = {
-        WeaponRange     = false,
-        AutoTP          = false,
-        AntiAFK         = true,
-        AutoJoinTeam    = "none",
-        RangeMultiplier = 3,
-        AutoTPRange     = 100,
+        AutoJoinTeam = "none",
+        AntiAFK = true,
     },
-    Teleport = {
-        Enabled        = false,
-        SelectedPoint  = nil,
-        SelectedSupply = nil,
-        SmoothSteps    = 10,
-        OffsetY        = 5,
-    },
+
     Config = {
         AutoSave = false,
     },
 }
 
 _G.STHAIN.Config = Config
+print("[FLOW] Config loaded")
