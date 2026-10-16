@@ -145,7 +145,22 @@ S.Comp.makeDropdown(spawnSection, "Unit Slot", {"1", "2", "3", "4"}, function(v)
     SS.UnitSlot = tonumber(v) or 1
     save()
 end)
-S.Comp.makeButton(spawnSection, "Spawn Unit", function()
+
+local spawnBtn = Instance.new("TextButton")
+spawnBtn.Name = "SpawnBtn"
+spawnBtn.Size = UDim2.new(1, 0, 0, 32)
+spawnBtn.BackgroundColor3 = C.bg4
+spawnBtn.BackgroundTransparency = 0
+spawnBtn.BorderSizePixel = 0
+spawnBtn.Text = "Spawn Unit"
+spawnBtn.TextColor3 = C.accent
+spawnBtn.TextSize = 11
+spawnBtn.Font = F.norm
+spawnBtn.AutoButtonColor = false
+spawnBtn.Parent = spawnSection
+Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(0, 6)
+
+spawnBtn.MouseButton1Click:Connect(function()
     if _G.STHAIN.SpawnUnit then _G.STHAIN.SpawnUnit(SS.UnitSlot) end
 end)
 
@@ -205,7 +220,22 @@ S.Comp.makeDropdown(tpSupply, "Supply Target", {"Enemy", "Own", "Nearest"}, func
     TT.SupplyTarget = v
     save()
 end)
-S.Comp.makeButton(tpSupply, "TP Supply", function()
+
+local tpSupplyBtn = Instance.new("TextButton")
+tpSupplyBtn.Name = "TPSupplyBtn"
+tpSupplyBtn.Size = UDim2.new(1, 0, 0, 32)
+tpSupplyBtn.BackgroundColor3 = C.bg4
+tpSupplyBtn.BackgroundTransparency = 0
+tpSupplyBtn.BorderSizePixel = 0
+tpSupplyBtn.Text = "TP Supply"
+tpSupplyBtn.TextColor3 = C.accent
+tpSupplyBtn.TextSize = 11
+tpSupplyBtn.Font = F.norm
+tpSupplyBtn.AutoButtonColor = false
+tpSupplyBtn.Parent = tpSupply
+Instance.new("UICorner", tpSupplyBtn).CornerRadius = UDim.new(0, 6)
+
+tpSupplyBtn.MouseButton1Click:Connect(function()
     if _G.STHAIN.TeleportToSupply then _G.STHAIN.TeleportToSupply(TT.SupplyTarget or "Enemy") end
 end)
 
