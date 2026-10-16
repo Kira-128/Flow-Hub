@@ -1,10 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES (FLOW v11)
-  - Fix: page parent ke ContentScroll, no offset Y
-  - Fix: Auto Join Team exclusive toggle
-  - Tab sidebar accent line rapi
-  - Print [FLOW]
+  [7] PAGES — Command An Army
 ============================================================
 ]]
 
@@ -22,14 +18,10 @@ local function save()
     end
 end
 
--- ============================================================
--- CREATE PAGE
--- ============================================================
 local function createPage(name)
     local page = Instance.new("ScrollingFrame")
     page.Name = "Page_" .. name
     page.Size = UDim2.new(1, 0, 1, 0)
-    page.Position = UDim2.new(0, 0, 0, 0)
     page.BackgroundTransparency = 1
     page.BorderSizePixel = 0
     page.ScrollBarThickness = 3
@@ -48,8 +40,6 @@ local function createPage(name)
     layout.Parent = page
 
     local pad = Instance.new("UIPadding")
-    pad.PaddingTop = UDim.new(0, 0)
-    pad.PaddingLeft = UDim.new(0, 0)
     pad.PaddingRight = UDim.new(0, 6)
     pad.PaddingBottom = UDim.new(0, 6)
     pad.Parent = page
@@ -65,9 +55,6 @@ local function switchPage(name)
     S.GUI.ContentTitle.Text = name
 end
 
--- ============================================================
--- MAKE TAB
--- ============================================================
 local function makeTab(iconId, name)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 30)
@@ -123,13 +110,13 @@ local function makeTab(iconId, name)
         tx.TextColor3 = C.text
         acc.Visible = true
         acc.Size = UDim2.new(0, 3, 0, 0)
-        S.Services.TS:Create(acc, TweenInfo.new(0.2), {
+        S.Services.TS:Create(acc, TweenInfo.new(0.15), {
             Size = UDim2.new(0, 3, 0, 18)
         }):Play()
         switchPage(name)
     end)
 
-    table.insert(tabs, {btn = btn, icon = ic, text = tx, bar = acc, name = name})
+    table.insert(tabs, {btn = btn, icon = ic, text = tx, bar = acc})
 end
 
 createPage("Combat")
@@ -144,15 +131,23 @@ makeTab(I.teleport, "Teleport")
 makeTab(I.settings, "Settings")
 makeTab(I.config, "Config")
 
--- ============================================================
--- TAB COMBAT
--- ============================================================
+-- COMBAT
 local CC = S.Config.Combat
+local SS = S.Config.Spawn
 
 local autoCombat = S.Comp.makeSection(pages["Combat"], "Auto Combat", false)
 S.Comp.makeToggle(autoCombat, "Auto Attack (V)", CC.AutoAttack, function(v) CC.AutoAttack = v save() end)
 S.Comp.makeToggle(autoCombat, "Auto Rush (B)", CC.AutoRush, function(v) CC.AutoRush = v save() end)
 S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow, function(v) CC.AutoFollow = v save() end)
+
+local spawnSection = S.Comp.makeSection(pages["Combat"], "Spawn Unit", false)
+S.Comp.makeDropdown(spawnSection, "Unit Slot", {"1", "2", "3", "4"}, function(v)
+    SS.UnitSlot = tonumber(v) or 1
+    save()
+end)
+S.Comp.makeButton(spawnSection, "Spawn Unit", function()
+    if _G.STHAIN.SpawnUnit then _G.STHAIN.SpawnUnit(SS.UnitSlot) end
+end)
 
 local pvpSection = S.Comp.makeSection(pages["Combat"], "PvP", false)
 S.Comp.makeToggle(pvpSection, "Kill Aura", CC.KillAura, function(v) CC.KillAura = v save() end)
@@ -163,12 +158,9 @@ S.Comp.makeToggle(pvpSection, "Anti-Stun", CC.AntiStun, function(v) CC.AntiStun 
 local combatDelay = S.Comp.makeSection(pages["Combat"], "Delay Settings", false)
 S.Comp.makeInput(combatDelay, "Attack Delay", CC.AttackDelay, function(v) CC.AttackDelay = v save() end)
 S.Comp.makeInput(combatDelay, "Rush Delay", CC.RushDelay, function(v) CC.RushDelay = v save() end)
-S.Comp.makeInput(combatDelay, "Kill Aura Range", CC.KillAuraRange, function(v) CC.KillAuraRange = v save() end)
-S.Comp.makeInput(combatDelay, "Heal Threshold", CC.HealThreshold, function(v) CC.HealThreshold = v save() end)
+S.Comp.makeInput(combatDelay, "Follow Delay", CC.FollowDelay, function(v) CC.FollowDelay = v save() end)
 
--- ============================================================
--- TAB ESP
--- ============================================================
+-- ESP
 local VV = S.Config.Visual
 
 local enableEsp = S.Comp.makeSection(pages["Esp"], "Enable Esp", false)
@@ -183,15 +175,8 @@ local espObject = S.Comp.makeSection(pages["Esp"], "Esp Object", false)
 S.Comp.makeToggle(espObject, "Esp Supply", VV.ESPSupply, function(v) VV.ESPSupply = v save() end)
 S.Comp.makeToggle(espObject, "Esp Capture", VV.ESPCapture, function(v) VV.ESPCapture = v save() end)
 
--- ============================================================
--- TAB TELEPORT
--- ============================================================
+-- TELEPORT
 local TT = S.Config.Teleport
-
-local tpSetting = S.Comp.makeSection(pages["Teleport"], "Teleport Setting", false)
-S.Comp.makeToggle(tpSetting, "Enable Teleport", TT.Enabled, function(v) TT.Enabled = v save() end)
-S.Comp.makeInput(tpSetting, "Smooth Steps", TT.SmoothSteps, function(v) TT.SmoothSteps = v save() end)
-S.Comp.makeInput(tpSetting, "Offset Y", TT.OffsetY, function(v) TT.OffsetY = v save() end)
 
 local tpCapture = S.Comp.makeSection(pages["Teleport"], "Capture Point", false)
 S.Comp.makeButton(tpCapture, "TP to Nearest Capture", function()
@@ -207,14 +192,6 @@ S.Comp.makeButton(tpCapture, "TP to Point B", function()
     if _G.STHAIN.TeleportToPointB then _G.STHAIN.TeleportToPointB() end
 end)
 
-local tpSupply = S.Comp.makeSection(pages["Teleport"], "Supply", false)
-S.Comp.makeButton(tpSupply, "TP to Enemy Supply", function()
-    if _G.STHAIN.TeleportToEnemySupply then _G.STHAIN.TeleportToEnemySupply() end
-end)
-S.Comp.makeButton(tpSupply, "TP to Own Supply", function()
-    if _G.STHAIN.TeleportToOwnSupply then _G.STHAIN.TeleportToOwnSupply() end
-end)
-
 local tpPlayer = S.Comp.makeSection(pages["Teleport"], "Player", false)
 S.Comp.makeButton(tpPlayer, "TP to Nearest Enemy", function()
     if _G.STHAIN.TeleportToNearestEnemy then _G.STHAIN.TeleportToNearestEnemy() end
@@ -223,17 +200,16 @@ S.Comp.makeButton(tpPlayer, "TP to Teammate", function()
     if _G.STHAIN.TeleportToTeammate then _G.STHAIN.TeleportToTeammate() end
 end)
 
-local tpMisc = S.Comp.makeSection(pages["Teleport"], "Misc", false)
-S.Comp.makeButton(tpMisc, "Scan Locations", function()
-    if _G.STHAIN.TeleportScan then
-        local r = _G.STHAIN.TeleportScan()
-        print("[SCAN] Captures:", #r.captures, "Supplies:", #r.supplies)
-    end
+local tpSupply = S.Comp.makeSection(pages["Teleport"], "Supply", false)
+S.Comp.makeDropdown(tpSupply, "Supply Target", {"Enemy", "Own", "Nearest"}, function(v)
+    TT.SupplyTarget = v
+    save()
+end)
+S.Comp.makeButton(tpSupply, "TP Supply", function()
+    if _G.STHAIN.TeleportToSupply then _G.STHAIN.TeleportToSupply(TT.SupplyTarget or "Enemy") end
 end)
 
--- ============================================================
--- TAB SETTINGS
--- ============================================================
+-- SETTINGS
 local MM = S.Config.Movement
 local XX = S.Config.Misc
 
@@ -245,13 +221,7 @@ S.Comp.makeToggle(utilityContent, "Infinite Jump", MM.InfJump, function(v) MM.In
 S.Comp.makeInput(utilityContent, "Fly Speed", MM.FlySpeed, function(v) MM.FlySpeed = v save() end)
 S.Comp.makeInput(utilityContent, "Hip Height", MM.HipHeight, function(v) MM.HipHeight = v save() end)
 S.Comp.makeInput(utilityContent, "Jump Power", MM.JumpPower, function(v) MM.JumpPower = v save() end)
-
-local miscContent = S.Comp.makeSection(pages["Settings"], "Misc", false)
-S.Comp.makeToggle(miscContent, "Weapon Range", XX.WeaponRange, function(v) XX.WeaponRange = v save() end)
-S.Comp.makeToggle(miscContent, "Auto Teleport", XX.AutoTP, function(v) XX.AutoTP = v save() end)
-S.Comp.makeToggle(miscContent, "Anti-AFK", XX.AntiAFK, function(v) XX.AntiAFK = v save() end)
-S.Comp.makeInput(miscContent, "Range Multi", XX.RangeMultiplier, function(v) XX.RangeMultiplier = v save() end)
-S.Comp.makeInput(miscContent, "TP Range", XX.AutoTPRange, function(v) XX.AutoTPRange = v save() end)
+S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK, function(v) XX.AntiAFK = v save() end)
 
 local visualContent = S.Comp.makeSection(pages["Settings"], "Visuals", false)
 S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright, function(v) VV.Fullbright = v save() end)
@@ -265,11 +235,7 @@ S.Comp.makeButton(autoClaimContent, "Claim All Code Now", function()
     if _G.STHAIN.RedeemAllCodes then _G.STHAIN.RedeemAllCodes() end
 end)
 
--- ============================================================
--- AUTO JOIN TEAM (EXCLUSIVE)
--- ============================================================
 local autoJoinContent = S.Comp.makeSection(pages["Settings"], "Auto Join Team", false)
-
 local setJoinDefender, setJoinAttacker
 
 local initialTeam = XX.AutoJoinTeam or "none"
@@ -298,16 +264,13 @@ setJoinAttacker = S.Comp.makeToggle(autoJoinContent, "Auto Join Attackers", init
     end
 end)
 
--- ============================================================
--- SERVER
--- ============================================================
 local serverContent = S.Comp.makeSection(pages["Settings"], "Server", false)
 S.Comp.makeButton(serverContent, "Rejoin Server", function()
     pcall(function()
         game:GetService("TeleportService"):Teleport(game.PlaceId, S.LP)
     end)
 end)
-S.Comp.makeButton(serverContent, "Server Hop (Find Small Server)", function()
+S.Comp.makeButton(serverContent, "Server Hop", function()
     pcall(function()
         local Http = game:GetService("HttpService")
         local TS = game:GetService("TeleportService")
@@ -325,9 +288,7 @@ S.Comp.makeButton(serverContent, "Server Hop (Find Small Server)", function()
     end)
 end)
 
--- ============================================================
--- TAB CONFIG
--- ============================================================
+-- CONFIG
 local cfg = S.Config.Config
 
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
@@ -343,9 +304,7 @@ S.Comp.makeButton(configMgmt, "Delete Config", function()
     if _G.STHAIN.DeleteConfig then _G.STHAIN.DeleteConfig() end
 end)
 
--- ============================================================
--- DRAG MAIN FRAME
--- ============================================================
+-- DRAG
 local mainDrag, mainStart, mainPos
 S.GUI.MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
@@ -369,9 +328,6 @@ S.GUI.MainFrame.InputEnded:Connect(function(input)
     end
 end)
 
--- ============================================================
--- MINIMIZE / OPEN
--- ============================================================
 switchPage("Combat")
 
 S.GUI.MinBtn.MouseButton1Click:Connect(function()
@@ -386,4 +342,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[FLOW] Pages loaded - v11")
+print("[FLOW] Pages loaded")
