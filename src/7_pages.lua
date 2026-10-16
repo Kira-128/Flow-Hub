@@ -152,7 +152,7 @@ local CC = S.Config.Combat
 local autoCombat = S.Comp.makeSection(pages["Combat"], "Auto Combat", false)
 S.Comp.makeToggle(autoCombat, "Auto Attack (V)", CC.AutoAttack, function(v) CC.AutoAttack = v save() end)
 S.Comp.makeToggle(autoCombat, "Auto Rush (B)", CC.AutoRush, function(v) CC.AutoRush = v save() end)
-S.Comp.makeToggle(autoCombat, "Inf Ammo", CC.InfAmmo, function(v) CC.InfAmmo = v save() end)
+S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow, function(v) CC.AutoFollow = v save() end)
 
 local pvpSection = S.Comp.makeSection(pages["Combat"], "PvP", false)
 S.Comp.makeToggle(pvpSection, "Kill Aura", CC.KillAura, function(v) CC.KillAura = v save() end)
