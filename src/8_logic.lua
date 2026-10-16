@@ -1,21 +1,5 @@
---[[
-============================================================
-  [8] LOGIC LOOPS (FLOW v9)
-  - Auto Join Team: PlayerGui.PickTeam
-  - Claim Quest: PlayerGui.Interactable.QuestUI
-  - Redeem Code: PlayerGui.Interactable.CodeUI
-  - ESP Object: destroy langsung pas OFF
-  - ESP Setting: langsung aktif tanpa OFF-ON
-  - TP Godmode: restore ke MaxHealth + delay
-  - Aimbot: smooth + prediction
-============================================================
-]]
-
 local S = _G.STHAIN
-if not S then
-    warn("[FLOW] _G.STHAIN nil! Stop logic.")
-    return
-end
+if not S then warn("[FLOW] _G.STHAIN nil!") return end
 
 local Config = S.Config
 local Utils = S.Utils
@@ -23,84 +7,36 @@ local Run = S.Services.Run
 local Lighting = S.Services.Lighting
 local Cam = S.Cam
 local LP = S.LP
+local VIM = S.Services.VIM
+local VU = S.Services.VU
+local UIS = S.Services.UIS
+local Players = S.Services.Players
+local RS = game:GetService("ReplicatedStorage")
 
 print("[FLOW] Logic starting...")
 
 local State = {
     Fly = false, Noclip = false, Invisible = false,
     Fullbright = false, NoFog = false,
-    SelfHitbox = false, EnemyHitbox = false,
     ESP = false, TargetLock = false,
 }
 
--- ============================================================
--- GODMODE (buat TP aman) — restore ke MaxHealth
--- ============================================================
-local function godmodeOn()
-    local char = Utils.getChar()
-    if not char then return nil end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return nil end
-    
-    local original = {
-        MaxHealth = hum.MaxHealth,
-        Health = hum.Health,
-    }
-    
-    local GOD_HP = 1000000
-    
-    pcall(function()
-        hum.MaxHealth = GOD_HP
-        hum.Health = GOD_HP
-    end)
-    
-    local lockConn
-    lockConn = Run.Stepped:Connect(function()
-        if hum and hum.Parent then
-            pcall(function()
-                if hum.MaxHealth < GOD_HP then
-                    hum.MaxHealth = GOD_HP
-                end
-                if hum.Health < GOD_HP then
-                    hum.Health = GOD_HP
-                end
-            end)
-        end
-    end)
-    
-    return {
-        restore = function()
-            if lockConn then lockConn:Disconnect() end
-            if hum and hum.Parent then
-                pcall(function()
-                    hum.MaxHealth = original.MaxHealth
-                    -- Restore ke HP penuh
-                    hum.Health = original.MaxHealth
-                end)
-            end
-        end
-    }
-end
+local function getChar() return LP.Character end
+local function getHRP() local c = LP.Character return c and c:FindFirstChild("HumanoidRootPart") end
+local function getHum() local c = LP.Character return c and c:FindFirstChildOfClass("Humanoid") end
 
 task.spawn(function()
     repeat task.wait(0.1) until LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     print("[FLOW] Character loaded!")
 end)
 
--- ============================================================
--- MOVEMENT
--- ============================================================
 Run.RenderStepped:Connect(function()
-    local hum = Utils.getHum()
+    local hum = getHum()
     if not hum then return end
     local mv = Config.Movement
     pcall(function()
-        if mv.WalkSpeed and mv.WalkSpeed > 0 then
-            hum.WalkSpeed = mv.WalkSpeed
-        end
-        if mv.HipHeight and mv.HipHeight >= 0 then
-            hum.HipHeight = mv.HipHeight
-        end
+        if mv.WalkSpeed and mv.WalkSpeed > 0 then hum.WalkSpeed = mv.WalkSpeed end
+        if mv.HipHeight and mv.HipHeight >= 0 then hum.HipHeight = mv.HipHeight end
         if mv.JumpPower and mv.JumpPower > 0 then
             hum.UseJumpPower = true
             hum.JumpPower = mv.JumpPower
@@ -108,21 +44,18 @@ Run.RenderStepped:Connect(function()
     end)
 end)
 
--- ============================================================
--- NOCLIP
--- ============================================================
 local noclipOriginal = {}
 local function cleanupNoclip()
-    for part, origVal in pairs(noclipOriginal) do
+    for part, orig in pairs(noclipOriginal) do
         if part and part.Parent then
-            pcall(function() part.CanCollide = origVal end)
+            pcall(function() part.CanCollide = orig end)
         end
     end
     noclipOriginal = {}
 end
 
 Run.Heartbeat:Connect(function()
-    local char = Utils.getChar()
+    local char = getChar()
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
@@ -143,28 +76,34 @@ Run.Heartbeat:Connect(function()
     end
 end)
 
--- ============================================================
--- FLY
--- ============================================================
 local flyConn, flyBV, flyBG = nil, nil, nil
 local function stopFly()
     if flyConn then flyConn:Disconnect() flyConn = nil end
     if flyBV then flyBV:Destroy() flyBV = nil end
     if flyBG then flyBG:Destroy() flyBG = nil end
-    local hrp = Utils.getHRP()
+    local hrp = getHRP()
     if hrp then
         hrp.Velocity = Vector3.zero
         hrp.RotVelocity = Vector3.zero
         hrp.CanCollide = true
+        for _, c in pairs(hrp:GetChildren()) do
+            if c:IsA("BodyVelocity") or c:IsA("BodyGyro") or c:IsA("BodyPosition") then
+                pcall(function() c:Destroy() end)
+            end
+        end
     end
-    local hum = Utils.getHum()
-    if hum then pcall(function() hum.PlatformStand = false end) end
+    local hum = getHum()
+    if hum then
+        pcall(function()
+            hum.PlatformStand = false
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end)
+    end
 end
 
 local function startFly()
     stopFly()
-    local hrp = Utils.getHRP()
-    local hum = Utils.getHum()
+    local hrp, hum = getHRP(), getHum()
     if not (hrp and hum) then return end
     hum.PlatformStand = true
     flyBV = Instance.new("BodyVelocity")
@@ -178,17 +117,13 @@ local function startFly()
     flyBG.Parent = hrp
     flyConn = Run.RenderStepped:Connect(function()
         if not Config.Movement.Fly then return end
-        local hrp2 = Utils.getHRP()
-        local hum2 = Utils.getHum()
-        if not (hrp2 and hum2 and flyBV and flyBG) then return end
+        local h, hm = getHRP(), getHum()
+        if not (h and hm and flyBV and flyBG) then return end
         flyBG.CFrame = Cam.CFrame
-        local camCF = Cam.CFrame
-        local moveDir = hum2.MoveDirection
-        local finalDir = Vector3.zero
-        if moveDir.Magnitude > 0.1 then
-            finalDir = camCF.LookVector * moveDir.Z + camCF.RightVector * moveDir.X
-        end
-        flyBV.Velocity = finalDir * Config.Movement.FlySpeed
+        local d = hm.MoveDirection
+        local f = Vector3.zero
+        if d.Magnitude > 0.1 then f = Cam.CFrame.LookVector * d.Z + Cam.CFrame.RightVector * d.X end
+        flyBV.Velocity = f * Config.Movement.FlySpeed
     end)
 end
 
@@ -202,13 +137,10 @@ task.spawn(function()
     end
 end)
 
--- ============================================================
--- INFINITE JUMP
--- ============================================================
 task.spawn(function()
     while task.wait(0.1) do
         if Config.Movement.InfJump then
-            local hum = Utils.getHum()
+            local hum = getHum()
             if hum then
                 local st = hum:GetState()
                 if st == Enum.HumanoidStateType.Freefall or st == Enum.HumanoidStateType.Jumping then
@@ -219,13 +151,10 @@ task.spawn(function()
     end
 end)
 
--- ============================================================
--- ANTI-STUN
--- ============================================================
 task.spawn(function()
     while task.wait(0.5) do
         if Config.Combat.AntiStun then
-            local hum = Utils.getHum()
+            local hum = getHum()
             if hum then
                 pcall(function()
                     hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
@@ -236,14 +165,11 @@ task.spawn(function()
     end
 end)
 
--- ============================================================
--- AUTO ATTACK / RUSH
--- ============================================================
-local atkTimer, rushTimer = 0, 0
+local atkTimer, rushTimer, followTimer = 0, 0, 0
 task.spawn(function()
     while task.wait(0.1) do
         local now = tick()
-        local hum = Utils.getHum()
+        local hum = getHum()
         if not hum then continue end
         local moving = hum.MoveDirection.Magnitude > 0.1
         if Config.Combat.AutoAttack and not moving and now - atkTimer >= Config.Combat.AttackDelay then
@@ -254,18 +180,19 @@ task.spawn(function()
             rushTimer = now
             Utils.sendKey(Enum.KeyCode.B, 0.05)
         end
+        if Config.Combat.AutoFollow and now - followTimer >= Config.Combat.FollowDelay then
+            followTimer = now
+            Utils.sendKey(Enum.KeyCode.C, 0.05)
+        end
     end
 end)
 
--- ============================================================
--- KILL AURA
--- ============================================================
 local killAuraCD = 0
 task.spawn(function()
     while task.wait(0.1) do
         if Config.Combat.KillAura then
-            local char = Utils.getChar()
-            local hrp = Utils.getHRP()
+            local char = getChar()
+            local hrp = getHRP()
             if not (char and hrp) then continue end
             local nearest, nearestDist = nil, Config.Combat.KillAuraRange
             for _, model in pairs(workspace:GetChildren()) do
@@ -281,20 +208,32 @@ task.spawn(function()
                     nearestDist = dist
                 end
             end
-            if nearest then
-                if tick() - killAuraCD >= 0.3 then
-                    killAuraCD = tick()
-                    Utils.sendKey(Enum.KeyCode.V, 0.05)
+            if nearest and tick() - killAuraCD >= 0.3 then
+                killAuraCD = tick()
+                Utils.sendKey(Enum.KeyCode.V, 0.05)
+            end
+        end
+    end
+end)
+
+local healCD = 0
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.Combat.AutoHeal then
+            local hum = getHum()
+            if hum and hum.Health > 0 then
+                local pct = (hum.Health / hum.MaxHealth) * 100
+                if pct <= Config.Combat.HealThreshold and tick() - healCD >= 2 then
+                    healCD = tick()
+                    Utils.sendKey(Enum.KeyCode.H, 0.05)
                 end
             end
         end
     end
 end)
 
--- ============================================================
--- TARGET LOCK (SMOOTH AIMBOT)
--- ============================================================
 local aimLock, aimLostAt, aimSmoothCF = nil, 0, nil
+local aimbotConn = nil
 
 local function aimAlive(p)
     if not p.Character then return false end
@@ -308,23 +247,24 @@ local function aimValid(p)
     if p.Team == LP.Team and p.Team ~= nil then return false end
     local part = p.Character:FindFirstChild("Head")
     if not part then return false end
-    local d = (part.Position - Cam.CFrame.Position).Magnitude
-    if d > 500 then return false end
+    if (part.Position - Cam.CFrame.Position).Magnitude > 500 then return false end
     return true
 end
 
 local function aimClosest()
     local best, bd = nil, math.huge
     local ctr = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
-    for _, p in ipairs(game.Players:GetPlayers()) do
+    local list = Players:GetPlayers()
+    for i = 1, #list do
+        local p = list[i]
         if p ~= LP and aimValid(p) then
             local part = p.Character:FindFirstChild("Head")
-            local sp, on = Cam:WorldToViewportPoint(part.Position)
-            if on then
-                local m = (Vector2.new(sp.X, sp.Y) - ctr).Magnitude
-                if m < 300 and m < bd then
-                    best = p
-                    bd = m
+            if part then
+                local sp, on = Cam:WorldToViewportPoint(part.Position)
+                if on then
+                    local dx, dy = sp.X - ctr.X, sp.Y - ctr.Y
+                    local m = math.sqrt(dx*dx + dy*dy)
+                    if m < 300 and m < bd then best = p bd = m end
                 end
             end
         end
@@ -346,14 +286,11 @@ Run.RenderStepped:Connect(function(dt)
         end
         return
     end
-
     if not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart") then return end
-
     if not aimSmoothCF then aimSmoothCF = Cam.CFrame end
 
     if aimLock then
         if aimValid(aimLock) then
-            -- keep lock
         else
             aimLock = nil
             aimLostAt = tick()
@@ -363,7 +300,6 @@ Run.RenderStepped:Connect(function(dt)
         local t = aimClosest()
         if t then aimLock = t end
     end
-
     if not aimLock then return end
 
     local part = aimLock.Character and aimLock.Character:FindFirstChild("Head")
@@ -372,7 +308,6 @@ Run.RenderStepped:Connect(function(dt)
     local target = CFrame.lookAt(Cam.CFrame.Position, aimPredict(part))
     local a = 1 - math.pow(0.15, dt * 60)
     a = math.clamp(a, 0, 1)
-
     aimSmoothCF = aimSmoothCF:Lerp(target, a)
     Cam.CFrame = aimSmoothCF
     State.TargetLock = true
@@ -384,78 +319,6 @@ LP.CharacterAdded:Connect(function()
     aimLostAt = 0
 end)
 
--- ============================================================
--- AUTO HEAL
--- ============================================================
-local healCD = 0
-task.spawn(function()
-    while task.wait(0.5) do
-        if Config.Combat.AutoHeal then
-            local hum = Utils.getHum()
-            if hum and hum.Health > 0 then
-                local pct = (hum.Health / hum.MaxHealth) * 100
-                if pct <= Config.Combat.HealThreshold and tick() - healCD >= 2 then
-                    healCD = tick()
-                    Utils.sendKey(Enum.KeyCode.H, 0.05)
-                end
-            end
-        end
-    end
-end)
-
--- ============================================================
--- INF AMMO
--- ============================================================
-task.spawn(function()
-    while task.wait(0.2) do
-        if Config.Combat.InfAmmo then
-            local char = Utils.getChar()
-            if not char then continue end
-            local tool = char:FindFirstChildOfClass("Tool")
-            if tool then
-                for _, obj in pairs(tool:GetDescendants()) do
-                    if obj:IsA("NumberValue") or obj:IsA("IntValue") then
-                        local n = string.lower(obj.Name)
-                        if n:find("ammo") or n:find("bullet") or n:find("mag") or n:find("clip") or n:find("round") then
-                            pcall(function() obj.Value = 999 end)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- ============================================================
--- WEAPON RANGE
--- ============================================================
-task.spawn(function()
-    while task.wait(0.5) do
-        local char = Utils.getChar()
-        if not char then continue end
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            if Config.Misc.WeaponRange then
-                for _, obj in pairs(tool:GetDescendants()) do
-                    if obj:IsA("NumberValue") or obj:IsA("IntValue") then
-                        local n = string.lower(obj.Name)
-                        if n:find("range") or n:find("distance") or n:find("reach") then
-                            if not obj:GetAttribute("CA_Orig") then
-                                obj:SetAttribute("CA_Orig", obj.Value)
-                            end
-                            local orig = obj:GetAttribute("CA_Orig")
-                            pcall(function() obj.Value = orig * Config.Misc.RangeMultiplier end)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- ============================================================
--- ESP (MASTER SWITCH: Chams)
--- ============================================================
 local espCache = {}
 local espGuiParent = (gethui and gethui()) or game:GetService("CoreGui")
 
@@ -477,8 +340,8 @@ end
 local function cleanupESP()
     for _, objs in pairs(espCache) do
         for _, obj in pairs(objs) do
-            if obj and typeof(obj) == "Instance" then 
-                pcall(function() obj:Destroy() end) 
+            if obj and typeof(obj) == "Instance" then
+                pcall(function() obj:Destroy() end)
             end
         end
     end
@@ -488,31 +351,26 @@ end
 task.spawn(function()
     while task.wait(0.25) do
         local masterOn = Config.Visual.Chams
-        
         if not masterOn then
             if next(espCache) then cleanupESP() end
         else
-            local myChar = Utils.getChar()
+            local myChar = getChar()
             local cam = workspace.CurrentCamera
-            local myHRP = Utils.getHRP()
-            
-            -- ============================================
-            -- ESP PLAYER
-            -- ============================================
+            local myHRP = getHRP()
+
             for _, model in pairs(workspace:GetChildren()) do
                 if model == myChar or not model:IsA("Model") then continue end
                 local hum = model:FindFirstChildOfClass("Humanoid")
                 if not hum or hum.Health <= 0 then continue end
                 local hrp = model:FindFirstChild("HumanoidRootPart")
                 if not hrp then continue end
-                
+
                 local isTeam = isTeammate(model)
                 local markerColor = isTeam and COLOR_TEAM or COLOR_ENEMY
-                
+
                 if not espCache[model] then
                     espCache[model] = {}
                     espCache[model].isTeam = isTeam
-                    
                     local hl = Instance.new("Highlight")
                     hl.Name = "CA_ESP_HL"
                     hl.FillColor = markerColor
@@ -522,12 +380,9 @@ task.spawn(function()
                     hl.Parent = espGuiParent
                     espCache[model].hl = hl
                 end
-                
-                local anySetting = Config.Visual.ESPShowDistance 
-                    or Config.Visual.ESPHealth 
-                    or Config.Visual.ESPName
-                
-                -- Bikin BillboardGui kalau setting ON tapi belum ada
+
+                local anySetting = Config.Visual.ESPShowDistance or Config.Visual.ESPHealth or Config.Visual.ESPName
+
                 if anySetting and not espCache[model].infoBB then
                     local bb = Instance.new("BillboardGui")
                     bb.Name = "CA_ESP_Info"
@@ -536,7 +391,6 @@ task.spawn(function()
                     bb.AlwaysOnTop = true
                     bb.Adornee = hrp
                     bb.Parent = espGuiParent
-                    
                     local lbl = Instance.new("TextLabel")
                     lbl.Size = UDim2.new(1, 0, 1, 0)
                     lbl.Text = ""
@@ -547,34 +401,26 @@ task.spawn(function()
                     lbl.Font = Enum.Font.GothamBold
                     lbl.BackgroundTransparency = 1
                     lbl.Parent = bb
-                    
                     espCache[model].infoBB = bb
                     espCache[model].infoLbl = lbl
                 end
-                
-                -- Destroy BillboardGui kalau setting OFF semua
+
                 if not anySetting and espCache[model].infoBB then
                     pcall(function() espCache[model].infoBB:Destroy() end)
                     espCache[model].infoBB = nil
                     espCache[model].infoLbl = nil
                 end
-                
-                -- Update warna Highlight
+
                 local cachedTeam = espCache[model].isTeam
                 if cachedTeam ~= isTeam and espCache[model].hl then
                     espCache[model].hl.FillColor = markerColor
                     espCache[model].isTeam = isTeam
                 end
-                
-                -- Update text
+
                 if espCache[model].infoLbl and myHRP then
                     local parts = {}
-                    if Config.Visual.ESPName then
-                        table.insert(parts, model.Name)
-                    end
-                    if Config.Visual.ESPHealth then
-                        table.insert(parts, "[ "..math.floor(hum.Health).." HP ]")
-                    end
+                    if Config.Visual.ESPName then table.insert(parts, model.Name) end
+                    if Config.Visual.ESPHealth then table.insert(parts, "[ "..math.floor(hum.Health).." HP ]") end
                     if Config.Visual.ESPShowDistance then
                         local dist = (hrp.Position - myHRP.Position).Magnitude
                         table.insert(parts, "[ "..math.floor(dist).." M ]")
@@ -583,16 +429,12 @@ task.spawn(function()
                     espCache[model].infoLbl.TextColor3 = markerColor
                 end
             end
-            
-            -- ============================================
-            -- ESP OBJECT (Supply + Capture) — destroy langsung pas OFF
-            -- ============================================
+
             local activeMap = workspace:FindFirstChild("ActiveMap")
             if activeMap then
                 for _, mapChild in pairs(activeMap:GetChildren()) do
                     local inter = mapChild:FindFirstChild("Interactable")
                     if inter then
-                        -- SUPPLY
                         local supplies = inter:FindFirstChild("Supplies")
                         if supplies then
                             for _, obj in pairs(supplies:GetChildren()) do
@@ -610,7 +452,6 @@ task.spawn(function()
                                             espCache[obj].hl = hl
                                         end
                                     else
-                                        -- OFF → destroy langsung
                                         if espCache[obj] and espCache[obj].isObject then
                                             if espCache[obj].hl then
                                                 pcall(function() espCache[obj].hl:Destroy() end)
@@ -621,8 +462,6 @@ task.spawn(function()
                                 end
                             end
                         end
-                        
-                        -- CAPTURE
                         local points = inter:FindFirstChild("Points")
                         if points then
                             for _, obj in pairs(points:GetChildren()) do
@@ -653,13 +492,12 @@ task.spawn(function()
                     end
                 end
             end
-            
-            -- Cleanup object yang parent hilang
+
             for model, objs in pairs(espCache) do
                 if not model.Parent then
                     for _, obj in pairs(objs) do
-                        if obj and typeof(obj) == "Instance" then 
-                            pcall(function() obj:Destroy() end) 
+                        if obj and typeof(obj) == "Instance" then
+                            pcall(function() obj:Destroy() end)
                         end
                     end
                     espCache[model] = nil
@@ -669,9 +507,6 @@ task.spawn(function()
     end
 end)
 
--- ============================================================
--- FULLBRIGHT / NO FOG
--- ============================================================
 local savedLighting = { Brightness=nil, Ambient=nil, OutdoorAmbient=nil, FogEnd=nil, FogStart=nil }
 task.spawn(function()
     while task.wait(0.5) do
@@ -713,87 +548,92 @@ task.spawn(function()
     end
 end)
 
--- ============================================================
--- INVISIBLE
--- ============================================================
-task.spawn(function()
-    while task.wait(1) do
-        local char = Utils.getChar()
-        if not char then continue end
-        if Config.Visual.Invisible then
-            for _, part in pairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and not part:GetAttribute("CA_Invis") then
-                    part:SetAttribute("CA_Invis", true)
-                    part:SetAttribute("CA_OrigTrans", part.Transparency)
-                    part.Transparency = 1
-                end
-            end
-            State.Invisible = true
-        elseif State.Invisible then
-            for _, part in pairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part:GetAttribute("CA_Invis") then
-                    part.Transparency = part:GetAttribute("CA_OrigTrans") or 0
-                    part:SetAttribute("CA_Invis", nil)
-                    part:SetAttribute("CA_OrigTrans", nil)
-                end
-            end
-            State.Invisible = false
-        end
-    end
-end)
-
--- ============================================================
--- ANTI-AFK
--- ============================================================
 task.spawn(function()
     while task.wait(120) do
         if Config.Misc.AntiAFK then
             pcall(function()
-                S.Services.VU:CaptureController()
-                S.Services.VU:ClickButton2(Vector2.new())
+                VU:CaptureController()
+                VU:ClickButton2(Vector2.new())
             end)
         end
     end
 end)
 
--- ============================================================
--- AUTO TP
--- ============================================================
+-- SPAWN UNIT
+local function getTroopRemote()
+    local shared = RS:FindFirstChild("Shared")
+    if not shared then return nil end
+    local remotes = shared:FindFirstChild("Remotes")
+    if not remotes then return nil end
+    return remotes:FindFirstChild("RespawnUnitRequest")
+end
+
+function _G.STHAIN.SpawnUnit(slot)
+    slot = tonumber(slot) or 1
+    if slot < 1 or slot > 4 then slot = 1 end
+    local remote = getTroopRemote()
+    if not remote then
+        print("[FLOW][Spawn] RespawnUnitRequest ga ketemu")
+        return false
+    end
+    local ok = pcall(function()
+        remote:FireServer(slot)
+    end)
+    if ok then
+        print("[FLOW][Spawn] Unit slot " .. slot)
+        return true
+    end
+    return false
+end
+
+-- AUTO JOIN TEAM (pakai remote)
+local function getTeamRemote()
+    local shared = RS:FindFirstChild("Shared")
+    if not shared then return nil end
+    local remotes = shared:FindFirstChild("Remotes")
+    if not remotes then return nil end
+    return remotes:FindFirstChild("TeamRequest")
+end
+
+function _G.STHAIN.JoinTeam(teamName)
+    local remote = getTeamRemote()
+    if not remote then
+        print("[FLOW][Team] TeamRequest remote ga ketemu")
+        return false
+    end
+    local teamStr = "Attackers"
+    if teamName == "defender" or teamName == "Defenders" then
+        teamStr = "Defenders"
+    end
+    local ok = pcall(function()
+        remote:FireServer(teamStr)
+    end)
+    if ok then
+        print("[FLOW][Team] Fire: " .. teamStr)
+        return true
+    end
+    return false
+end
+
 task.spawn(function()
     while task.wait(1) do
-        if Config.Misc.AutoTP then
-            local char = Utils.getChar()
-            local hrp = Utils.getHRP()
-            if not (char and hrp) then continue end
-            local nearest, nearestDist = nil, Config.Misc.AutoTPRange
-            for _, model in pairs(workspace:GetChildren()) do
-                if model == char or not model:IsA("Model") then continue end
-                local hum = model:FindFirstChildOfClass("Humanoid")
-                if not hum or hum.Health <= 0 then continue end
-                local thrp = model:FindFirstChild("HumanoidRootPart")
-                if thrp then
-                    local dist = (thrp.Position - hrp.Position).Magnitude
-                    if dist > 5 and dist < nearestDist then
-                        nearest = thrp
-                        nearestDist = dist
-                    end
-                end
-            end
-            if nearest then
-                hrp.CFrame = CFrame.new(nearest.Position + Vector3.new(0, 3, 0))
+        local team = Config.Misc.AutoJoinTeam
+        if team and team ~= "none" then
+            local targetName = (team == "defender") and "Defenders" or "Attackers"
+            if LP.Team and LP.Team.Name == targetName then
+                Config.Misc.AutoJoinTeam = "none"
+                print("[FLOW][Team] Udah di tim, reset")
+            else
+                _G.STHAIN.JoinTeam(team)
             end
         end
     end
 end)
 
--- ============================================================
--- AUTO CLAIM QUEST (FIXED: PlayerGui.Interactable)
--- ============================================================
+-- CLAIM QUEST
 function _G.STHAIN.ClaimQuests()
     local PG = LP:FindFirstChild("PlayerGui")
     if not PG then return 0 end
-    
-    -- Buka Quest UI via HUD.RightBar.Quest
     local hud = PG:FindFirstChild("HUD")
     if hud then
         local rightBar = hud:FindFirstChild("RightBar")
@@ -801,34 +641,24 @@ function _G.STHAIN.ClaimQuests()
             local questBtn = rightBar:FindFirstChild("Quest")
             if questBtn then
                 pcall(function()
-                    if firesignal then
-                        firesignal(questBtn.MouseButton1Click)
-                    else
-                        questBtn:Activate()
-                    end
+                    if firesignal then firesignal(questBtn.MouseButton1Click) else questBtn:Activate() end
                 end)
-                print("[FLOW][Quest] Buka Quest UI")
                 task.wait(1.2)
             end
         end
     end
-    
-    -- Interactable LANGSUNG di PlayerGui
     local interactable = PG:FindFirstChild("Interactable")
-    if not interactable then 
+    if not interactable then
         warn("[FLOW][Quest] Interactable ga ketemu")
-        return 0 
+        return 0
     end
-    
     local questUI = interactable:FindFirstChild("QuestUI")
-    if not questUI then 
+    if not questUI then
         warn("[FLOW][Quest] QuestUI ga ketemu")
-        return 0 
+        return 0
     end
-    
     local claimed = 0
     local found = 0
-    
     local function scanClaim(r, depth)
         if depth > 10 then return end
         for _, c in pairs(r:GetChildren()) do
@@ -836,11 +666,7 @@ function _G.STHAIN.ClaimQuests()
                 found = found + 1
                 if c.Visible then
                     local ok = pcall(function()
-                        if firesignal then
-                            firesignal(c.MouseButton1Click)
-                        elseif c.Activate then
-                            c:Activate()
-                        end
+                        if firesignal then firesignal(c.MouseButton1Click) else c:Activate() end
                     end)
                     if ok then
                         claimed = claimed + 1
@@ -854,11 +680,8 @@ function _G.STHAIN.ClaimQuests()
             end
         end
     end
-    
     local list = questUI:FindFirstChild("List")
     if list then scanClaim(list, 0) end
-    
-    -- Battlepass juga
     local invUI = interactable:FindFirstChild("InventoryUI")
     if invUI then
         local bpTab = invUI:FindFirstChild("BattlepassTab")
@@ -867,27 +690,18 @@ function _G.STHAIN.ClaimQuests()
             if bpQuest then scanClaim(bpQuest, 0) end
         end
     end
-    
     print(("[FLOW][Quest] Found: %d | Claimed: %d"):format(found, claimed))
-    
     task.wait(0.3)
     local exitBtn = questUI:FindFirstChild("Exit")
     if exitBtn then
         pcall(function()
-            if firesignal then
-                firesignal(exitBtn.MouseButton1Click)
-            elseif exitBtn.Activate then
-                exitBtn:Activate()
-            end
+            if firesignal then firesignal(exitBtn.MouseButton1Click) else exitBtn:Activate() end
         end)
     end
-    
     return claimed
 end
 
--- ============================================================
--- AUTO REDEEM CODE (FIXED: PlayerGui.Interactable)
--- ============================================================
+-- REDEEM CODE
 local function ambilCode()
     local url = "https://www.radiotimes.com/technology/gaming/command-an-army-codes/"
     local ok, html = pcall(game.HttpGet, game, url)
@@ -916,25 +730,16 @@ end
 local function cariCodeUI()
     local PG = LP:FindFirstChild("PlayerGui")
     if not PG then return nil, nil end
-    
-    -- Interactable LANGSUNG di PlayerGui
     local interactable = PG:FindFirstChild("Interactable")
     if not interactable then return nil, nil end
-    
     local codeUI = interactable:FindFirstChild("CodeUI")
     if not codeUI then return nil, nil end
-    
     return codeUI:FindFirstChild("TextBox"), codeUI:FindFirstChild("Claim")
 end
 
 function _G.STHAIN.RedeemAllCodes()
     local codes = ambilCode()
-    if #codes == 0 then 
-        warn("[FLOW][Code] Ga ada code")
-        return 0 
-    end
-    
-    -- Buka CodeUI via HUD.RightBar.Code
+    if #codes == 0 then return 0 end
     local PG = LP:FindFirstChild("PlayerGui")
     if PG then
         local hud = PG:FindFirstChild("HUD")
@@ -944,25 +749,18 @@ function _G.STHAIN.RedeemAllCodes()
                 local codeBtn = rightBar:FindFirstChild("Code")
                 if codeBtn and codeBtn.Visible then
                     pcall(function()
-                        if firesignal then
-                            firesignal(codeBtn.MouseButton1Click)
-                        elseif codeBtn.Activate then
-                            codeBtn:Activate()
-                        end
+                        if firesignal then firesignal(codeBtn.MouseButton1Click) else codeBtn:Activate() end
                     end)
-                    print("[FLOW][Code] Buka CodeUI")
                     task.wait(1)
                 end
             end
         end
     end
-    
     local tb, btn = cariCodeUI()
-    if not tb then 
+    if not tb then
         warn("[FLOW][Code] TextBox ga ketemu")
-        return 0 
+        return 0
     end
-    
     local sukses = 0
     for i, code in ipairs(codes) do
         pcall(function()
@@ -973,18 +771,12 @@ function _G.STHAIN.RedeemAllCodes()
             tb:ReleaseFocus()
         end)
         task.wait(0.4)
-        
         local fired = false
         if btn then
             fired = pcall(function()
-                if firesignal then
-                    firesignal(btn.MouseButton1Click)
-                elseif btn.Activate then
-                    btn:Activate()
-                end
+                if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end
             end)
         end
-        
         if fired then
             sukses = sukses + 1
             print(("[FLOW][Code] [%d/%d] OK: %s"):format(i, #codes, code))
@@ -997,61 +789,39 @@ function _G.STHAIN.RedeemAllCodes()
     return sukses
 end
 
--- ============================================================
--- AUTO JOIN TEAM (FIXED: PlayerGui.PickTeam)
--- ============================================================
-function _G.STHAIN.JoinTeam(teamName)
-    local PG = LP:FindFirstChild("PlayerGui")
-    if not PG then return false end
-    
-    -- PickTeam LANGSUNG di PlayerGui
-    local pickTeam = PG:FindFirstChild("PickTeam")
-    if not pickTeam then return false end
-    if not pickTeam.Visible then return false end
-    
-    local target = nil
-    if teamName == "attacker" then
-        target = pickTeam:FindFirstChild("Attacker")
-    elseif teamName == "defender" then
-        target = pickTeam:FindFirstChild("Defender")
-    end
-    
-    if not target or not target.Visible then return false end
-    
-    local ok = pcall(function()
-        if firesignal then
-            firesignal(target.MouseButton1Click)
-        else
-            target:Activate()
+-- TELEPORT
+local function godmodeOn()
+    local char = getChar()
+    if not char then return nil end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return nil end
+    local original = { MaxHealth = hum.MaxHealth, Health = hum.Health }
+    local GOD_HP = 1000000
+    pcall(function()
+        hum.MaxHealth = GOD_HP
+        hum.Health = GOD_HP
+    end)
+    local lockConn = Run.Stepped:Connect(function()
+        if hum and hum.Parent then
+            pcall(function()
+                if hum.MaxHealth < GOD_HP then hum.MaxHealth = GOD_HP end
+                if hum.Health < GOD_HP then hum.Health = GOD_HP end
+            end)
         end
     end)
-    
-    if ok then
-        print("[FLOW][Team] Join: "..tostring(teamName))
-        return true
-    end
-    return false
-end
-
-task.spawn(function()
-    while task.wait(2) do
-        local team = Config.Misc.AutoJoinTeam
-        if team and team ~= "none" then
-            local ok = pcall(function() 
-                return _G.STHAIN.JoinTeam(team) 
-            end)
-            if ok == true then
-                task.wait(2)
-                Config.Misc.AutoJoinTeam = "none"
-                print("[FLOW][Team] Reset ke none")
+    return {
+        restore = function()
+            if lockConn then lockConn:Disconnect() end
+            if hum and hum.Parent then
+                pcall(function()
+                    hum.MaxHealth = original.MaxHealth
+                    hum.Health = original.MaxHealth
+                end)
             end
         end
-    end
-end)
+    }
+end
 
--- ============================================================
--- TELEPORT SYSTEM (GODMODE SAFE)
--- ============================================================
 local function getMapFolder()
     local activeMap = workspace:FindFirstChild("ActiveMap")
     if not activeMap then return nil end
@@ -1111,11 +881,10 @@ function _G.STHAIN.GetMyTeam()
 end
 
 function _G.STHAIN.TeleportTo(part)
-    local char = Utils.getChar()
+    local char = getChar()
     if not char then return false end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not (hrp and part) then return false end
-    
     local targetPos
     if typeof(part) == "Vector3" then targetPos = part
     else
@@ -1123,11 +892,7 @@ function _G.STHAIN.TeleportTo(part)
         targetPos = part.Position
     end
     local offY = (Config.Teleport and Config.Teleport.OffsetY) or 5
-    
-    -- 🔥 GODMODE ON
     local god = godmodeOn()
-    
-    -- Noclip temporary
     local savedCollide = {}
     for _, p in pairs(char:GetDescendants()) do
         if p:IsA("BasePart") then
@@ -1135,76 +900,81 @@ function _G.STHAIN.TeleportTo(part)
             p.CanCollide = false
         end
     end
-    
-    -- Reset velocity
     pcall(function()
         hrp.Velocity = Vector3.zero
         hrp.RotVelocity = Vector3.zero
     end)
-    
-    -- TP
-    pcall(function() 
-        hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, offY, 0)) 
+    pcall(function()
+        hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, offY, 0))
     end)
-    
-    -- Tunggu sync (lebih lama biar HP bar game sinkron)
     task.wait(1.5)
-    
-    -- Reset velocity lagi
     pcall(function()
         hrp.Velocity = Vector3.zero
         hrp.RotVelocity = Vector3.zero
     end)
-    
     task.wait(1)
-    
-    -- Restore noclip
     for p, cc in pairs(savedCollide) do
         if p and p.Parent then
             pcall(function() p.CanCollide = cc end)
         end
     end
-    
-    -- 🔥 GODMODE OFF (restore ke HP penuh)
     if god then god.restore() end
-    
     return true
 end
 
-function _G.STHAIN.TeleportToEnemySupply()
-    local myTeam = _G.STHAIN.GetMyTeam()
-    if myTeam == "unknown" then return false end
+function _G.STHAIN.TeleportToSupply(mode)
+    mode = mode or "Enemy"
+    local hrp = getHRP()
+    if not hrp then return false end
     local results = _G.STHAIN.TeleportScan()
+    if #results.supplies == 0 then return false end
+    local myTeam = _G.STHAIN.GetMyTeam()
     local enemyTeam = (myTeam == "attacker") and "defender" or "attacker"
-    local enemySupplies = {}
+    local candidates = {}
     for _, sup in ipairs(results.supplies) do
-        if sup.team == enemyTeam then table.insert(enemySupplies, sup) end
-    end
-    if #enemySupplies == 0 then return false end
-    if not _G.STHAIN._tpSupplyIndex then _G.STHAIN._tpSupplyIndex = 0 end
-    _G.STHAIN._tpSupplyIndex = _G.STHAIN._tpSupplyIndex + 1
-    if _G.STHAIN._tpSupplyIndex > #enemySupplies then _G.STHAIN._tpSupplyIndex = 1 end
-    local target = enemySupplies[_G.STHAIN._tpSupplyIndex]
-    _G.STHAIN.TeleportTo(target.capturePart or target.instance)
-    print("[FLOW] TP Enemy supply:", target.name)
-    return true
-end
-
-function _G.STHAIN.TeleportToOwnSupply()
-    local myTeam = _G.STHAIN.GetMyTeam()
-    if myTeam == "unknown" then return false end
-    local results = _G.STHAIN.TeleportScan()
-    for _, sup in ipairs(results.supplies) do
-        if sup.team == myTeam then
-            _G.STHAIN.TeleportTo(sup.capturePart or sup.instance)
-            return true
+        if mode == "Enemy" and sup.team == enemyTeam then
+            table.insert(candidates, sup)
+        elseif mode == "Own" and sup.team == myTeam then
+            table.insert(candidates, sup)
+        elseif mode == "Nearest" then
+            table.insert(candidates, sup)
         end
+    end
+    if #candidates == 0 then
+        for _, sup in ipairs(results.supplies) do
+            table.insert(candidates, sup)
+        end
+    end
+    if #candidates == 0 then return false end
+    local nearest, nd = nil, math.huge
+    for _, sup in ipairs(candidates) do
+        local part = sup.capturePart or sup.instance
+        if part and part.Parent then
+            local d = (part.Position - hrp.Position).Magnitude
+            if d < nd then
+                nearest = sup
+                nd = d
+            end
+        end
+    end
+    if nearest then
+        _G.STHAIN.TeleportTo(nearest.capturePart or nearest.instance)
+        print("[FLOW] TP Supply (" .. mode .. "): " .. nearest.name)
+        return true
     end
     return false
 end
 
+function _G.STHAIN.TeleportToOwnSupply()
+    return _G.STHAIN.TeleportToSupply("Own")
+end
+
+function _G.STHAIN.TeleportToEnemySupply()
+    return _G.STHAIN.TeleportToSupply("Enemy")
+end
+
 function _G.STHAIN.TeleportToNearestCapture()
-    local hrp = Utils.getHRP()
+    local hrp = getHRP()
     if not hrp then return false end
     local results = _G.STHAIN.TeleportScan()
     local nearest, nd = nil, math.huge
@@ -1240,8 +1010,8 @@ function _G.STHAIN.TeleportToPointA() return tpToNamed("pointa") end
 function _G.STHAIN.TeleportToPointB() return tpToNamed("pointb") end
 
 function _G.STHAIN.TeleportToNearestEnemy()
-    local char = Utils.getChar()
-    local hrp = Utils.getHRP()
+    local char = getChar()
+    local hrp = getHRP()
     if not (char and hrp) then return false end
     local nearest, nd = nil, math.huge
     for _, model in pairs(workspace:GetChildren()) do
@@ -1261,8 +1031,8 @@ function _G.STHAIN.TeleportToNearestEnemy()
 end
 
 function _G.STHAIN.TeleportToTeammate()
-    local char = Utils.getChar()
-    local hrp = Utils.GetHRP and Utils.getHRP() or Utils.getHRP()
+    local char = getChar()
+    local hrp = getHRP()
     if not (char and hrp) then return false end
     local myTeam = _G.STHAIN.GetMyTeam()
     if myTeam == "unknown" then return false end
@@ -1288,10 +1058,7 @@ function _G.STHAIN.TeleportToTeammate()
     return false
 end
 
--- ============================================================
--- CONFIG SAVE / LOAD / DELETE
--- ============================================================
-local CONFIG_FILE = "sthain_config.json"
+local CONFIG_FILE = "flow_caa_config.json"
 
 function _G.STHAIN.SaveConfig()
     if not writefile then return false end
@@ -1322,9 +1089,6 @@ function _G.STHAIN.DeleteConfig()
     return true
 end
 
--- ============================================================
--- RESPAWN HANDLER
--- ============================================================
 LP.CharacterAdded:Connect(function(char)
     task.wait(1.5)
     State.Invisible = false
@@ -1333,6 +1097,8 @@ LP.CharacterAdded:Connect(function(char)
     if flyConn then stopFly() end
     cleanupESP()
     cleanupNoclip()
+    aimLock = nil
+    aimSmoothCF = nil
 end)
 
-print("[FLOW] Logic loaded - v9")
+print("[FLOW] Logic loaded")
