@@ -2,7 +2,12 @@
 ============================================================
   [7] PAGES — Command An Army
   Author  : Cabu
-  Version : 1.0
+  Version : 1.1 (FIXED)
+  - Dropdown muncul di ATAS
+  - Dropdown bisa discroll
+  - Dropdown gak ke-clip
+  - Section auto-size
+  - Tombol bisa diklik
 ============================================================
 ]]
 
@@ -11,6 +16,10 @@ local C = S.Theme.Colors
 local I = S.Theme.Icons
 local F = S.Theme.Font
 
+-- Fallback UIS
+local UIS = S.Services.UIS or game:GetService("UserInputService")
+local Run = S.Services.Run or game:GetService("RunService")
+
 local pages = {}
 local tabs = {}
 
@@ -18,6 +27,28 @@ local function save()
     if _G.STHAIN.SaveConfig then
         task.spawn(_G.STHAIN.SaveConfig)
     end
+end
+
+-- ============================================================
+-- FORCE SECTION AUTO-SIZE (fix tombol ngambang)
+-- ============================================================
+local function forceFixSection(sectionFrame)
+    if not sectionFrame then return end
+    pcall(function()
+        if sectionFrame:IsA("Frame") or sectionFrame:IsA("ScrollingFrame") then
+            sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
+            sectionFrame.ClipsDescendants = false
+        end
+        for _, child in pairs(sectionFrame:GetDescendants()) do
+            if child:IsA("Frame") or child:IsA("ScrollingFrame") then
+                if not child.Name:find("Popup") and not child.Name:find("Dropdown") then
+                    pcall(function()
+                        child.AutomaticSize = Enum.AutomaticSize.Y
+                    end)
+                end
+            end
+        end
+    end)
 end
 
 -- ============================================================
@@ -34,6 +65,9 @@ local function createPage(name)
     page.ScrollBarImageTransparency = 0.5
     page.CanvasSize = UDim2.new(0, 0, 0, 0)
     page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.ScrollingDirection = Enum.ScrollingDirection.Y
+    page.ElasticBehavior = Enum.ElasticBehavior.Never
+    page.ClipsDescendants = false
     page.Visible = false
     page.Parent = S.GUI.ContentScroll
 
@@ -128,7 +162,7 @@ local function makeTab(iconId, name)
 end
 
 -- ============================================================
--- CUSTOM DYNAMIC DROPDOWN (buat Supply Target)
+-- CUSTOM DYNAMIC DROPDOWN (muncul DI ATAS + bisa scroll)
 -- ============================================================
 local function makeDynamicDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -161,24 +195,67 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     selected.BackgroundTransparency = 0
     selected.BorderSizePixel = 0
     selected.AutoButtonColor = false
+    selected.ZIndex = 10
     selected.Parent = f
     Instance.new("UICorner", selected).CornerRadius = UDim.new(0, 4)
 
-    local popup = Instance.new("Frame")
-    popup.Size = UDim2.new(1, -8, 0, 0)
-    popup.Position = UDim2.new(0, 4, 1, 4)
+    -- POPUP — ScrollingFrame, parent ke MainFrame
+    local popup = Instance.new("ScrollingFrame")
+    popup.Name = "DropdownPopup_" .. name
+    popup.Size = UDim2.new(0, 140, 0, 150)
     popup.BackgroundColor3 = C.bg4
+    popup.BackgroundTransparency = 0
     popup.BorderSizePixel = 0
     popup.Visible = false
-    popup.ZIndex = 50
-    popup.Parent = f
+    popup.ZIndex = 200
+    popup.ScrollBarThickness = 3
+    popup.ScrollBarImageColor3 = C.accent
+    popup.ScrollBarImageTransparency = 0.4
+    popup.CanvasSize = UDim2.new(0, 0, 0, 0)
+    popup.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    popup.ScrollingDirection = Enum.ScrollingDirection.Y
+    popup.ElasticBehavior = Enum.ElasticBehavior.Never
+    popup.ClipsDescendants = true
+    popup.Parent = S.GUI.MainFrame
     Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 5)
 
     local popLayout = Instance.new("UIListLayout")
     popLayout.Padding = UDim.new(0, 2)
+    popLayout.SortOrder = Enum.SortOrder.LayoutOrder
     popLayout.Parent = popup
 
+    local popPad = Instance.new("UIPadding")
+    popPad.PaddingTop = UDim.new(0, 4)
+    popPad.PaddingBottom = UDim.new(0, 4)
+    popPad.PaddingLeft = UDim.new(0, 4)
+    popPad.PaddingRight = UDim.new(0, 4)
+    popPad.Parent = popup
+
     local currentValue = initialOptions[1] or "None"
+    local isOpen = false
+
+    -- ============================================================
+    -- POSISI POPUP — DI ATAS TOMBOL
+    -- ============================================================
+    local function updatePopupPosition()
+        local pos = selected.AbsolutePosition
+        local size = selected.AbsoluteSize
+        local popupH = popup.AbsoluteSize.Y
+        local mainFramePos = S.GUI.MainFrame.AbsolutePosition
+
+        -- Posisi X: rata kanan sama tombol
+        local popupX = pos.X + size.X - 140 - mainFramePos.X
+
+        -- Posisi Y: DI ATAS tombol
+        local popupY = pos.Y - mainFramePos.Y - popupH - 4
+
+        -- Kalau keluar layar atas, munculin ke BAWAH
+        if pos.Y - popupH - 4 < 0 then
+            popupY = pos.Y - mainFramePos.Y + size.Y + 4
+        end
+
+        popup.Position = UDim2.new(0, popupX, 0, popupY)
+    end
 
     local function rebuildOptions(options)
         for _, child in pairs(popup:GetChildren()) do
@@ -186,44 +263,76 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
                 child:Destroy()
             end
         end
-        for _, opt in ipairs(options) do
+        for i, opt in ipairs(options) do
             local optBtn = Instance.new("TextButton")
             optBtn.Size = UDim2.new(1, -8, 0, 26)
+            optBtn.LayoutOrder = i
             optBtn.Text = opt
             optBtn.TextColor3 = C.text
             optBtn.TextSize = 11
             optBtn.Font = F.norm
             optBtn.BackgroundColor3 = C.bg4
             optBtn.BorderSizePixel = 0
-            optBtn.ZIndex = 51
+            optBtn.ZIndex = 201
+            optBtn.AutoButtonColor = true
             optBtn.Parent = popup
             Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
             optBtn.MouseButton1Click:Connect(function()
                 selected.Text = opt
                 currentValue = opt
                 popup.Visible = false
+                isOpen = false
                 pcall(callback, opt)
             end)
         end
-        popup.Size = UDim2.new(1, -8, 0, #options * 28 + 4)
+        local maxH = 150
+        local contentH = #options * 28 + 8
+        popup.Size = UDim2.new(0, 140, 0, math.min(contentH, maxH))
     end
 
     rebuildOptions(initialOptions)
 
-    local isOpen = false
     selected.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         popup.Visible = isOpen
+        if isOpen then
+            updatePopupPosition()
+        end
+    end)
+
+    -- Close on outside click
+    UIS.InputBegan:Connect(function(input)
+        if isOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = input.Position
+            local popPos = popup.AbsolutePosition
+            local popSize = popup.AbsoluteSize
+            local selPos = selected.AbsolutePosition
+            local selSize = selected.AbsoluteSize
+
+            local inPopup = mousePos.X >= popPos.X and mousePos.X <= popPos.X + popSize.X
+                and mousePos.Y >= popPos.Y and mousePos.Y <= popPos.Y + popSize.Y
+            local inSelected = mousePos.X >= selPos.X and mousePos.X <= selPos.X + selSize.X
+                and mousePos.Y >= selPos.Y and mousePos.Y <= selPos.Y + selSize.Y
+
+            if not inPopup and not inSelected then
+                popup.Visible = false
+                isOpen = false
+            end
+        end
+    end)
+
+    -- Update posisi tiap frame kalau scroll
+    Run.RenderStepped:Connect(function()
+        if isOpen then updatePopupPosition() end
     end)
 
     return {
         UpdateOptions = function(options)
-            -- Cek apakah current value masih ada di options baru
+            if isOpen then return end
             local stillValid = false
             for _, opt in ipairs(options) do
                 if opt == currentValue then stillValid = true break end
             end
-            -- Kalau ga valid, ganti ke option pertama
             if not stillValid and #options > 0 then
                 currentValue = options[1]
                 selected.Text = options[1]
@@ -233,6 +342,28 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
         end,
         GetValue = function() return currentValue end,
     }
+end
+
+-- ============================================================
+-- HELPER — Bikin button di dalam section
+-- ============================================================
+local function makeSectionButton(parent, text, callback)
+    local btn = Instance.new("TextButton")
+    btn.Name = text:gsub("%s+", "") .. "Btn"
+    btn.Size = UDim2.new(1, 0, 0, 32)
+    btn.BackgroundColor3 = C.bg4
+    btn.BackgroundTransparency = 0
+    btn.BorderSizePixel = 0
+    btn.Text = text
+    btn.TextColor3 = C.accent
+    btn.TextSize = 11
+    btn.Font = F.norm
+    btn.AutoButtonColor = false
+    btn.ZIndex = 5
+    btn.Parent = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
 end
 
 -- ============================================================
@@ -260,33 +391,38 @@ local autoCombat = S.Comp.makeSection(pages["Combat"], "Auto Combat", false)
 S.Comp.makeToggle(autoCombat, "Auto Attack (V)", CC.AutoAttack, function(v) CC.AutoAttack = v save() end)
 S.Comp.makeToggle(autoCombat, "Auto Rush (B)", CC.AutoRush, function(v) CC.AutoRush = v save() end)
 S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow, function(v) CC.AutoFollow = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(autoCombat) end)
 
 -- ============================================================
--- TAB COMBAT — Spawn Unit
+-- TAB COMBAT — Spawn Unit (FIXED)
 -- ============================================================
 local spawnSection = S.Comp.makeSection(pages["Combat"], "Spawn Unit", false)
-S.Comp.makeDropdown(spawnSection, "Unit Slot", {"1", "2", "3", "4"}, function(v)
+
+local spawnContent = Instance.new("Frame")
+spawnContent.Name = "Content"
+spawnContent.Size = UDim2.new(1, 0, 0, 0)
+spawnContent.BackgroundTransparency = 1
+spawnContent.BorderSizePixel = 0
+spawnContent.AutomaticSize = Enum.AutomaticSize.Y
+spawnContent.Parent = spawnSection
+
+local spawnLayout = Instance.new("UIListLayout")
+spawnLayout.Padding = UDim.new(0, 6)
+spawnLayout.SortOrder = Enum.SortOrder.LayoutOrder
+spawnLayout.Parent = spawnContent
+
+S.Comp.makeDropdown(spawnContent, "Unit Slot", {"1", "2", "3", "4"}, function(v)
     SS.UnitSlot = tonumber(v) or 1
     save()
 end)
 
-local spawnBtn = Instance.new("TextButton")
-spawnBtn.Name = "SpawnBtn"
-spawnBtn.Size = UDim2.new(1, 0, 0, 32)
-spawnBtn.BackgroundColor3 = C.bg4
-spawnBtn.BackgroundTransparency = 0
-spawnBtn.BorderSizePixel = 0
-spawnBtn.Text = "Spawn Unit"
-spawnBtn.TextColor3 = C.accent
-spawnBtn.TextSize = 11
-spawnBtn.Font = F.norm
-spawnBtn.AutoButtonColor = false
-spawnBtn.Parent = spawnSection
-Instance.new("UICorner", spawnBtn).CornerRadius = UDim.new(0, 6)
-
-spawnBtn.MouseButton1Click:Connect(function()
-    if _G.STHAIN.SpawnUnit then _G.STHAIN.SpawnUnit(SS.UnitSlot) end
+makeSectionButton(spawnContent, "Spawn Unit", function()
+    if _G.STHAIN.SpawnUnit then 
+        _G.STHAIN.SpawnUnit(SS.UnitSlot) 
+    end
 end)
+
+task.defer(function() task.wait(0.1) forceFixSection(spawnSection) end)
 
 -- ============================================================
 -- TAB COMBAT — PvP
@@ -296,6 +432,7 @@ S.Comp.makeToggle(pvpSection, "Kill Aura", CC.KillAura, function(v) CC.KillAura 
 S.Comp.makeToggle(pvpSection, "Target Lock", CC.TargetLock, function(v) CC.TargetLock = v save() end)
 S.Comp.makeToggle(pvpSection, "Auto Heal", CC.AutoHeal, function(v) CC.AutoHeal = v save() end)
 S.Comp.makeToggle(pvpSection, "Anti-Stun", CC.AntiStun, function(v) CC.AntiStun = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(pvpSection) end)
 
 -- ============================================================
 -- TAB COMBAT — Delay Settings
@@ -304,6 +441,7 @@ local combatDelay = S.Comp.makeSection(pages["Combat"], "Delay Settings", false)
 S.Comp.makeInput(combatDelay, "Attack Delay", CC.AttackDelay, function(v) CC.AttackDelay = v save() end)
 S.Comp.makeInput(combatDelay, "Rush Delay", CC.RushDelay, function(v) CC.RushDelay = v save() end)
 S.Comp.makeInput(combatDelay, "Follow Delay", CC.FollowDelay, function(v) CC.FollowDelay = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(combatDelay) end)
 
 -- ============================================================
 -- TAB ESP
@@ -312,15 +450,18 @@ local VV = S.Config.Visual
 
 local enableEsp = S.Comp.makeSection(pages["Esp"], "Enable Esp", false)
 S.Comp.makeToggle(enableEsp, "Enable Esp", VV.Chams, function(v) VV.Chams = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(enableEsp) end)
 
 local espSetting = S.Comp.makeSection(pages["Esp"], "Esp Setting", false)
 S.Comp.makeToggle(espSetting, "Show Distance", VV.ESPShowDistance, function(v) VV.ESPShowDistance = v save() end)
 S.Comp.makeToggle(espSetting, "Show Health", VV.ESPHealth, function(v) VV.ESPHealth = v save() end)
 S.Comp.makeToggle(espSetting, "Show Name", VV.ESPName, function(v) VV.ESPName = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(espSetting) end)
 
 local espObject = S.Comp.makeSection(pages["Esp"], "Esp Object", false)
 S.Comp.makeToggle(espObject, "Esp Supply", VV.ESPSupply, function(v) VV.ESPSupply = v save() end)
 S.Comp.makeToggle(espObject, "Esp Capture", VV.ESPCapture, function(v) VV.ESPCapture = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(espObject) end)
 
 -- ============================================================
 -- TAB TELEPORT — Capture Point
@@ -340,6 +481,7 @@ end)
 S.Comp.makeButton(tpCapture, "TP to Point B", function()
     if _G.STHAIN.TeleportToPointB then _G.STHAIN.TeleportToPointB() end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(tpCapture) end)
 
 -- ============================================================
 -- TAB TELEPORT — Player
@@ -351,66 +493,79 @@ end)
 S.Comp.makeButton(tpPlayer, "TP to Teammate", function()
     if _G.STHAIN.TeleportToTeammate then _G.STHAIN.TeleportToTeammate() end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(tpPlayer) end)
 
 -- ============================================================
--- TAB TELEPORT — Supply Enemy
+-- TAB TELEPORT — Supply Enemy (FIXED)
 -- ============================================================
 local supplyEnemySection = S.Comp.makeSection(pages["Teleport"], "Supply Enemy", false)
 
-local enemyDropdown = makeDynamicDropdown(supplyEnemySection, "Supply Target", {"AttackerSupply1"}, function(v)
-    TT.EnemySupplyTarget = v
-    save()
-end)
+local supplyEnemyContent = Instance.new("Frame")
+supplyEnemyContent.Name = "Content"
+supplyEnemyContent.Size = UDim2.new(1, 0, 0, 0)
+supplyEnemyContent.BackgroundTransparency = 1
+supplyEnemyContent.BorderSizePixel = 0
+supplyEnemyContent.AutomaticSize = Enum.AutomaticSize.Y
+supplyEnemyContent.Parent = supplyEnemySection
 
-local enemyBtn = Instance.new("TextButton")
-enemyBtn.Name = "SupplyEnemyBtn"
-enemyBtn.Size = UDim2.new(1, 0, 0, 32)
-enemyBtn.BackgroundColor3 = C.bg4
-enemyBtn.BackgroundTransparency = 0
-enemyBtn.BorderSizePixel = 0
-enemyBtn.Text = "TP Supply Enemy"
-enemyBtn.TextColor3 = C.accent
-enemyBtn.TextSize = 11
-enemyBtn.Font = F.norm
-enemyBtn.AutoButtonColor = false
-enemyBtn.Parent = supplyEnemySection
-Instance.new("UICorner", enemyBtn).CornerRadius = UDim.new(0, 6)
+local supplyEnemyLayout = Instance.new("UIListLayout")
+supplyEnemyLayout.Padding = UDim.new(0, 6)
+supplyEnemyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+supplyEnemyLayout.Parent = supplyEnemyContent
 
-enemyBtn.MouseButton1Click:Connect(function()
+local enemyDropdown = makeDynamicDropdown(
+    supplyEnemyContent,
+    "Supply Target",
+    {TT.EnemySupplyTarget or "AttackerSupply1"},
+    function(v)
+        TT.EnemySupplyTarget = v
+        save()
+    end
+)
+
+makeSectionButton(supplyEnemyContent, "TP Supply Enemy", function()
     if _G.STHAIN.TeleportToSupplyEnemy then 
         _G.STHAIN.TeleportToSupplyEnemy(TT.EnemySupplyTarget or "") 
     end
 end)
 
+task.defer(function() task.wait(0.1) forceFixSection(supplyEnemySection) end)
+
 -- ============================================================
--- TAB TELEPORT — Supply Owner
+-- TAB TELEPORT — Supply Owner (FIXED)
 -- ============================================================
 local supplyOwnerSection = S.Comp.makeSection(pages["Teleport"], "Supply Owner", false)
 
-local ownerDropdown = makeDynamicDropdown(supplyOwnerSection, "Supply Target", {"DefenderSupply1"}, function(v)
-    TT.OwnerSupplyTarget = v
-    save()
-end)
+local supplyOwnerContent = Instance.new("Frame")
+supplyOwnerContent.Name = "Content"
+supplyOwnerContent.Size = UDim2.new(1, 0, 0, 0)
+supplyOwnerContent.BackgroundTransparency = 1
+supplyOwnerContent.BorderSizePixel = 0
+supplyOwnerContent.AutomaticSize = Enum.AutomaticSize.Y
+supplyOwnerContent.Parent = supplyOwnerSection
 
-local ownerBtn = Instance.new("TextButton")
-ownerBtn.Name = "SupplyOwnerBtn"
-ownerBtn.Size = UDim2.new(1, 0, 0, 32)
-ownerBtn.BackgroundColor3 = C.bg4
-ownerBtn.BackgroundTransparency = 0
-ownerBtn.BorderSizePixel = 0
-ownerBtn.Text = "TP Supply Owner"
-ownerBtn.TextColor3 = C.accent
-ownerBtn.TextSize = 11
-ownerBtn.Font = F.norm
-ownerBtn.AutoButtonColor = false
-ownerBtn.Parent = supplyOwnerSection
-Instance.new("UICorner", ownerBtn).CornerRadius = UDim.new(0, 6)
+local supplyOwnerLayout = Instance.new("UIListLayout")
+supplyOwnerLayout.Padding = UDim.new(0, 6)
+supplyOwnerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+supplyOwnerLayout.Parent = supplyOwnerContent
 
-ownerBtn.MouseButton1Click:Connect(function()
+local ownerDropdown = makeDynamicDropdown(
+    supplyOwnerContent,
+    "Supply Target",
+    {TT.OwnerSupplyTarget or "DefenderSupply1"},
+    function(v)
+        TT.OwnerSupplyTarget = v
+        save()
+    end
+)
+
+makeSectionButton(supplyOwnerContent, "TP Supply Owner", function()
     if _G.STHAIN.TeleportToSupplyOwner then 
         _G.STHAIN.TeleportToSupplyOwner(TT.OwnerSupplyTarget or "") 
     end
 end)
+
+task.defer(function() task.wait(0.1) forceFixSection(supplyOwnerSection) end)
 
 -- ============================================================
 -- DYNAMIC DROPDOWN UPDATE LOOP
@@ -446,6 +601,7 @@ S.Comp.makeInput(utilityContent, "Fly Speed", MM.FlySpeed, function(v) MM.FlySpe
 S.Comp.makeInput(utilityContent, "Hip Height", MM.HipHeight, function(v) MM.HipHeight = v save() end)
 S.Comp.makeInput(utilityContent, "Jump Power", MM.JumpPower, function(v) MM.JumpPower = v save() end)
 S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK, function(v) XX.AntiAFK = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(utilityContent) end)
 
 -- ============================================================
 -- TAB SETTINGS — Visuals
@@ -453,6 +609,7 @@ S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK, function(v) XX.AntiAFK
 local visualContent = S.Comp.makeSection(pages["Settings"], "Visuals", false)
 S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright, function(v) VV.Fullbright = v save() end)
 S.Comp.makeToggle(visualContent, "No Fog", VV.NoFog, function(v) VV.NoFog = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(visualContent) end)
 
 -- ============================================================
 -- TAB SETTINGS — Auto Claim
@@ -464,6 +621,7 @@ end)
 S.Comp.makeButton(autoClaimContent, "Claim All Code Now", function()
     if _G.STHAIN.RedeemAllCodes then _G.STHAIN.RedeemAllCodes() end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(autoClaimContent) end)
 
 -- ============================================================
 -- TAB SETTINGS — Auto Join Team
@@ -496,6 +654,7 @@ setJoinAttacker = S.Comp.makeToggle(autoJoinContent, "Auto Join Attackers", init
         save()
     end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(autoJoinContent) end)
 
 -- ============================================================
 -- TAB SETTINGS — Server
@@ -523,6 +682,7 @@ S.Comp.makeButton(serverContent, "Server Hop", function()
         if best then TS:TeleportToPlaceInstance(game.PlaceId, best.id, S.LP) end
     end)
 end)
+task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
 -- TAB CONFIG
@@ -532,7 +692,9 @@ local cfg = S.Config.Config
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave, function(v)
     cfg.AutoSave = v
+    save()
 end)
+task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 S.Comp.makeButton(configMgmt, "Save Config Now", function()
@@ -541,20 +703,23 @@ end)
 S.Comp.makeButton(configMgmt, "Delete Config", function()
     if _G.STHAIN.DeleteConfig then _G.STHAIN.DeleteConfig() end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
 -- ============================================================
--- DRAG MAIN FRAME
+-- DRAG MAIN FRAME (support Mouse + Touch)
 -- ============================================================
 local mainDrag, mainStart, mainPos
 S.GUI.MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.Touch 
+       or input.UserInputType == Enum.UserInputType.MouseButton1 then
         mainDrag = true
         mainStart = input.Position
         mainPos = S.GUI.MainFrame.Position
     end
 end)
 S.GUI.MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch and mainDrag then
+    if mainDrag and (input.UserInputType == Enum.UserInputType.Touch 
+       or input.UserInputType == Enum.UserInputType.MouseMovement) then
         local delta = input.Position - mainStart
         S.GUI.MainFrame.Position = UDim2.new(
             mainPos.X.Scale, mainPos.X.Offset + delta.X,
@@ -563,7 +728,8 @@ S.GUI.MainFrame.InputChanged:Connect(function(input)
     end
 end)
 S.GUI.MainFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.Touch 
+       or input.UserInputType == Enum.UserInputType.MouseButton1 then
         mainDrag = false
     end
 end)
@@ -585,4 +751,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[FLOW] Pages loaded")
+print("[FLOW] Pages loaded — v1.1 FIXED")
