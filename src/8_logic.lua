@@ -1,11 +1,11 @@
 --[[
 ============================================================
-  [8] LOGIC — Command An Army (FINAL)
+  [8] LOGIC — Command An Army (FINAL CLEAN)
 ============================================================
 ]]
 
 local S = _G.STHAIN
-if not S then warn("[FLOW] _G.STHAIN nil!") return end
+if not S then return end
 
 local Config = S.Config
 local Utils = S.Utils
@@ -19,8 +19,6 @@ local UIS = S.Services.UIS
 local Players = S.Services.Players
 local RS = game:GetService("ReplicatedStorage")
 
-print("[FLOW] Logic starting...")
-
 local State = {
     Fly = false, Noclip = false, Invisible = false,
     Fullbright = false, NoFog = false,
@@ -32,33 +30,34 @@ local function getHRP() local c = LP.Character return c and c:FindFirstChild("Hu
 local function getHum() local c = LP.Character return c and c:FindFirstChildOfClass("Humanoid") end
 
 -- ============================================================
--- SEND KEY — pakai keypress (Delta) fallback VIM
+-- SEND KEY (FIX HP & PC)
 -- ============================================================
 local function sendKey(keyCode, hold)
-    hold = hold or 0.05
-    local ok = pcall(function()
-        if keypress and keyrelease then
-            keypress(keyCode)
-            task.wait(hold)
-            keyrelease(keyCode)
-        else
+    local delay = hold or 0.05
+    
+    if keypress and keyrelease then
+        local keyStr = keyCode.Name:lower()
+        local ok = pcall(function()
+            keypress(keyStr)
+            task.wait(delay)
+            keyrelease(keyStr)
+        end)
+        if ok then return true end
+    end
+
+    if VIM then
+        local ok = pcall(function()
             VIM:SendKeyEvent(true, keyCode, false, game)
-            task.wait(hold)
-            VIM:SendKeyEvent(false, keyCode, false, game)
-        end
-    end)
-    if not ok then
-        pcall(function()
-            VIM:SendKeyEvent(true, keyCode, false, game)
-            task.wait(hold)
+            task.wait(delay)
             VIM:SendKeyEvent(false, keyCode, false, game)
         end)
+        if ok then return true end
     end
+    return false
 end
 
 task.spawn(function()
     repeat task.wait(0.1) until LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    print("[FLOW] Character loaded!")
 end)
 
 -- ============================================================
@@ -291,7 +290,6 @@ end)
 -- AIMBOT (Target Lock)
 -- ============================================================
 local aimLock, aimLostAt, aimSmoothCF = nil, 0, nil
-local aimbotConn = nil
 
 local function aimAlive(p)
     if not p.Character then return false end
@@ -348,8 +346,7 @@ Run.RenderStepped:Connect(function(dt)
     if not aimSmoothCF then aimSmoothCF = Cam.CFrame end
 
     if aimLock then
-        if aimValid(aimLock) then
-        else
+        if not aimValid(aimLock) then
             aimLock = nil
             aimLostAt = tick()
         end
@@ -579,13 +576,11 @@ local savedLighting = {
 
 task.spawn(function()
     while task.wait(0.3) do
-        -- FULLBRIGHT
         if Config.Visual.Fullbright then
             if savedLighting.Brightness == nil then
                 savedLighting.Brightness = Lighting.Brightness
                 savedLighting.Ambient = Lighting.Ambient
                 savedLighting.OutdoorAmbient = Lighting.OutdoorAmbient
-                print("[FLOW][FB] Saved original")
             end
             Lighting.Brightness = 3
             Lighting.Ambient = Color3.fromRGB(200, 200, 200)
@@ -599,17 +594,14 @@ task.spawn(function()
                 savedLighting.Brightness = nil
                 savedLighting.Ambient = nil
                 savedLighting.OutdoorAmbient = nil
-                print("[FLOW][FB] Restored")
             end
             State.Fullbright = false
         end
 
-        -- NO FOG
         if Config.Visual.NoFog then
             if savedLighting.FogEnd == nil then
                 savedLighting.FogEnd = Lighting.FogEnd
                 savedLighting.FogStart = Lighting.FogStart
-                print("[FLOW][Fog] Saved original")
             end
             Lighting.FogEnd = 100000
             Lighting.FogStart = 100000
@@ -620,7 +612,6 @@ task.spawn(function()
                 Lighting.FogStart = savedLighting.FogStart
                 savedLighting.FogEnd = nil
                 savedLighting.FogStart = nil
-                print("[FLOW][Fog] Restored")
             end
             State.NoFog = false
         end
@@ -656,16 +647,9 @@ function _G.STHAIN.SpawnUnit(slot)
     slot = tonumber(slot) or 1
     if slot < 1 or slot > 4 then slot = 1 end
     local remote = getTroopRemote()
-    if not remote then
-        print("[FLOW][Spawn] RespawnUnitRequest ga ketemu")
-        return false
-    end
+    if not remote then return false end
     local ok = pcall(function() remote:FireServer(slot) end)
-    if ok then
-        print("[FLOW][Spawn] Unit slot " .. slot)
-        return true
-    end
-    return false
+    return ok
 end
 
 -- ============================================================
@@ -681,20 +665,13 @@ end
 
 function _G.STHAIN.JoinTeam(teamName)
     local remote = getTeamRemote()
-    if not remote then
-        print("[FLOW][Team] TeamRequest remote ga ketemu")
-        return false
-    end
+    if not remote then return false end
     local teamStr = "Attackers"
     if teamName == "defender" or teamName == "Defenders" then
         teamStr = "Defenders"
     end
     local ok = pcall(function() remote:FireServer(teamStr) end)
-    if ok then
-        print("[FLOW][Team] Fire: " .. teamStr)
-        return true
-    end
-    return false
+    return ok
 end
 
 task.spawn(function()
@@ -704,7 +681,6 @@ task.spawn(function()
             local targetName = (team == "defender") and "Defenders" or "Attackers"
             if LP.Team and LP.Team.Name == targetName then
                 Config.Misc.AutoJoinTeam = "none"
-                print("[FLOW][Team] Udah di tim, reset")
             else
                 _G.STHAIN.JoinTeam(team)
             end
@@ -748,7 +724,6 @@ function _G.STHAIN.ClaimQuests()
                     end)
                     if ok then
                         claimed = claimed + 1
-                        print(("[FLOW][Quest] Claim: %s"):format(c.Parent.Parent.Name))
                         task.wait(0.5)
                     end
                 end
@@ -768,7 +743,6 @@ function _G.STHAIN.ClaimQuests()
             if bpQuest then scanClaim(bpQuest, 0) end
         end
     end
-    print(("[FLOW][Quest] Found: %d | Claimed: %d"):format(found, claimed))
     task.wait(0.3)
     local exitBtn = questUI:FindFirstChild("Exit")
     if exitBtn then
@@ -785,10 +759,7 @@ end
 local function ambilCode()
     local url = "https://www.radiotimes.com/technology/gaming/command-an-army-codes/"
     local ok, html = pcall(game.HttpGet, game, url)
-    if not ok or not html or #html < 500 then
-        warn("[FLOW][Code] Fetch gagal")
-        return {}
-    end
+    if not ok or not html or #html < 500 then return {} end
     local startPos = html:find("Active codes")
     local endPos = html:find("expired codes")
     if not startPos then return {} end
@@ -803,7 +774,6 @@ local function ambilCode()
             table.insert(codes, code)
         end
     end
-    print(("[FLOW][Code] Dapet %d code"):format(#codes))
     return codes
 end
 
@@ -819,12 +789,8 @@ end
 
 function _G.STHAIN.RedeemAllCodes()
     local codes = ambilCode()
-    if #codes == 0 then 
-        warn("[FLOW][Code] Ga ada code")
-        return 0 
-    end
+    if #codes == 0 then return 0 end
 
-    -- Buka CodeUI
     local PG = LP:FindFirstChild("PlayerGui")
     if PG then
         local hud = PG:FindFirstChild("HUD")
@@ -843,19 +809,14 @@ function _G.STHAIN.RedeemAllCodes()
     end
 
     local tb, btn = cariCodeUI()
-    if not tb then 
-        warn("[FLOW][Code] TextBox ga ketemu")
-        return 0 
-    end
+    if not tb then return 0 end
 
-    -- BLOCK keyboard focus
     local focusBlock = UIS:AddFocusBlock()
     local savedEditable = tb.TextEditable
     pcall(function() tb.TextEditable = false end)
 
     local sukses = 0
     for i, code in ipairs(codes) do
-        -- Set text langsung (ga pakai CaptureFocus)
         pcall(function()
             tb.Text = code
         end)
@@ -868,20 +829,13 @@ function _G.STHAIN.RedeemAllCodes()
             end)
         end
 
-        if fired then
-            sukses = sukses + 1
-            print(("[FLOW][Code] [%d/%d] OK: %s"):format(i, #codes, code))
-        else
-            print(("[FLOW][Code] [%d/%d] FAIL: %s"):format(i, #codes, code))
-        end
+        if fired then sukses = sukses + 1 end
         task.wait(1.5)
     end
 
-    -- Restore
     pcall(function() tb.TextEditable = savedEditable end)
     focusBlock:Disconnect()
 
-    -- Tutup CodeUI
     task.wait(0.3)
     local codeUI = tb.Parent
     if codeUI then
@@ -893,7 +847,6 @@ function _G.STHAIN.RedeemAllCodes()
         end
     end
 
-    print(("[FLOW][Code] Redeem done: %d/%d"):format(sukses, #codes))
     return sukses
 end
 
@@ -1064,15 +1017,9 @@ end
 function _G.STHAIN.TeleportToSupplyEnemy(target)
     target = target or ""
     local results = _G.STHAIN.TeleportScan()
-    if #results.supplies == 0 then
-        print("[FLOW][SupplyEnemy] Ga ada supply di map")
-        return false
-    end
+    if #results.supplies == 0 then return false end
     local myTeam = _G.STHAIN.GetMyTeam()
-    if myTeam == "unknown" then
-        print("[FLOW][SupplyEnemy] Team ga ke-detect")
-        return false
-    end
+    if myTeam == "unknown" then return false end
     local enemyTeam = (myTeam == "attacker") and "defender" or "attacker"
     local candidates = {}
     for _, sup in ipairs(results.supplies) do
@@ -1080,61 +1027,43 @@ function _G.STHAIN.TeleportToSupplyEnemy(target)
             table.insert(candidates, sup)
         end
     end
-    if #candidates == 0 then
-        print("[FLOW][SupplyEnemy] Ga ada supply enemy")
-        return false
-    end
+    if #candidates == 0 then return false end
     if target ~= "" then
         for _, sup in ipairs(candidates) do
             if sup.name == target then
                 _G.STHAIN.TeleportTo(sup.capturePart or sup.instance)
-                print("[FLOW][SupplyEnemy] TP: " .. sup.name)
                 return true
             end
         end
-        print("[FLOW][SupplyEnemy] Supply '"..target.."' ga ketemu, fallback ke pertama")
     end
     local targetSup = candidates[1]
     _G.STHAIN.TeleportTo(targetSup.capturePart or targetSup.instance)
-    print("[FLOW][SupplyEnemy] TP fallback: " .. targetSup.name)
     return true
 end
 
 function _G.STHAIN.TeleportToSupplyOwner(target)
     target = target or ""
     local results = _G.STHAIN.TeleportScan()
-    if #results.supplies == 0 then
-        print("[FLOW][SupplyOwner] Ga ada supply di map")
-        return false
-    end
+    if #results.supplies == 0 then return false end
     local myTeam = _G.STHAIN.GetMyTeam()
-    if myTeam == "unknown" then
-        print("[FLOW][SupplyOwner] Team ga ke-detect")
-        return false
-    end
+    if myTeam == "unknown" then return false end
     local candidates = {}
     for _, sup in ipairs(results.supplies) do
         if sup.team == myTeam then
             table.insert(candidates, sup)
         end
     end
-    if #candidates == 0 then
-        print("[FLOW][SupplyOwner] Ga ada supply owner")
-        return false
-    end
+    if #candidates == 0 then return false end
     if target ~= "" then
         for _, sup in ipairs(candidates) do
             if sup.name == target then
                 _G.STHAIN.TeleportTo(sup.capturePart or sup.instance)
-                print("[FLOW][SupplyOwner] TP: " .. sup.name)
                 return true
             end
         end
-        print("[FLOW][SupplyOwner] Supply '"..target.."' ga ketemu, fallback ke pertama")
     end
     local targetSup = candidates[1]
     _G.STHAIN.TeleportTo(targetSup.capturePart or targetSup.instance)
-    print("[FLOW][SupplyOwner] TP fallback: " .. targetSup.name)
     return true
 end
 
@@ -1277,5 +1206,3 @@ LP.CharacterAdded:Connect(function(char)
     aimLock = nil
     aimSmoothCF = nil
 end)
-
-print("[FLOW] Logic loaded")
