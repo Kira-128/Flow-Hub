@@ -2,12 +2,7 @@
 ============================================================
   [7] PAGES — Command An Army
   Author  : Cabu
-  Version : 1.2 (FINAL)
-  - Warna text default (C.text)
-  - Dropdown muncul di ATAS + smooth
-  - Dropdown bisa discroll
-  - Spawn Unit dropdown smooth juga
-  - Auto-close popup kalau section ditutup
+  Version : 1.4 (FINAL) 
 ============================================================
 ]]
 
@@ -22,7 +17,6 @@ local TS = S.Services.TS or game:GetService("TweenService")
 
 local pages = {}
 local tabs = {}
-local activeDropdowns = {}
 
 local function save()
     if _G.STHAIN.SaveConfig then
@@ -89,12 +83,6 @@ local function createPage(name)
 end
 
 local function switchPage(name)
-    -- Close semua dropdown yang kebuka
-    for _, dd in ipairs(activeDropdowns) do
-        if dd.ClosePopup then dd.ClosePopup() end
-    end
-    activeDropdowns = {}
-
     for n, p in pairs(pages) do
         p.Visible = (n == name)
     end
@@ -169,7 +157,8 @@ local function makeTab(iconId, name)
 end
 
 -- ============================================================
--- CUSTOM DYNAMIC DROPDOWN — MUNCUL DI ATAS + SMOOTH + SCROLL
+-- CUSTOM DYNAMIC DROPDOWN
+-- NEMPEL TOMBOL + AUTO-CLOSE + SLIDE SMOOTH + "None" SUPPORT
 -- ============================================================
 local function makeDynamicDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -196,7 +185,7 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     selected.Size = UDim2.new(0, 130, 0, 22)
     selected.Position = UDim2.new(1, -142, 0.5, -11)
     selected.Text = initialOptions[1] or "None"
-    selected.TextColor3 = C.text        -- ✅ WARNA DEFAULT
+    selected.TextColor3 = C.text
     selected.TextSize = 11
     selected.Font = F.norm
     selected.BackgroundColor3 = C.bg4
@@ -208,7 +197,7 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     selected.Parent = f
     Instance.new("UICorner", selected).CornerRadius = UDim.new(0, 4)
 
-    -- POPUP — ScrollingFrame, parent ke MainFrame
+    -- POPUP
     local popup = Instance.new("ScrollingFrame")
     popup.Name = "DropdownPopup_" .. name
     popup.Size = UDim2.new(0, 140, 0, 150)
@@ -242,21 +231,23 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
 
     local currentValue = initialOptions[1] or "None"
     local isOpen = false
+    local isAnimating = false
 
-    -- POSISI POPUP — DI ATAS
-    local function updatePopupPosition(animOffset)
-        animOffset = animOffset or 0
+    -- HITUNG POSISI POPUP — NEMPEL TOMBOL
+    local function updatePopupPosition()
         local pos = selected.AbsolutePosition
         local size = selected.AbsoluteSize
         local popupH = popup.AbsoluteSize.Y
         local popupW = 140
         local mfPos = S.GUI.MainFrame.AbsolutePosition
 
+        if size.X == 0 or size.Y == 0 then return false end
+
         local localX = pos.X + size.X - popupW - mfPos.X
-        local localY = pos.Y - mfPos.Y - popupH - 4 + animOffset
+        local localY = pos.Y - mfPos.Y - popupH - 4
 
         if pos.Y - popupH - 4 < 0 then
-            localY = pos.Y - mfPos.Y + size.Y + 4 + animOffset
+            localY = pos.Y - mfPos.Y + size.Y + 4
         end
 
         if localX < 0 then localX = 0 end
@@ -265,6 +256,7 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
         end
 
         popup.Position = UDim2.new(0, localX, 0, localY)
+        return true
     end
 
     local function rebuildOptions(options)
@@ -278,7 +270,7 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
             optBtn.Size = UDim2.new(1, -8, 0, 26)
             optBtn.LayoutOrder = i
             optBtn.Text = opt
-            optBtn.TextColor3 = C.text        -- ✅ WARNA DEFAULT
+            optBtn.TextColor3 = C.text
             optBtn.TextSize = 11
             optBtn.Font = F.norm
             optBtn.TextStrokeTransparency = 1
@@ -291,7 +283,8 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
             optBtn.MouseButton1Click:Connect(function()
                 selected.Text = opt
                 currentValue = opt
-                closePopup()
+                isOpen = false
+                popup.Visible = false
                 pcall(callback, opt)
             end)
         end
@@ -302,37 +295,55 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
 
     rebuildOptions(initialOptions)
 
-    -- ANIMASI SMOOTH
+    -- ANIMASI SLIDE
     local function animatePopup(show)
+        if isAnimating then return end
+        isAnimating = true
+
         if show then
-            updatePopupPosition(-8)
-            popup.Visible = true
+            if not updatePopupPosition() then
+                isAnimating = false
+                isOpen = false
+                return
+            end
             popup.BackgroundTransparency = 1
-            TS:Create(popup, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundTransparency = 0
-            }):Play()
-            TS:Create(popup, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            popup.Visible = true
+            local startPos = UDim2.new(
+                popup.Position.X.Scale, popup.Position.X.Offset,
+                popup.Position.Y.Scale, popup.Position.Y.Offset + 8
+            )
+            popup.Position = startPos
+            TS:Create(popup, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 0,
                 Position = UDim2.new(
                     popup.Position.X.Scale, popup.Position.X.Offset,
-                    popup.Position.Y.Scale, popup.Position.Y.Offset + 8
+                    popup.Position.Y.Scale, popup.Position.Y.Offset - 8
                 )
             }):Play()
+            task.delay(0.15, function() isAnimating = false end)
         else
-            TS:Create(popup, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            TS:Create(popup, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                 BackgroundTransparency = 1
             }):Play()
-            task.delay(0.12, function()
+            task.delay(0.1, function()
                 popup.Visible = false
+                isAnimating = false
             end)
         end
     end
 
-    function closePopup()
+    local function closePopup(instant)
         if not isOpen then return end
         isOpen = false
-        animatePopup(false)
+        if instant then
+            popup.Visible = false
+            popup.BackgroundTransparency = 0
+        else
+            animatePopup(false)
+        end
     end
 
+    -- KLIK TOMBOL DROPDOWN
     selected.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         if isOpen then
@@ -342,9 +353,10 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
         end
     end)
 
-    -- Auto-close kalau ancestor gak visible
+    -- AUTO-CLOSE INSTAN + NEMPEL
     Run.RenderStepped:Connect(function()
         if not isOpen then return end
+
         local anc = f
         local stillVisible = true
         while anc do
@@ -355,14 +367,16 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
             end
             anc = anc.Parent
         end
+
         if not stillVisible then
-            closePopup()
+            closePopup(true)
             return
         end
-        updatePopupPosition(0)
+
+        updatePopupPosition()
     end)
 
-    -- Close on outside click
+    -- CLOSE ON OUTSIDE CLICK
     UIS.InputBegan:Connect(function(input)
         if isOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
             local mousePos = input.Position
@@ -377,7 +391,7 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
                 and mousePos.Y >= selPos.Y and mousePos.Y <= selPos.Y + selSize.Y
 
             if not inPopup and not inSelected then
-                closePopup()
+                closePopup(false)
             end
         end
     end)
@@ -396,13 +410,19 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
             end
             rebuildOptions(options)
         end,
+        SetValue = function(v)
+            currentValue = v
+            selected.Text = v
+        end,
         GetValue = function() return currentValue end,
-        ClosePopup = closePopup,
+        ClosePopup = function()
+            closePopup(true)
+        end,
     }
 end
 
 -- ============================================================
--- HELPER — Bikin button di dalam section
+-- HELPER — Button dalam section
 -- ============================================================
 local function makeSectionButton(parent, text, callback)
     local btn = Instance.new("TextButton")
@@ -412,7 +432,7 @@ local function makeSectionButton(parent, text, callback)
     btn.BackgroundTransparency = 0
     btn.BorderSizePixel = 0
     btn.Text = text
-    btn.TextColor3 = C.text          -- ✅ WARNA DEFAULT
+    btn.TextColor3 = C.text
     btn.TextSize = 11
     btn.Font = F.norm
     btn.TextStrokeTransparency = 1
@@ -454,7 +474,7 @@ S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow, function(v) CC.A
 task.defer(function() task.wait(0.1) forceFixSection(autoCombat) end)
 
 -- ============================================================
--- TAB COMBAT — Spawn Unit (FIXED + SMOOTH DROPDOWN)
+-- TAB COMBAT — Spawn Unit
 -- ============================================================
 local spawnSection = S.Comp.makeSection(pages["Combat"], "Spawn Unit", false)
 
@@ -474,13 +494,12 @@ spawnLayout.Parent = spawnContent
 local spawnDropdown = makeDynamicDropdown(
     spawnContent,
     "Unit Slot",
-    {"1", "2", "3", "4"},
+    {tostring(SS.UnitSlot or 1)},
     function(v)
         SS.UnitSlot = tonumber(v) or 1
         save()
     end
 )
-table.insert(activeDropdowns, spawnDropdown)
 
 makeSectionButton(spawnContent, "Spawn Unit", function()
     if _G.STHAIN.SpawnUnit then 
@@ -562,7 +581,7 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(tpPlayer) end)
 
 -- ============================================================
--- TAB TELEPORT — Supply Enemy (FIXED)
+-- TAB TELEPORT — Supply Enemy
 -- ============================================================
 local supplyEnemySection = S.Comp.makeSection(pages["Teleport"], "Supply Enemy", false)
 
@@ -582,13 +601,12 @@ supplyEnemyLayout.Parent = supplyEnemyContent
 local enemyDropdown = makeDynamicDropdown(
     supplyEnemyContent,
     "Supply Target",
-    {TT.EnemySupplyTarget or "AttackerSupply1"},
+    {TT.EnemySupplyTarget or "None"},
     function(v)
         TT.EnemySupplyTarget = v
         save()
     end
 )
-table.insert(activeDropdowns, enemyDropdown)
 
 makeSectionButton(supplyEnemyContent, "TP Supply Enemy", function()
     if _G.STHAIN.TeleportToSupplyEnemy then 
@@ -599,7 +617,7 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(supplyEnemySection) end)
 
 -- ============================================================
--- TAB TELEPORT — Supply Owner (FIXED)
+-- TAB TELEPORT — Supply Owner
 -- ============================================================
 local supplyOwnerSection = S.Comp.makeSection(pages["Teleport"], "Supply Owner", false)
 
@@ -619,13 +637,12 @@ supplyOwnerLayout.Parent = supplyOwnerContent
 local ownerDropdown = makeDynamicDropdown(
     supplyOwnerContent,
     "Supply Target",
-    {TT.OwnerSupplyTarget or "DefenderSupply1"},
+    {TT.OwnerSupplyTarget or "None"},
     function(v)
         TT.OwnerSupplyTarget = v
         save()
     end
 )
-table.insert(activeDropdowns, ownerDropdown)
 
 makeSectionButton(supplyOwnerContent, "TP Supply Owner", function()
     if _G.STHAIN.TeleportToSupplyOwner then 
@@ -637,18 +654,33 @@ task.defer(function() task.wait(0.1) forceFixSection(supplyOwnerSection) end)
 
 -- ============================================================
 -- DYNAMIC DROPDOWN UPDATE LOOP
+-- Handle lobby (supply gak ada → "None")
 -- ============================================================
 task.spawn(function()
-    while task.wait(3) do
+    while task.wait(2) do
         if _G.STHAIN.GetSupplyList then
             local ok, data = pcall(_G.STHAIN.GetSupplyList)
+            
+            local hasAnySupply = false
             if ok and data then
-                if data.enemySupplies and #data.enemySupplies > 0 then
+                hasAnySupply = (#(data.enemySupplies or {}) > 0) or (#(data.ownerSupplies or {}) > 0)
+            end
+            
+            if hasAnySupply then
+                if #data.enemySupplies > 0 then
                     enemyDropdown.UpdateOptions(data.enemySupplies)
+                else
+                    enemyDropdown.UpdateOptions({"None"})
                 end
-                if data.ownerSupplies and #data.ownerSupplies > 0 then
+                
+                if #data.ownerSupplies > 0 then
                     ownerDropdown.UpdateOptions(data.ownerSupplies)
+                else
+                    ownerDropdown.UpdateOptions({"None"})
                 end
+            else
+                enemyDropdown.UpdateOptions({"None"})
+                ownerDropdown.UpdateOptions({"None"})
             end
         end
     end
@@ -808,10 +840,6 @@ end)
 switchPage("Combat")
 
 S.GUI.MinBtn.MouseButton1Click:Connect(function()
-    -- Close dropdown sebelum minimize
-    for _, dd in ipairs(activeDropdowns) do
-        if dd.ClosePopup then dd.ClosePopup() end
-    end
     S.GUI.MainFrame.Visible = false
     S.GUI.FloatBtn.Visible = true
 end)
@@ -823,4 +851,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[FLOW] Pages loaded — v1.2 FINAL")
+print("[FLOW] Pages loaded — v1.4 FINAL")
