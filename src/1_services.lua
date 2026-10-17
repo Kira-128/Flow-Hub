@@ -26,5 +26,3 @@ _G.STHAIN.LP = LP
 _G.STHAIN.Cam = Cam
 _G.STHAIN.IsMobile = IsMobile
 _G.STHAIN.IsPC = IsPC
-
-print("[FLOW] Platform: " .. (IsMobile and "Mobile" or IsPC and "PC" or "Unknown"))
