@@ -2,7 +2,7 @@
 ============================================================
   FLOW HUB - LOADER
   Author  : Cabu
-  Version : 1.0
+  Version : 1.1 (Clean Console)
 ============================================================
 ]]
 
@@ -23,43 +23,43 @@ local Modules = {
 _G.STHAIN = _G.STHAIN or {}
 _G.STHAIN.Modules = _G.STHAIN.Modules or {}
 
+-- ✅ Set true kalau lu mau debug (muncul di console)
+-- ✅ Set false buat publish (console 100% bersih)
+local DEBUG = false
+
+local function log(msg)
+    if DEBUG then print("[FLOW] " .. tostring(msg)) end
+end
+
 local function fetch(name)
     local ok, src = pcall(game.HttpGet, game, BASE .. name .. ".lua")
     if ok and src and #src > 0 then
-        print(("[FLOW][OK] %s (%d bytes)"):format(name, #src))
+        log(("[OK] %s (%d bytes)"):format(name, #src))
         return src
     end
-    print(("[FLOW][FAIL] fetch %s"):format(name))
+    log(("[FAIL] fetch %s"):format(name))
     return nil
 end
 
-print("[FLOW HUB] === LOAD START ===")
+log("=== LOAD START ===")
 
 for _, mod in ipairs(Modules) do
     local src = fetch(mod)
     if src then
         local fn, cerr = loadstring(src, "@" .. mod .. ".lua")
         if not fn then
-            print(("[FLOW][COMPILE-ERR] %s -> %s"):format(mod, tostring(cerr)))
+            log(("[COMPILE-ERR] %s -> %s"):format(mod, tostring(cerr)))
         else
             local ok, rerr = pcall(fn)
             if not ok then
-                print(("[FLOW][RUNTIME-ERR] %s -> %s"):format(mod, tostring(rerr)))
+                log(("[RUNTIME-ERR] %s -> %s"):format(mod, tostring(rerr)))
             else
                 _G.STHAIN.Modules[mod] = true
-                print(("[FLOW][EXEC-OK] %s"):format(mod))
+                log(("[EXEC-OK] %s"):format(mod))
             end
         end
     end
     task.wait()
 end
 
-print("[FLOW HUB] === LOAD END ===")
-print("[FLOW] _G.STHAIN keys:")
-if _G.STHAIN then
-    for k, v in pairs(_G.STHAIN) do
-        print(("  %s = %s"):format(k, typeof(v)))
-    end
-else
-    print("  _G.STHAIN = NIL  <-- ROOT CAUSE")
-end
+log("=== LOAD END ===")
