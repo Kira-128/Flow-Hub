@@ -2,12 +2,12 @@
 ============================================================
   [7] PAGES — Command An Army
   Author  : Cabu
-  Version : 1.1 (FIXED)
-  - Dropdown muncul di ATAS
+  Version : 1.2 (FINAL)
+  - Warna text default (C.text)
+  - Dropdown muncul di ATAS + smooth
   - Dropdown bisa discroll
-  - Dropdown gak ke-clip
-  - Section auto-size
-  - Tombol bisa diklik
+  - Spawn Unit dropdown smooth juga
+  - Auto-close popup kalau section ditutup
 ============================================================
 ]]
 
@@ -16,12 +16,13 @@ local C = S.Theme.Colors
 local I = S.Theme.Icons
 local F = S.Theme.Font
 
--- Fallback UIS
 local UIS = S.Services.UIS or game:GetService("UserInputService")
 local Run = S.Services.Run or game:GetService("RunService")
+local TS = S.Services.TS or game:GetService("TweenService")
 
 local pages = {}
 local tabs = {}
+local activeDropdowns = {}
 
 local function save()
     if _G.STHAIN.SaveConfig then
@@ -30,7 +31,7 @@ local function save()
 end
 
 -- ============================================================
--- FORCE SECTION AUTO-SIZE (fix tombol ngambang)
+-- FORCE SECTION AUTO-SIZE
 -- ============================================================
 local function forceFixSection(sectionFrame)
     if not sectionFrame then return end
@@ -88,6 +89,12 @@ local function createPage(name)
 end
 
 local function switchPage(name)
+    -- Close semua dropdown yang kebuka
+    for _, dd in ipairs(activeDropdowns) do
+        if dd.ClosePopup then dd.ClosePopup() end
+    end
+    activeDropdowns = {}
+
     for n, p in pairs(pages) do
         p.Visible = (n == name)
     end
@@ -152,7 +159,7 @@ local function makeTab(iconId, name)
         tx.TextColor3 = C.text
         acc.Visible = true
         acc.Size = UDim2.new(0, 3, 0, 0)
-        S.Services.TS:Create(acc, TweenInfo.new(0.15), {
+        TS:Create(acc, TweenInfo.new(0.15), {
             Size = UDim2.new(0, 3, 0, 18)
         }):Play()
         switchPage(name)
@@ -162,7 +169,7 @@ local function makeTab(iconId, name)
 end
 
 -- ============================================================
--- CUSTOM DYNAMIC DROPDOWN (muncul DI ATAS + bisa scroll)
+-- CUSTOM DYNAMIC DROPDOWN — MUNCUL DI ATAS + SMOOTH + SCROLL
 -- ============================================================
 local function makeDynamicDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -182,19 +189,21 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     lbl.Font = F.norm
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.BackgroundTransparency = 1
+    lbl.TextStrokeTransparency = 1
     lbl.Parent = f
 
     local selected = Instance.new("TextButton")
     selected.Size = UDim2.new(0, 130, 0, 22)
     selected.Position = UDim2.new(1, -142, 0.5, -11)
     selected.Text = initialOptions[1] or "None"
-    selected.TextColor3 = C.accent
+    selected.TextColor3 = C.text        -- ✅ WARNA DEFAULT
     selected.TextSize = 11
     selected.Font = F.norm
     selected.BackgroundColor3 = C.bg4
     selected.BackgroundTransparency = 0
     selected.BorderSizePixel = 0
     selected.AutoButtonColor = false
+    selected.TextStrokeTransparency = 1
     selected.ZIndex = 10
     selected.Parent = f
     Instance.new("UICorner", selected).CornerRadius = UDim.new(0, 4)
@@ -234,27 +243,28 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     local currentValue = initialOptions[1] or "None"
     local isOpen = false
 
-    -- ============================================================
-    -- POSISI POPUP — DI ATAS TOMBOL
-    -- ============================================================
-    local function updatePopupPosition()
+    -- POSISI POPUP — DI ATAS
+    local function updatePopupPosition(animOffset)
+        animOffset = animOffset or 0
         local pos = selected.AbsolutePosition
         local size = selected.AbsoluteSize
         local popupH = popup.AbsoluteSize.Y
-        local mainFramePos = S.GUI.MainFrame.AbsolutePosition
+        local popupW = 140
+        local mfPos = S.GUI.MainFrame.AbsolutePosition
 
-        -- Posisi X: rata kanan sama tombol
-        local popupX = pos.X + size.X - 140 - mainFramePos.X
+        local localX = pos.X + size.X - popupW - mfPos.X
+        local localY = pos.Y - mfPos.Y - popupH - 4 + animOffset
 
-        -- Posisi Y: DI ATAS tombol
-        local popupY = pos.Y - mainFramePos.Y - popupH - 4
-
-        -- Kalau keluar layar atas, munculin ke BAWAH
         if pos.Y - popupH - 4 < 0 then
-            popupY = pos.Y - mainFramePos.Y + size.Y + 4
+            localY = pos.Y - mfPos.Y + size.Y + 4 + animOffset
         end
 
-        popup.Position = UDim2.new(0, popupX, 0, popupY)
+        if localX < 0 then localX = 0 end
+        if localX + popupW > S.GUI.MainFrame.AbsoluteSize.X then
+            localX = S.GUI.MainFrame.AbsoluteSize.X - popupW
+        end
+
+        popup.Position = UDim2.new(0, localX, 0, localY)
     end
 
     local function rebuildOptions(options)
@@ -268,9 +278,10 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
             optBtn.Size = UDim2.new(1, -8, 0, 26)
             optBtn.LayoutOrder = i
             optBtn.Text = opt
-            optBtn.TextColor3 = C.text
+            optBtn.TextColor3 = C.text        -- ✅ WARNA DEFAULT
             optBtn.TextSize = 11
             optBtn.Font = F.norm
+            optBtn.TextStrokeTransparency = 1
             optBtn.BackgroundColor3 = C.bg4
             optBtn.BorderSizePixel = 0
             optBtn.ZIndex = 201
@@ -280,8 +291,7 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
             optBtn.MouseButton1Click:Connect(function()
                 selected.Text = opt
                 currentValue = opt
-                popup.Visible = false
-                isOpen = false
+                closePopup()
                 pcall(callback, opt)
             end)
         end
@@ -292,12 +302,64 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
 
     rebuildOptions(initialOptions)
 
+    -- ANIMASI SMOOTH
+    local function animatePopup(show)
+        if show then
+            updatePopupPosition(-8)
+            popup.Visible = true
+            popup.BackgroundTransparency = 1
+            TS:Create(popup, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 0
+            }):Play()
+            TS:Create(popup, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(
+                    popup.Position.X.Scale, popup.Position.X.Offset,
+                    popup.Position.Y.Scale, popup.Position.Y.Offset + 8
+                )
+            }):Play()
+        else
+            TS:Create(popup, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                BackgroundTransparency = 1
+            }):Play()
+            task.delay(0.12, function()
+                popup.Visible = false
+            end)
+        end
+    end
+
+    function closePopup()
+        if not isOpen then return end
+        isOpen = false
+        animatePopup(false)
+    end
+
     selected.MouseButton1Click:Connect(function()
         isOpen = not isOpen
-        popup.Visible = isOpen
         if isOpen then
-            updatePopupPosition()
+            animatePopup(true)
+        else
+            animatePopup(false)
         end
+    end)
+
+    -- Auto-close kalau ancestor gak visible
+    Run.RenderStepped:Connect(function()
+        if not isOpen then return end
+        local anc = f
+        local stillVisible = true
+        while anc do
+            if anc == S.GUI.MainFrame then break end
+            if anc:IsA("GuiObject") and not anc.Visible then
+                stillVisible = false
+                break
+            end
+            anc = anc.Parent
+        end
+        if not stillVisible then
+            closePopup()
+            return
+        end
+        updatePopupPosition(0)
     end)
 
     -- Close on outside click
@@ -315,15 +377,9 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
                 and mousePos.Y >= selPos.Y and mousePos.Y <= selPos.Y + selSize.Y
 
             if not inPopup and not inSelected then
-                popup.Visible = false
-                isOpen = false
+                closePopup()
             end
         end
-    end)
-
-    -- Update posisi tiap frame kalau scroll
-    Run.RenderStepped:Connect(function()
-        if isOpen then updatePopupPosition() end
     end)
 
     return {
@@ -341,6 +397,7 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
             rebuildOptions(options)
         end,
         GetValue = function() return currentValue end,
+        ClosePopup = closePopup,
     }
 end
 
@@ -355,9 +412,12 @@ local function makeSectionButton(parent, text, callback)
     btn.BackgroundTransparency = 0
     btn.BorderSizePixel = 0
     btn.Text = text
-    btn.TextColor3 = C.accent
+    btn.TextColor3 = C.text          -- ✅ WARNA DEFAULT
     btn.TextSize = 11
     btn.Font = F.norm
+    btn.TextStrokeTransparency = 1
+    btn.TextXAlignment = Enum.TextXAlignment.Center
+    btn.TextYAlignment = Enum.TextYAlignment.Center
     btn.AutoButtonColor = false
     btn.ZIndex = 5
     btn.Parent = parent
@@ -394,7 +454,7 @@ S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow, function(v) CC.A
 task.defer(function() task.wait(0.1) forceFixSection(autoCombat) end)
 
 -- ============================================================
--- TAB COMBAT — Spawn Unit (FIXED)
+-- TAB COMBAT — Spawn Unit (FIXED + SMOOTH DROPDOWN)
 -- ============================================================
 local spawnSection = S.Comp.makeSection(pages["Combat"], "Spawn Unit", false)
 
@@ -411,10 +471,16 @@ spawnLayout.Padding = UDim.new(0, 6)
 spawnLayout.SortOrder = Enum.SortOrder.LayoutOrder
 spawnLayout.Parent = spawnContent
 
-S.Comp.makeDropdown(spawnContent, "Unit Slot", {"1", "2", "3", "4"}, function(v)
-    SS.UnitSlot = tonumber(v) or 1
-    save()
-end)
+local spawnDropdown = makeDynamicDropdown(
+    spawnContent,
+    "Unit Slot",
+    {"1", "2", "3", "4"},
+    function(v)
+        SS.UnitSlot = tonumber(v) or 1
+        save()
+    end
+)
+table.insert(activeDropdowns, spawnDropdown)
 
 makeSectionButton(spawnContent, "Spawn Unit", function()
     if _G.STHAIN.SpawnUnit then 
@@ -522,6 +588,7 @@ local enemyDropdown = makeDynamicDropdown(
         save()
     end
 )
+table.insert(activeDropdowns, enemyDropdown)
 
 makeSectionButton(supplyEnemyContent, "TP Supply Enemy", function()
     if _G.STHAIN.TeleportToSupplyEnemy then 
@@ -558,6 +625,7 @@ local ownerDropdown = makeDynamicDropdown(
         save()
     end
 )
+table.insert(activeDropdowns, ownerDropdown)
 
 makeSectionButton(supplyOwnerContent, "TP Supply Owner", function()
     if _G.STHAIN.TeleportToSupplyOwner then 
@@ -668,7 +736,7 @@ end)
 S.Comp.makeButton(serverContent, "Server Hop", function()
     pcall(function()
         local Http = game:GetService("HttpService")
-        local TS = game:GetService("TeleportService")
+        local TeleportService = game:GetService("TeleportService")
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
         local data = Http:JSONDecode(game:HttpGet(url))
         local best = nil
@@ -679,7 +747,7 @@ S.Comp.makeButton(serverContent, "Server Hop", function()
                 end
             end
         end
-        if best then TS:TeleportToPlaceInstance(game.PlaceId, best.id, S.LP) end
+        if best then TeleportService:TeleportToPlaceInstance(game.PlaceId, best.id, S.LP) end
     end)
 end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
@@ -706,7 +774,7 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
 -- ============================================================
--- DRAG MAIN FRAME (support Mouse + Touch)
+-- DRAG MAIN FRAME
 -- ============================================================
 local mainDrag, mainStart, mainPos
 S.GUI.MainFrame.InputBegan:Connect(function(input)
@@ -740,6 +808,10 @@ end)
 switchPage("Combat")
 
 S.GUI.MinBtn.MouseButton1Click:Connect(function()
+    -- Close dropdown sebelum minimize
+    for _, dd in ipairs(activeDropdowns) do
+        if dd.ClosePopup then dd.ClosePopup() end
+    end
     S.GUI.MainFrame.Visible = false
     S.GUI.FloatBtn.Visible = true
 end)
@@ -751,4 +823,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[FLOW] Pages loaded — v1.1 FIXED")
+print("[FLOW] Pages loaded — v1.2 FINAL")
