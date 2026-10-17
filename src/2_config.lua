@@ -89,4 +89,3 @@ local Config = {
 }
 
 _G.STHAIN.Config = Config
-print("[FLOW] Config loaded")
