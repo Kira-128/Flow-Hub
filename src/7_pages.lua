@@ -2,7 +2,7 @@
 ============================================================
   [7] PAGES — Command An Army
   Author  : Cabu
-  Version : 1.5 (FINAL)
+  Version : 1.6 (FINAL)
 ============================================================
 ]]
 
@@ -200,6 +200,31 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     selected.Parent = f
     Instance.new("UICorner", selected).CornerRadius = UDim.new(0, 4)
 
+    -- ✅ Overlay putih buat animasi klik dropdown
+    local selOverlay = Instance.new("Frame")
+    selOverlay.Name = "ClickOverlay"
+    selOverlay.Size = UDim2.new(1, 0, 1, 0)
+    selOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    selOverlay.BackgroundTransparency = 1
+    selOverlay.BorderSizePixel = 0
+    selOverlay.ZIndex = 11
+    selOverlay.Parent = selected
+    Instance.new("UICorner", selOverlay).CornerRadius = UDim.new(0, 4)
+
+    selected.MouseButton1Down:Connect(function()
+        selOverlay.BackgroundTransparency = 0.85
+    end)
+    selected.MouseButton1Up:Connect(function()
+        TS:Create(selOverlay, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            BackgroundTransparency = 1
+        }):Play()
+    end)
+    selected.MouseLeave:Connect(function()
+        TS:Create(selOverlay, TweenInfo.new(0.15), {
+            BackgroundTransparency = 1
+        }):Play()
+    end)
+
     -- POPUP — lebar SAMA dengan tombol
     local popup = Instance.new("ScrollingFrame")
     popup.Name = "DropdownPopup_" .. name
@@ -245,18 +270,13 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
 
         if size.X == 0 or size.Y == 0 then return false end
 
-        -- X: rata kiri+kanan sama tombol
         local localX = pos.X - mfPos.X
-
-        -- Y: DI ATAS tombol — GAP 4px
         local localY = pos.Y - mfPos.Y - popupH - 4
 
-        -- Kalau gak muat di atas, munculin ke BAWAH — GAP 4px
         if pos.Y - popupH - 4 < 0 then
             localY = pos.Y - mfPos.Y + size.Y + 4
         end
 
-        -- Clamp X biar gak keluar MainFrame
         if localX < 0 then localX = 0 end
         if localX + DROPDOWN_W > S.GUI.MainFrame.AbsoluteSize.X then
             localX = S.GUI.MainFrame.AbsoluteSize.X - DROPDOWN_W
@@ -284,9 +304,35 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
             optBtn.BackgroundColor3 = C.bg4
             optBtn.BorderSizePixel = 0
             optBtn.ZIndex = 201
-            optBtn.AutoButtonColor = true
+            optBtn.AutoButtonColor = false
             optBtn.Parent = popup
             Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
+
+            -- ✅ Overlay putih buat animasi klik opsi
+            local optOverlay = Instance.new("Frame")
+            optOverlay.Name = "ClickOverlay"
+            optOverlay.Size = UDim2.new(1, 0, 1, 0)
+            optOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            optOverlay.BackgroundTransparency = 1
+            optOverlay.BorderSizePixel = 0
+            optOverlay.ZIndex = 202
+            optOverlay.Parent = optBtn
+            Instance.new("UICorner", optOverlay).CornerRadius = UDim.new(0, 4)
+
+            optBtn.MouseButton1Down:Connect(function()
+                optOverlay.BackgroundTransparency = 0.85
+            end)
+            optBtn.MouseButton1Up:Connect(function()
+                TS:Create(optOverlay, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    BackgroundTransparency = 1
+                }):Play()
+            end)
+            optBtn.MouseLeave:Connect(function()
+                TS:Create(optOverlay, TweenInfo.new(0.15), {
+                    BackgroundTransparency = 1
+                }):Play()
+            end)
+
             optBtn.MouseButton1Click:Connect(function()
                 selected.Text = opt
                 currentValue = opt
@@ -342,6 +388,8 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     local function closePopup(instant)
         if not isOpen then return end
         isOpen = false
+        isAnimating = false
+
         if instant then
             popup.Visible = false
             popup.BackgroundTransparency = 0
@@ -367,9 +415,15 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
         local stillVisible = true
         while anc do
             if anc == S.GUI.MainFrame then break end
-            if anc:IsA("GuiObject") and not anc.Visible then
-                stillVisible = false
-                break
+            if anc:IsA("GuiObject") then
+                if not anc.Visible then
+                    stillVisible = false
+                    break
+                end
+                if anc.AbsoluteSize.X == 0 or anc.AbsoluteSize.Y == 0 then
+                    stillVisible = false
+                    break
+                end
             end
             anc = anc.Parent
         end
@@ -428,28 +482,10 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- HELPER — Button dalam section
+-- HELPER — Button pakai S.Comp.makeButton (animasi klik sama)
 -- ============================================================
 local function makeSectionButton(parent, text, callback)
-    local btn = Instance.new("TextButton")
-    btn.Name = text:gsub("%s+", "") .. "Btn"
-    btn.Size = UDim2.new(1, 0, 0, 32)
-    btn.BackgroundColor3 = C.bg4
-    btn.BackgroundTransparency = 0
-    btn.BorderSizePixel = 0
-    btn.Text = text
-    btn.TextColor3 = C.text
-    btn.TextSize = 11
-    btn.Font = F.norm
-    btn.TextStrokeTransparency = 1
-    btn.TextXAlignment = Enum.TextXAlignment.Center
-    btn.TextYAlignment = Enum.TextYAlignment.Center
-    btn.AutoButtonColor = false
-    btn.ZIndex = 5
-    btn.Parent = parent
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    btn.MouseButton1Click:Connect(callback)
-    return btn
+    return S.Comp.makeButton(parent, text, callback)
 end
 
 -- ============================================================
@@ -857,4 +893,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[FLOW] Pages loaded — v1.5 FINAL")
+print("[FLOW] Pages loaded — v1.6 FINAL")
