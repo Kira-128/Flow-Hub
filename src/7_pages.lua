@@ -2,7 +2,7 @@
 ============================================================
   [7] PAGES — Command An Army
   Author  : Cabu
-  Version : 1.4 (FINAL) 
+  Version : 1.5 (FINAL)
 ============================================================
 ]]
 
@@ -158,7 +158,7 @@ end
 
 -- ============================================================
 -- CUSTOM DYNAMIC DROPDOWN
--- NEMPEL TOMBOL + AUTO-CLOSE + SLIDE SMOOTH + "None" SUPPORT
+-- Gap 4px + Lebar SAMA dengan tombol (130px) + smooth
 -- ============================================================
 local function makeDynamicDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -181,9 +181,12 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     lbl.TextStrokeTransparency = 1
     lbl.Parent = f
 
+    -- ✅ Lebar tombol & popup konsisten = 130
+    local DROPDOWN_W = 130
+
     local selected = Instance.new("TextButton")
-    selected.Size = UDim2.new(0, 130, 0, 22)
-    selected.Position = UDim2.new(1, -142, 0.5, -11)
+    selected.Size = UDim2.new(0, DROPDOWN_W, 0, 22)
+    selected.Position = UDim2.new(1, -(DROPDOWN_W + 12), 0.5, -11)
     selected.Text = initialOptions[1] or "None"
     selected.TextColor3 = C.text
     selected.TextSize = 11
@@ -197,10 +200,10 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     selected.Parent = f
     Instance.new("UICorner", selected).CornerRadius = UDim.new(0, 4)
 
-    -- POPUP
+    -- POPUP — lebar SAMA dengan tombol
     local popup = Instance.new("ScrollingFrame")
     popup.Name = "DropdownPopup_" .. name
-    popup.Size = UDim2.new(0, 140, 0, 150)
+    popup.Size = UDim2.new(0, DROPDOWN_W, 0, 150)
     popup.BackgroundColor3 = C.bg4
     popup.BackgroundTransparency = 0
     popup.BorderSizePixel = 0
@@ -233,26 +236,30 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
     local isOpen = false
     local isAnimating = false
 
-    -- HITUNG POSISI POPUP — NEMPEL TOMBOL
+    -- HITUNG POSISI POPUP — GAP 4px + LEBAR SAMA
     local function updatePopupPosition()
         local pos = selected.AbsolutePosition
         local size = selected.AbsoluteSize
         local popupH = popup.AbsoluteSize.Y
-        local popupW = 140
         local mfPos = S.GUI.MainFrame.AbsolutePosition
 
         if size.X == 0 or size.Y == 0 then return false end
 
-        local localX = pos.X + size.X - popupW - mfPos.X
+        -- X: rata kiri+kanan sama tombol
+        local localX = pos.X - mfPos.X
+
+        -- Y: DI ATAS tombol — GAP 4px
         local localY = pos.Y - mfPos.Y - popupH - 4
 
+        -- Kalau gak muat di atas, munculin ke BAWAH — GAP 4px
         if pos.Y - popupH - 4 < 0 then
             localY = pos.Y - mfPos.Y + size.Y + 4
         end
 
+        -- Clamp X biar gak keluar MainFrame
         if localX < 0 then localX = 0 end
-        if localX + popupW > S.GUI.MainFrame.AbsoluteSize.X then
-            localX = S.GUI.MainFrame.AbsoluteSize.X - popupW
+        if localX + DROPDOWN_W > S.GUI.MainFrame.AbsoluteSize.X then
+            localX = S.GUI.MainFrame.AbsoluteSize.X - DROPDOWN_W
         end
 
         popup.Position = UDim2.new(0, localX, 0, localY)
@@ -290,7 +297,7 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
         end
         local maxH = 150
         local contentH = #options * 28 + 8
-        popup.Size = UDim2.new(0, 140, 0, math.min(contentH, maxH))
+        popup.Size = UDim2.new(0, DROPDOWN_W, 0, math.min(contentH, maxH))
     end
 
     rebuildOptions(initialOptions)
@@ -310,14 +317,14 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
             popup.Visible = true
             local startPos = UDim2.new(
                 popup.Position.X.Scale, popup.Position.X.Offset,
-                popup.Position.Y.Scale, popup.Position.Y.Offset + 8
+                popup.Position.Y.Scale, popup.Position.Y.Offset + 6
             )
             popup.Position = startPos
             TS:Create(popup, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 BackgroundTransparency = 0,
                 Position = UDim2.new(
                     popup.Position.X.Scale, popup.Position.X.Offset,
-                    popup.Position.Y.Scale, popup.Position.Y.Offset - 8
+                    popup.Position.Y.Scale, popup.Position.Y.Offset - 6
                 )
             }):Play()
             task.delay(0.15, function() isAnimating = false end)
@@ -343,7 +350,6 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
         end
     end
 
-    -- KLIK TOMBOL DROPDOWN
     selected.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         if isOpen then
@@ -353,7 +359,7 @@ local function makeDynamicDropdown(parent, name, initialOptions, callback)
         end
     end)
 
-    -- AUTO-CLOSE INSTAN + NEMPEL
+    -- AUTO-CLOSE + NEMPEL POSISI
     Run.RenderStepped:Connect(function()
         if not isOpen then return end
 
@@ -851,4 +857,4 @@ end)
 S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
-print("[FLOW] Pages loaded — v1.4 FINAL")
+print("[FLOW] Pages loaded — v1.5 FINAL")
