@@ -33,19 +33,31 @@ function Utils.isEnemy(model)
 end
 
 function Utils.sendKey(k, hold)
-    local VIM = S.Services.VIM
     local delay = hold or 0.02
+    
+    if keypress and keyrelease then
+        local keyStr = k.Name:lower()
+        local ok = pcall(function()
+            keypress(keyStr)
+            task.wait(delay)
+            keyrelease(keyStr)
+        end)
+        if ok then return true end
+    end
 
-    pcall(function() VIM:SendKeyEvent(true, k, false, game) end)
-    pcall(function() if keypress then keypress(k) end end)
-
-    task.wait(delay)
-
-    pcall(function() VIM:SendKeyEvent(false, k, false, game) end)
-    pcall(function() if keyrelease then keyrelease(k) end end)
+    local VIM = S.Services.VIM
+    if VIM then
+        local ok = pcall(function()
+            VIM:SendKeyEvent(true, k, false, game)
+            task.wait(delay)
+            VIM:SendKeyEvent(false, k, false, game)
+        end)
+        if ok then return true end
+    end
+    
+    return false
 end
 
--- WORLD TO SCREEN (buat ESP Box / Tracer)
 function Utils.worldToScreen(worldPos)
     local cam = workspace.CurrentCamera
     local screenPos, onScreen = cam:WorldToViewportPoint(worldPos)
