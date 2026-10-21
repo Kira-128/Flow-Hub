@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [8] LOGIC — Command An Army (FINAL CLEAN)
+  [8] LOGIC — Command An Army (FINAL CLEAN V2)
 ============================================================
 ]]
 
@@ -33,8 +33,31 @@ local function getHum() local c = LP.Character return c and c:FindFirstChildOfCl
 -- SEND KEY (FIX HP & PC)
 -- ============================================================
 local function sendKey(keyCode, hold)
+    -- ✅ LOGIKA BUAT MOBILE (KLIK TOMBOL UI)
+    if S.IsMobile then
+        local PG = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+        local targetName = nil
+        if keyCode == Enum.KeyCode.V then targetName = "Attack"
+        elseif keyCode == Enum.KeyCode.B then targetName = "Rush"
+        elseif keyCode == Enum.KeyCode.C then targetName = "Follow"
+        elseif keyCode == Enum.KeyCode.H then targetName = "Heal"
+        end
+
+        if targetName then
+            for _, v in pairs(PG:GetDescendants()) do
+                if (v:IsA("TextButton") or v:IsA("ImageButton")) and v.Name == targetName and v.Visible then
+                    pcall(function()
+                        if firesignal then firesignal(v.MouseButton1Click) else v:Activate() end
+                    end)
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
+    -- ✅ LOGIKA BUAT PC (VIM/KEYPRESS)
     local delay = hold or 0.05
-    
     if keypress and keyrelease then
         local keyStr = keyCode.Name:lower()
         local ok = pcall(function()
@@ -68,8 +91,16 @@ Run.RenderStepped:Connect(function()
     if not hum then return end
     local mv = Config.Movement
     pcall(function()
-        if mv.WalkSpeed and mv.WalkSpeed > 0 then hum.WalkSpeed = mv.WalkSpeed end
-        if mv.HipHeight and mv.HipHeight >= 0 then hum.HipHeight = mv.HipHeight end
+        -- ✅ Speed cuma jalan kalau toggle EnableRunSpeed nyala
+        if mv.EnableRunSpeed then
+            if mv.WalkSpeed and mv.WalkSpeed > 0 then hum.WalkSpeed = mv.WalkSpeed end
+        else
+            if hum.WalkSpeed ~= 16 then hum.WalkSpeed = 16 end
+        end
+
+        -- ❌ Hip Height dihapus
+        -- if mv.HipHeight and mv.HipHeight >= 0 then hum.HipHeight = mv.HipHeight end
+
         if mv.JumpPower and mv.JumpPower > 0 then
             hum.UseJumpPower = true
             hum.JumpPower = mv.JumpPower
@@ -633,24 +664,49 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- SPAWN UNIT
+-- SPAWN UNIT (FIXED)
 -- ============================================================
-local function getTroopRemote()
+function _G.STHAIN.SpawnUnit(slot)
+    local PG = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+    if not PG then return false end
+
+    -- 1. Cari tombol "Spawn" di UI Supply
+    local spawnBtn = nil
+    for _, v in pairs(PG:GetDescendants()) do
+        if (v:IsA("ImageButton") or v:IsA("TextButton")) and v.Name == "Spawn" and v.Visible then
+            spawnBtn = v
+            break
+        end
+    end
+
+    if spawnBtn then
+        pcall(function()
+            if firesignal then firesignal(spawnBtn.MouseButton1Click) else spawnBtn:Activate() end
+        end)
+        return true
+    end
+
+    -- 2. Fallback remote (TroopMotionControl)
     local shared = RS:FindFirstChild("Shared")
-    if not shared then return nil end
-    local remotes = shared:FindFirstChild("Remotes")
-    if not remotes then return nil end
-    return remotes:FindFirstChild("RespawnUnitRequest")
+    local remotes = shared and shared:FindFirstChild("Remotes")
+    local motionRemote = remotes and remotes:FindFirstChild("TroopMotionControl")
+    if motionRemote then
+        pcall(function() motionRemote:FireServer("ready") end)
+        return true
+    end
+    return false
 end
 
-function _G.STHAIN.SpawnUnit(slot)
-    slot = tonumber(slot) or 1
-    if slot < 1 or slot > 4 then slot = 1 end
-    local remote = getTroopRemote()
-    if not remote then return false end
-    local ok = pcall(function() remote:FireServer(slot) end)
-    return ok
-end
+-- Auto Spawn Loop (tiap 3 detik)
+task.spawn(function()
+    while task.wait(3) do
+        if Config.Spawn.AutoSpawn then
+            if _G.STHAIN.SpawnUnit then
+                _G.STHAIN.SpawnUnit(Config.Spawn.UnitSlot or 1)
+            end
+        end
+    end
+end)
 
 -- ============================================================
 -- AUTO JOIN TEAM
@@ -689,11 +745,12 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- CLAIM QUEST
+-- CLAIM QUEST (FIXED)
 -- ============================================================
 function _G.STHAIN.ClaimQuests()
     local PG = LP:FindFirstChild("PlayerGui")
     if not PG then return 0 end
+
     local hud = PG:FindFirstChild("HUD")
     if hud then
         local rightBar = hud:FindFirstChild("RightBar")
@@ -703,46 +760,30 @@ function _G.STHAIN.ClaimQuests()
                 pcall(function()
                     if firesignal then firesignal(questBtn.MouseButton1Click) else questBtn:Activate() end
                 end)
-                task.wait(1.2)
+                task.wait(1)
             end
         end
     end
+
     local interactable = PG:FindFirstChild("Interactable")
-    if not interactable then return 0 end
-    local questUI = interactable:FindFirstChild("QuestUI")
+    local questUI = interactable and interactable:FindFirstChild("QuestUI")
     if not questUI then return 0 end
+
     local claimed = 0
-    local found = 0
-    local function scanClaim(r, depth)
-        if depth > 10 then return end
-        for _, c in pairs(r:GetChildren()) do
-            if c.Name == "Claim" and (c:IsA("ImageButton") or c:IsA("TextButton")) then
-                found = found + 1
-                if c.Visible then
-                    local ok = pcall(function()
-                        if firesignal then firesignal(c.MouseButton1Click) else c:Activate() end
-                    end)
-                    if ok then
-                        claimed = claimed + 1
-                        task.wait(0.5)
-                    end
+    for _, c in pairs(questUI:GetDescendants()) do
+        if (c:IsA("ImageButton") or c:IsA("TextButton")) and c.Name == "Claim" then
+            if c.Visible then
+                local ok = pcall(function()
+                    if firesignal then firesignal(c.MouseButton1Click) else c:Activate() end
+                end)
+                if ok then
+                    claimed = claimed + 1
+                    task.wait(0.5)
                 end
             end
-            if c:IsA("Frame") or c:IsA("ScrollingFrame") or c:IsA("CanvasGroup") then
-                scanClaim(c, depth + 1)
-            end
         end
     end
-    local list = questUI:FindFirstChild("List")
-    if list then scanClaim(list, 0) end
-    local invUI = interactable:FindFirstChild("InventoryUI")
-    if invUI then
-        local bpTab = invUI:FindFirstChild("BattlepassTab")
-        if bpTab then
-            local bpQuest = bpTab:FindFirstChild("Quest")
-            if bpQuest then scanClaim(bpQuest, 0) end
-        end
-    end
+
     task.wait(0.3)
     local exitBtn = questUI:FindFirstChild("Exit")
     if exitBtn then
@@ -754,7 +795,7 @@ function _G.STHAIN.ClaimQuests()
 end
 
 -- ============================================================
--- REDEEM CODE (no keyboard bug)
+-- REDEEM CODE
 -- ============================================================
 local function ambilCode()
     local url = "https://www.radiotimes.com/technology/gaming/command-an-army-codes/"
@@ -817,9 +858,7 @@ function _G.STHAIN.RedeemAllCodes()
 
     local sukses = 0
     for i, code in ipairs(codes) do
-        pcall(function()
-            tb.Text = code
-        end)
+        pcall(function() tb.Text = code end)
         task.wait(0.4)
 
         local fired = false
@@ -846,12 +885,11 @@ function _G.STHAIN.RedeemAllCodes()
             end)
         end
     end
-
     return sukses
 end
 
 -- ============================================================
--- TELEPORT — Helper
+-- TELEPORT SYSTEM
 -- ============================================================
 local function getMapFolder()
     local activeMap = workspace:FindFirstChild("ActiveMap")
@@ -911,9 +949,6 @@ function _G.STHAIN.GetMyTeam()
     return "unknown"
 end
 
--- ============================================================
--- TELEPORT — Godmode + Noclip
--- ============================================================
 local function godmodeOn()
     local char = getChar()
     if not char then return nil end
@@ -988,9 +1023,6 @@ function _G.STHAIN.TeleportTo(part)
     return true
 end
 
--- ============================================================
--- TELEPORT — Supply (Enemy + Owner)
--- ============================================================
 function _G.STHAIN.GetSupplyList()
     local results = _G.STHAIN.TeleportScan()
     if not results or #results.supplies == 0 then return nil end
@@ -1067,9 +1099,6 @@ function _G.STHAIN.TeleportToSupplyOwner(target)
     return true
 end
 
--- ============================================================
--- TELEPORT — Capture Point
--- ============================================================
 function _G.STHAIN.TeleportToNearestCapture()
     local hrp = getHRP()
     if not hrp then return false end
@@ -1106,9 +1135,6 @@ end
 function _G.STHAIN.TeleportToPointA() return tpToNamed("pointa") end
 function _G.STHAIN.TeleportToPointB() return tpToNamed("pointb") end
 
--- ============================================================
--- TELEPORT — Player
--- ============================================================
 function _G.STHAIN.TeleportToNearestEnemy()
     local char = getChar()
     local hrp = getHRP()
@@ -1159,37 +1185,41 @@ function _G.STHAIN.TeleportToTeammate()
 end
 
 -- ============================================================
--- CONFIG SAVE / LOAD
+-- CONFIG SAVE / LOAD (MARKDIRTY)
 -- ============================================================
-local CONFIG_FILE = "flow_caa_config.json"
+local CONFIG_FOLDER = "FlowHub_Configs"
+local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+
+local isDirty = false
+local saveThread = nil
+
+function _G.STHAIN.MarkDirty()
+    isDirty = true
+    if saveThread then task.cancel(saveThread) end
+    saveThread = task.delay(2, function()
+        if isDirty then
+            if Utils and Utils.SaveConfig then
+                Utils.SaveConfig()
+            end
+            isDirty = false
+            saveThread = nil
+        end
+    end)
+end
 
 function _G.STHAIN.SaveConfig()
-    if not writefile then return false end
-    local ok = pcall(function()
-        writefile(CONFIG_FILE, game:GetService("HttpService"):JSONEncode(_G.STHAIN.Config))
-    end)
-    return ok
+    if Utils and Utils.SaveConfig then return Utils.SaveConfig() end
+    return false
 end
 
 function _G.STHAIN.LoadConfig()
-    if not readfile then return false end
-    local ok, data = pcall(readfile, CONFIG_FILE)
-    if ok and data and #data > 0 then
-        local ok2, dec = pcall(function()
-            return game:GetService("HttpService"):JSONDecode(data)
-        end)
-        if ok2 and type(dec) == "table" then
-            for k, v in pairs(dec) do _G.STHAIN.Config[k] = v end
-            return true
-        end
-    end
+    if Utils and Utils.LoadConfig then return Utils.LoadConfig() end
     return false
 end
 
 function _G.STHAIN.DeleteConfig()
-    if not delfile then return false end
-    pcall(function() delfile(CONFIG_FILE) end)
-    return true
+    if Utils and Utils.DeleteConfig then return Utils.DeleteConfig() end
+    return false
 end
 
 -- ============================================================
