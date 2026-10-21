@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (FINAL)
+  [7] PAGES — Command An Army (FINAL V3)
 ============================================================
 ]]
 
@@ -465,9 +465,10 @@ local CC = S.Config.Combat
 local SS = S.Config.Spawn
 
 local autoCombat = S.Comp.makeSection(pages["Combat"], "Auto Combat", false)
-S.Comp.makeToggle(autoCombat, "Auto Attack (V)", CC.AutoAttack, function(v) CC.AutoAttack = v save() end)
-S.Comp.makeToggle(autoCombat, "Auto Rush (B)", CC.AutoRush, function(v) CC.AutoRush = v save() end)
-S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow, function(v) CC.AutoFollow = v save() end)
+-- ✅ FIX: Pake CC.AutoAttack == true biar sinkron sama config
+S.Comp.makeToggle(autoCombat, "Auto Attack (V)", CC.AutoAttack == true, function(v) CC.AutoAttack = v save() end)
+S.Comp.makeToggle(autoCombat, "Auto Rush (B)", CC.AutoRush == true, function(v) CC.AutoRush = v save() end)
+S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow == true, function(v) CC.AutoFollow = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(autoCombat) end)
 
 local spawnSection = S.Comp.makeSection(pages["Combat"], "Spawn Unit", false)
@@ -494,8 +495,8 @@ makeSectionButton(spawnContent, "Spawn Unit", function()
     if _G.STHAIN.SpawnUnit then _G.STHAIN.SpawnUnit(SS.UnitSlot) end
 end)
 
--- ✅ TOGGLE AUTO SPAWN
-S.Comp.makeToggle(spawnContent, "Auto Spawn (Respawn)", SS.AutoSpawn, function(v) 
+-- ✅ TOGGLE AUTO SPAWN (Ubah nama jadi BETA)
+S.Comp.makeToggle(spawnContent, "Auto Respawn [BETA]", SS.AutoSpawn == true, function(v) 
     SS.AutoSpawn = v 
     save() 
 end)
@@ -503,10 +504,10 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(spawnSection) end)
 
 local pvpSection = S.Comp.makeSection(pages["Combat"], "PvP", false)
-S.Comp.makeToggle(pvpSection, "Kill Aura", CC.KillAura, function(v) CC.KillAura = v save() end)
-S.Comp.makeToggle(pvpSection, "Target Lock", CC.TargetLock, function(v) CC.TargetLock = v save() end)
-S.Comp.makeToggle(pvpSection, "Auto Heal", CC.AutoHeal, function(v) CC.AutoHeal = v save() end)
-S.Comp.makeToggle(pvpSection, "Anti-Stun", CC.AntiStun, function(v) CC.AntiStun = v save() end)
+S.Comp.makeToggle(pvpSection, "Kill Aura", CC.KillAura == true, function(v) CC.KillAura = v save() end)
+S.Comp.makeToggle(pvpSection, "Target Lock", CC.TargetLock == true, function(v) CC.TargetLock = v save() end)
+S.Comp.makeToggle(pvpSection, "Auto Heal", CC.AutoHeal == true, function(v) CC.AutoHeal = v save() end)
+S.Comp.makeToggle(pvpSection, "Anti-Stun", CC.AntiStun == true, function(v) CC.AntiStun = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(pvpSection) end)
 
 local combatDelay = S.Comp.makeSection(pages["Combat"], "Delay Settings", false)
@@ -521,18 +522,18 @@ task.defer(function() task.wait(0.1) forceFixSection(combatDelay) end)
 local VV = S.Config.Visual
 
 local enableEsp = S.Comp.makeSection(pages["Esp"], "Enable Esp", false)
-S.Comp.makeToggle(enableEsp, "Enable Esp", VV.Chams, function(v) VV.Chams = v save() end)
+S.Comp.makeToggle(enableEsp, "Enable Esp", VV.Chams == true, function(v) VV.Chams = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(enableEsp) end)
 
 local espSetting = S.Comp.makeSection(pages["Esp"], "Esp Setting", false)
-S.Comp.makeToggle(espSetting, "Show Distance", VV.ESPShowDistance, function(v) VV.ESPShowDistance = v save() end)
-S.Comp.makeToggle(espSetting, "Show Health", VV.ESPHealth, function(v) VV.ESPHealth = v save() end)
-S.Comp.makeToggle(espSetting, "Show Name", VV.ESPName, function(v) VV.ESPName = v save() end)
+S.Comp.makeToggle(espSetting, "Show Distance", VV.ESPShowDistance == true, function(v) VV.ESPShowDistance = v save() end)
+S.Comp.makeToggle(espSetting, "Show Health", VV.ESPHealth == true, function(v) VV.ESPHealth = v save() end)
+S.Comp.makeToggle(espSetting, "Show Name", VV.ESPName == true, function(v) VV.ESPName = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(espSetting) end)
 
 local espObject = S.Comp.makeSection(pages["Esp"], "Esp Object", false)
-S.Comp.makeToggle(espObject, "Esp Supply", VV.ESPSupply, function(v) VV.ESPSupply = v save() end)
-S.Comp.makeToggle(espObject, "Esp Capture", VV.ESPCapture, function(v) VV.ESPCapture = v save() end)
+S.Comp.makeToggle(espObject, "Esp Supply", VV.ESPSupply == true, function(v) VV.ESPSupply = v save() end)
+S.Comp.makeToggle(espObject, "Esp Capture", VV.ESPCapture == true, function(v) VV.ESPCapture = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(espObject) end)
 
 -- ============================================================
@@ -643,22 +644,22 @@ local XX = S.Config.Misc
 
 local utilityContent = S.Comp.makeSection(pages["Settings"], "Player Utility", false)
 S.Comp.makeInput(utilityContent, "Speed Value", MM.WalkSpeed, function(v) MM.WalkSpeed = v save() end)
-S.Comp.makeToggle(utilityContent, "Enable Run Speed", MM.EnableRunSpeed, function(v) 
+S.Comp.makeToggle(utilityContent, "Enable Run Speed", MM.EnableRunSpeed == true, function(v) 
     MM.EnableRunSpeed = v 
     save() 
 end)
-S.Comp.makeToggle(utilityContent, "No Clip", MM.Noclip, function(v) MM.Noclip = v save() end)
-S.Comp.makeToggle(utilityContent, "Fly", MM.Fly, function(v) MM.Fly = v save() end)
-S.Comp.makeToggle(utilityContent, "Infinite Jump", MM.InfJump, function(v) MM.InfJump = v save() end)
+S.Comp.makeToggle(utilityContent, "No Clip", MM.Noclip == true, function(v) MM.Noclip = v save() end)
+S.Comp.makeToggle(utilityContent, "Fly", MM.Fly == true, function(v) MM.Fly = v save() end)
+S.Comp.makeToggle(utilityContent, "Infinite Jump", MM.InfJump == true, function(v) MM.InfJump = v save() end)
 S.Comp.makeInput(utilityContent, "Fly Speed", MM.FlySpeed, function(v) MM.FlySpeed = v save() end)
 -- ✅ Hip Height Dihapus
 S.Comp.makeInput(utilityContent, "Jump Power", MM.JumpPower, function(v) MM.JumpPower = v save() end)
-S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK, function(v) XX.AntiAFK = v save() end)
+S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK == true, function(v) XX.AntiAFK = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(utilityContent) end)
 
 local visualContent = S.Comp.makeSection(pages["Settings"], "Visuals", false)
-S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright, function(v) VV.Fullbright = v save() end)
-S.Comp.makeToggle(visualContent, "No Fog", VV.NoFog, function(v) VV.NoFog = v save() end)
+S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright == true, function(v) VV.Fullbright = v save() end)
+S.Comp.makeToggle(visualContent, "No Fog", VV.NoFog == true, function(v) VV.NoFog = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(visualContent) end)
 
 local autoClaimContent = S.Comp.makeSection(pages["Settings"], "Auto Claim", false)
@@ -731,7 +732,7 @@ task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 local cfg = S.Config.Config
 
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
-S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave, function(v)
+S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
     cfg.AutoSave = v
     save()
 end)
