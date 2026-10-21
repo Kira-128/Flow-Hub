@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (With Search Feature)
+  [7] PAGES — Command An Army (FINAL)
 ============================================================
 ]]
 
@@ -16,7 +16,6 @@ local TS = S.Services.TS or game:GetService("TweenService")
 local pages = {}
 local tabs = {}
 
--- ✅ Fix Auto Save (Pake MarkDirty biar anti-lag)
 local function save()
     if _G.STHAIN.MarkDirty then
         _G.STHAIN.MarkDirty()
@@ -87,7 +86,9 @@ local function switchPage(name)
     for n, p in pairs(pages) do
         p.Visible = (n == name)
     end
-    S.GUI.ContentTitle.Text = name
+    if S.GUI.ContentTitle then
+        S.GUI.ContentTitle.Text = name
+    end
 end
 
 -- ============================================================
@@ -483,7 +484,8 @@ spawnLayout.Padding = UDim.new(0, 6)
 spawnLayout.SortOrder = Enum.SortOrder.LayoutOrder
 spawnLayout.Parent = spawnContent
 
-local spawnDropdown = makeDynamicDropdown(spawnContent, "Unit Slot", {tostring(SS.UnitSlot or 1)}, function(v)
+-- ✅ 4 SLOT UNIT
+local spawnDropdown = makeDynamicDropdown(spawnContent, "Unit Slot", {"1", "2", "3", "4"}, function(v)
     SS.UnitSlot = tonumber(v) or 1
     save()
 end)
@@ -491,6 +493,13 @@ end)
 makeSectionButton(spawnContent, "Spawn Unit", function()
     if _G.STHAIN.SpawnUnit then _G.STHAIN.SpawnUnit(SS.UnitSlot) end
 end)
+
+-- ✅ TOGGLE AUTO SPAWN
+S.Comp.makeToggle(spawnContent, "Auto Spawn (Respawn)", SS.AutoSpawn, function(v) 
+    SS.AutoSpawn = v 
+    save() 
+end)
+
 task.defer(function() task.wait(0.1) forceFixSection(spawnSection) end)
 
 local pvpSection = S.Comp.makeSection(pages["Combat"], "PvP", false)
@@ -634,12 +643,15 @@ local XX = S.Config.Misc
 
 local utilityContent = S.Comp.makeSection(pages["Settings"], "Player Utility", false)
 S.Comp.makeInput(utilityContent, "Speed Value", MM.WalkSpeed, function(v) MM.WalkSpeed = v save() end)
-S.Comp.makeToggle(utilityContent, "Enable Run Speed", MM.EnableRunSpeed, function(v) MM.EnableRunSpeed = v save() end) -- ✅ FITUR BARU
+S.Comp.makeToggle(utilityContent, "Enable Run Speed", MM.EnableRunSpeed, function(v) 
+    MM.EnableRunSpeed = v 
+    save() 
+end)
 S.Comp.makeToggle(utilityContent, "No Clip", MM.Noclip, function(v) MM.Noclip = v save() end)
 S.Comp.makeToggle(utilityContent, "Fly", MM.Fly, function(v) MM.Fly = v save() end)
 S.Comp.makeToggle(utilityContent, "Infinite Jump", MM.InfJump, function(v) MM.InfJump = v save() end)
 S.Comp.makeInput(utilityContent, "Fly Speed", MM.FlySpeed, function(v) MM.FlySpeed = v save() end)
--- ❌ HIP HEIGHT DIHAPUS
+-- ✅ Hip Height Dihapus
 S.Comp.makeInput(utilityContent, "Jump Power", MM.JumpPower, function(v) MM.JumpPower = v save() end)
 S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK, function(v) XX.AntiAFK = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(utilityContent) end)
@@ -694,7 +706,7 @@ S.Comp.makeButton(serverContent, "Rejoin Server", function()
         game:GetService("TeleportService"):Teleport(game.PlaceId, S.LP)
     end)
 end)
-S.Comp.makeButton(serverContent, "Server Hop (Find Small Server)", function() -- ✅ FITUR BARU
+S.Comp.makeButton(serverContent, "Server Hop (Find Small Server)", function()
     pcall(function()
         local Http = game:GetService("HttpService")
         local TeleportService = game:GetService("TeleportService")
@@ -778,7 +790,7 @@ S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
 -- ============================================================
--- SEARCH FEATURE (LINTAS HALAMAN) — ✅ FIXED
+-- SEARCH FEATURE (LINTAS HALAMAN) — FIXED
 -- ============================================================
 if S.GUI.SearchBox then
     S.GUI.SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -811,10 +823,29 @@ if S.GUI.SearchBox then
                     end
 
                     if matchFound then
-                        -- ✅ FIX: Pindahin sidebar & judul ke tab yang bener
+                        -- ✅ FIX: Pindahin halaman & update judul
                         switchPage(pageName)
-                        if S.GUI.ContentTitle then S.GUI.ContentTitle.Text = pageName end
+                        if S.GUI.ContentTitle then 
+                            S.GUI.ContentTitle.Text = pageName 
+                        end
                         
+                        -- ✅ FIX: Update visual tab di sidebar
+                        for _, t in pairs(tabs) do
+                            if t.text.Text == pageName then
+                                t.btn.BackgroundColor3 = S.Theme.Colors.bg3
+                                t.btn.BackgroundTransparency = 0.3
+                                t.icon.ImageColor3 = S.Theme.Colors.accent
+                                t.text.TextColor3 = S.Theme.Colors.text
+                                t.bar.Visible = true
+                            else
+                                t.btn.BackgroundColor3 = S.Theme.Colors.bg2
+                                t.btn.BackgroundTransparency = 1
+                                t.icon.ImageColor3 = S.Theme.Colors.textDim
+                                t.text.TextColor3 = S.Theme.Colors.textDim
+                                t.bar.Visible = false
+                            end
+                        end
+
                         task.wait(0.1)
                         if page:IsA("ScrollingFrame") then
                             page.CanvasPosition = Vector2.new(0, section.Position.Y.Offset)
