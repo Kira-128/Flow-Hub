@@ -1,28 +1,95 @@
 --[[
 ============================================================
-  [1] SERVICES
+  [4] UTILS + CONFIG SYSTEM
 ============================================================
 ]]
 
-local Services = {
-    Players  = game:GetService("Players"),
-    Run      = game:GetService("RunService"),
-    VIM      = game:GetService("VirtualInputManager"),
-    UIS      = game:GetService("UserInputService"),
-    TS       = game:GetService("TweenService"),
-    Lighting = game:GetService("Lighting"),
-    VU       = game:GetService("VirtualUser"),
-}
+local S = _G.STHAIN
+local LP = S.LP
 
-local LP  = Services.Players.LocalPlayer
-local Cam = workspace.CurrentCamera
+local Utils = {}
 
-local IsMobile = Services.UIS.TouchEnabled and not Services.UIS.KeyboardEnabled
-local IsPC = Services.UIS.KeyboardEnabled and not Services.UIS.TouchEnabled
+function Utils.getChar() return LP.Character end
+function Utils.getHRP() local c = LP.Character return c and c:FindFirstChild("HumanoidRootPart") end
+function Utils.getHum() local c = LP.Character return c and c:FindFirstChildOfClass("Humanoid") end
 
-_G.STHAIN = _G.STHAIN or {}
-_G.STHAIN.Services = Services
-_G.STHAIN.LP = LP
-_G.STHAIN.Cam = Cam
-_G.STHAIN.IsMobile = IsMobile
-_G.STHAIN.IsPC = IsPC
+function Utils.sendKey(k, hold)
+    local delay = hold or 0.02
+    if S.IsMobile then return false end -- Mobile gak pake sendKey (pake remote)
+    
+    if keypress and keyrelease then
+        local keyStr = k.Name:lower()
+        local ok = pcall(function()
+            keypress(keyStr)
+            task.wait(delay)
+            keyrelease(keyStr)
+        end)
+        if ok then return true end
+    end
+
+    local VIM = S.Services.VIM
+    if VIM then
+        local ok = pcall(function()
+            VIM:SendKeyEvent(true, k, false, game)
+            task.wait(delay)
+            VIM:SendKeyEvent(false, k, false, game)
+        end)
+        if ok then return true end
+    end
+    return false
+end
+
+function Utils.worldToScreen(worldPos)
+    local cam = workspace.CurrentCamera
+    local screenPos, onScreen = cam:WorldToViewportPoint(worldPos)
+    return Vector2.new(screenPos.X, screenPos.Y), onScreen, screenPos.Z
+end
+
+-- ============================================================
+-- CONFIG SYSTEM (SAVE / LOAD / DELETE)
+-- ============================================================
+local CONFIG_FOLDER = "FlowHub_Configs"
+local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+
+function Utils.SaveConfig()
+    if not writefile then return false end
+    if not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
+    
+    local Http = game:GetService("HttpService")
+    local ok = pcall(function()
+        writefile(CONFIG_FILE, Http:JSONEncode(_G.STHAIN.Config))
+    end)
+    return ok
+end
+
+function Utils.LoadConfig()
+    if not readfile or not isfile then return false end
+    if not isfile(CONFIG_FILE) then return false end
+    
+    local ok, data = pcall(function() return readfile(CONFIG_FILE) end)
+    if ok and data and #data > 0 then
+        local Http = game:GetService("HttpService")
+        local ok2, decoded = pcall(function() return Http:JSONDecode(data) end)
+        if ok2 and type(decoded) == "table" then
+            for category, values in pairs(decoded) do
+                if _G.STHAIN.Config[category] then
+                    for key, val in pairs(values) do
+                        _G.STHAIN.Config[category][key] = val
+                    end
+                end
+            end
+            return true
+        end
+    end
+    return false
+end
+
+function Utils.DeleteConfig()
+    if not delfile then return false end
+    if isfile(CONFIG_FILE) then
+        pcall(function() delfile(CONFIG_FILE) end)
+    end
+    return true
+end
+
+S.Utils = Utils
