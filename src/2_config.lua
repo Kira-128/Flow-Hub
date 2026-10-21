@@ -1,43 +1,29 @@
 --[[
 ============================================================
   [2] CONFIG — Command An Army
-  Author  : Cabu
-  Version : 1.1
 ============================================================
 ]]
 
 local Config = {
-    -- ========================================================
-    -- COMBAT
-    -- ========================================================
+    -- ... (SEMUA TABEL CONFIG LU TETAP SAMA) ...
     Combat = {
         AutoAttack = false,
         AutoRush = false,
         AutoFollow = false,
-
         KillAura = false,
         TargetLock = false,
         AutoHeal = false,
         AntiStun = false,
-
         AttackDelay = 0.35,
         RushDelay = 0.5,
         FollowDelay = 0.35,
-
         KillAuraRange = 20,
         HealThreshold = 30,
     },
-
-    -- ========================================================
-    -- SPAWN
-    -- ========================================================
     Spawn = {
         UnitSlot = 1,
+        AutoSpawn = false,
     },
-
-    -- ========================================================
-    -- VISUAL
-    -- ========================================================
     Visual = {
         Chams = false,
         ESPSupply = false,
@@ -48,45 +34,50 @@ local Config = {
         Fullbright = false,
         NoFog = false,
     },
-
-    -- ========================================================
-    -- TELEPORT
-    -- ========================================================
     Teleport = {
         OffsetY = 5,
         EnemySupplyTarget = "AttackerSupply1",
         OwnerSupplyTarget = "DefenderSupply1",
     },
-
-    -- ========================================================
-    -- MOVEMENT
-    -- ========================================================
     Movement = {
         WalkSpeed = 16,
-        EnableRunSpeed = false, -- ✅ FITUR BARU
+        EnableRunSpeed = false,
         Noclip = false,
         Fly = false,
         InfJump = false,
-
         FlySpeed = 60,
-        -- HipHeight = 0, -- ❌ DIHAPUS
         JumpPower = 50,
     },
-
-    -- ========================================================
-    -- MISC
-    -- ========================================================
     Misc = {
         AutoJoinTeam = "none",
         AntiAFK = true,
     },
-
-    -- ========================================================
-    -- CONFIG
-    -- ========================================================
     Config = {
-        AutoSave = true, 
+        AutoSave = true,
     },
 }
 
 _G.STHAIN.Config = Config
+
+-- ============================================================
+-- AUTO LOAD CONFIG PAS AWAL (BIAR GUI SINKRON)
+-- ============================================================
+if readfile and isfile then
+    local CONFIG_FILE = "FlowHub_Configs/config.json"
+    if isfile(CONFIG_FILE) then
+        local ok, data = pcall(readfile, CONFIG_FILE)
+        if ok and data and #data > 0 then
+            local Http = game:GetService("HttpService")
+            local ok2, decoded = pcall(function() return Http:JSONDecode(data) end)
+            if ok2 and type(decoded) == "table" then
+                for category, values in pairs(decoded) do
+                    if Config[category] then
+                        for key, val in pairs(values) do
+                            Config[category][key] = val
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
