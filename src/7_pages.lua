@@ -16,9 +16,12 @@ local TS = S.Services.TS or game:GetService("TweenService")
 local pages = {}
 local tabs = {}
 
+-- ✅ Fix Auto Save (Pake MarkDirty biar anti-lag)
 local function save()
-    if _G.STHAIN.SaveConfig then
-        task.spawn(_G.STHAIN.SaveConfig)
+    if _G.STHAIN.MarkDirty then
+        _G.STHAIN.MarkDirty()
+    elseif S.Utils and S.Utils.SaveConfig then
+        task.spawn(S.Utils.SaveConfig)
     end
 end
 
@@ -631,11 +634,12 @@ local XX = S.Config.Misc
 
 local utilityContent = S.Comp.makeSection(pages["Settings"], "Player Utility", false)
 S.Comp.makeInput(utilityContent, "Speed Value", MM.WalkSpeed, function(v) MM.WalkSpeed = v save() end)
+S.Comp.makeToggle(utilityContent, "Enable Run Speed", MM.EnableRunSpeed, function(v) MM.EnableRunSpeed = v save() end) -- ✅ FITUR BARU
 S.Comp.makeToggle(utilityContent, "No Clip", MM.Noclip, function(v) MM.Noclip = v save() end)
 S.Comp.makeToggle(utilityContent, "Fly", MM.Fly, function(v) MM.Fly = v save() end)
 S.Comp.makeToggle(utilityContent, "Infinite Jump", MM.InfJump, function(v) MM.InfJump = v save() end)
 S.Comp.makeInput(utilityContent, "Fly Speed", MM.FlySpeed, function(v) MM.FlySpeed = v save() end)
-S.Comp.makeInput(utilityContent, "Hip Height", MM.HipHeight, function(v) MM.HipHeight = v save() end)
+-- ❌ HIP HEIGHT DIHAPUS
 S.Comp.makeInput(utilityContent, "Jump Power", MM.JumpPower, function(v) MM.JumpPower = v save() end)
 S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK, function(v) XX.AntiAFK = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(utilityContent) end)
@@ -690,7 +694,7 @@ S.Comp.makeButton(serverContent, "Rejoin Server", function()
         game:GetService("TeleportService"):Teleport(game.PlaceId, S.LP)
     end)
 end)
-S.Comp.makeButton(serverContent, "Server Hop", function()
+S.Comp.makeButton(serverContent, "Server Hop (Find Small Server)", function() -- ✅ FITUR BARU
     pcall(function()
         local Http = game:GetService("HttpService")
         local TeleportService = game:GetService("TeleportService")
@@ -723,10 +727,10 @@ task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 S.Comp.makeButton(configMgmt, "Save Config Now", function()
-    if _G.STHAIN.SaveConfig then _G.STHAIN.SaveConfig() end
+    if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
 S.Comp.makeButton(configMgmt, "Delete Config", function()
-    if _G.STHAIN.DeleteConfig then _G.STHAIN.DeleteConfig() end
+    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then _G.STHAIN.Utils.DeleteConfig() end
 end)
 task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
@@ -774,7 +778,7 @@ S.GUI.FloatBtn.Visible = true
 S.GUI.MainFrame.Visible = false
 
 -- ============================================================
--- SEARCH FEATURE (LINTAS HALAMAN)
+-- SEARCH FEATURE (LINTAS HALAMAN) — ✅ FIXED
 -- ============================================================
 if S.GUI.SearchBox then
     S.GUI.SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -807,7 +811,10 @@ if S.GUI.SearchBox then
                     end
 
                     if matchFound then
+                        -- ✅ FIX: Pindahin sidebar & judul ke tab yang bener
                         switchPage(pageName)
+                        if S.GUI.ContentTitle then S.GUI.ContentTitle.Text = pageName end
+                        
                         task.wait(0.1)
                         if page:IsA("ScrollingFrame") then
                             page.CanvasPosition = Vector2.new(0, section.Position.Y.Offset)
