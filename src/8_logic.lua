@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [8] LOGIC — Command An Army (FINAL CLEAN V2)
+  [8] LOGIC — Command An Army (FINAL AUTO COMBAT)
 ============================================================
 ]]
 
@@ -19,6 +19,11 @@ local UIS = S.Services.UIS
 local Players = S.Services.Players
 local RS = game:GetService("ReplicatedStorage")
 
+-- ✅ Ambil Remote buat Combat
+local Shared = RS:FindFirstChild("Shared")
+local Remotes = Shared and Shared:FindFirstChild("Remotes")
+local TroopStateRequest = Remotes and Remotes:FindFirstChild("TroopStateRequest")
+
 local State = {
     Fly = false, Noclip = false, Invisible = false,
     Fullbright = false, NoFog = false,
@@ -30,18 +35,13 @@ local function getHRP() local c = LP.Character return c and c:FindFirstChild("Hu
 local function getHum() local c = LP.Character return c and c:FindFirstChildOfClass("Humanoid") end
 
 -- ============================================================
--- SEND KEY (FIX HP & PC)
+-- SEND KEY (FIX HP & PC) - Buat Heal dll
 -- ============================================================
 local function sendKey(keyCode, hold)
-    -- ✅ LOGIKA BUAT MOBILE (KLIK TOMBOL UI)
     if S.IsMobile then
         local PG = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
         local targetName = nil
-        if keyCode == Enum.KeyCode.V then targetName = "Attack"
-        elseif keyCode == Enum.KeyCode.B then targetName = "Rush"
-        elseif keyCode == Enum.KeyCode.C then targetName = "Follow"
-        elseif keyCode == Enum.KeyCode.H then targetName = "Heal"
-        end
+        if keyCode == Enum.KeyCode.H then targetName = "Heal" end
 
         if targetName then
             for _, v in pairs(PG:GetDescendants()) do
@@ -56,7 +56,6 @@ local function sendKey(keyCode, hold)
         return false
     end
 
-    -- ✅ LOGIKA BUAT PC (VIM/KEYPRESS)
     local delay = hold or 0.05
     if keypress and keyrelease then
         local keyStr = keyCode.Name:lower()
@@ -91,15 +90,11 @@ Run.RenderStepped:Connect(function()
     if not hum then return end
     local mv = Config.Movement
     pcall(function()
-        -- ✅ Speed cuma jalan kalau toggle EnableRunSpeed nyala
         if mv.EnableRunSpeed then
             if mv.WalkSpeed and mv.WalkSpeed > 0 then hum.WalkSpeed = mv.WalkSpeed end
         else
             if hum.WalkSpeed ~= 16 then hum.WalkSpeed = 16 end
         end
-
-        -- ❌ Hip Height dihapus
-        -- if mv.HipHeight and mv.HipHeight >= 0 then hum.HipHeight = mv.HipHeight end
 
         if mv.JumpPower and mv.JumpPower > 0 then
             hum.UseJumpPower = true
@@ -242,26 +237,32 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO ATTACK / RUSH / FOLLOW
+-- ✅ AUTO ATTACK / RUSH / FOLLOW (FIX REMOTE)
 -- ============================================================
 local atkTimer, rushTimer, followTimer = 0, 0, 0
 task.spawn(function()
     while task.wait(0.1) do
         local now = tick()
-        local hum = getHum()
-        if not hum then continue end
-        local moving = hum.MoveDirection.Magnitude > 0.1
-        if Config.Combat.AutoAttack and not moving and now - atkTimer >= Config.Combat.AttackDelay then
+        
+        if Config.Combat.AutoAttack and now - atkTimer >= Config.Combat.AttackDelay then
             atkTimer = now
-            sendKey(Enum.KeyCode.V, 0.05)
+            if TroopStateRequest then
+                pcall(function() TroopStateRequest:FireServer("Attack") end)
+            end
         end
-        if Config.Combat.AutoRush and not moving and now - rushTimer >= Config.Combat.RushDelay then
+        
+        if Config.Combat.AutoRush and now - rushTimer >= Config.Combat.RushDelay then
             rushTimer = now
-            sendKey(Enum.KeyCode.B, 0.05)
+            if TroopStateRequest then
+                pcall(function() TroopStateRequest:FireServer("Rush") end)
+            end
         end
+        
         if Config.Combat.AutoFollow and now - followTimer >= Config.Combat.FollowDelay then
             followTimer = now
-            sendKey(Enum.KeyCode.C, 0.05)
+            if TroopStateRequest then
+                pcall(function() TroopStateRequest:FireServer("Follow") end)
+            end
         end
     end
 end)
@@ -292,7 +293,9 @@ task.spawn(function()
             end
             if nearest and tick() - killAuraCD >= 0.3 then
                 killAuraCD = tick()
-                sendKey(Enum.KeyCode.V, 0.05)
+                if TroopStateRequest then
+                    pcall(function() TroopStateRequest:FireServer("Attack") end)
+                end
             end
         end
     end
@@ -406,7 +409,7 @@ LP.CharacterAdded:Connect(function()
 end)
 
 -- ============================================================
--- ESP
+-- ESP (Sama kayak sebelumnya)
 -- ============================================================
 local espCache = {}
 local espGuiParent = (gethui and gethui()) or game:GetService("CoreGui")
@@ -664,13 +667,12 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- SPAWN UNIT (FIXED)
+-- SPAWN UNIT
 -- ============================================================
 function _G.STHAIN.SpawnUnit(slot)
     local PG = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
     if not PG then return false end
 
-    -- 1. Cari tombol "Spawn" di UI Supply
     local spawnBtn = nil
     for _, v in pairs(PG:GetDescendants()) do
         if (v:IsA("ImageButton") or v:IsA("TextButton")) and v.Name == "Spawn" and v.Visible then
@@ -686,10 +688,7 @@ function _G.STHAIN.SpawnUnit(slot)
         return true
     end
 
-    -- 2. Fallback remote (TroopMotionControl)
-    local shared = RS:FindFirstChild("Shared")
-    local remotes = shared and shared:FindFirstChild("Remotes")
-    local motionRemote = remotes and remotes:FindFirstChild("TroopMotionControl")
+    local motionRemote = Remotes and Remotes:FindFirstChild("TroopMotionControl")
     if motionRemote then
         pcall(function() motionRemote:FireServer("ready") end)
         return true
@@ -697,7 +696,6 @@ function _G.STHAIN.SpawnUnit(slot)
     return false
 end
 
--- Auto Spawn Loop (tiap 3 detik)
 task.spawn(function()
     while task.wait(3) do
         if Config.Spawn.AutoSpawn then
@@ -712,11 +710,7 @@ end)
 -- AUTO JOIN TEAM
 -- ============================================================
 local function getTeamRemote()
-    local shared = RS:FindFirstChild("Shared")
-    if not shared then return nil end
-    local remotes = shared:FindFirstChild("Remotes")
-    if not remotes then return nil end
-    return remotes:FindFirstChild("TeamRequest")
+    return Remotes and Remotes:FindFirstChild("TeamRequest")
 end
 
 function _G.STHAIN.JoinTeam(teamName)
@@ -745,7 +739,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- CLAIM QUEST (FIXED)
+-- CLAIM QUEST
 -- ============================================================
 function _G.STHAIN.ClaimQuests()
     local PG = LP:FindFirstChild("PlayerGui")
@@ -770,27 +764,42 @@ function _G.STHAIN.ClaimQuests()
     if not questUI then return 0 end
 
     local claimed = 0
-    for _, c in pairs(questUI:GetDescendants()) do
-        if (c:IsA("ImageButton") or c:IsA("TextButton")) and c.Name == "Claim" then
-            if c.Visible then
-                local ok = pcall(function()
-                    if firesignal then firesignal(c.MouseButton1Click) else c:Activate() end
-                end)
-                if ok then
-                    claimed = claimed + 1
-                    task.wait(0.5)
+
+    local function processTab(tabName)
+        local tabBtn = questUI:FindFirstChild(tabName)
+        if tabBtn then
+            pcall(function()
+                if firesignal then firesignal(tabBtn.MouseButton1Click) else tabBtn:Activate() end
+            end)
+            task.wait(1)
+        end
+
+        for _, c in pairs(questUI:GetDescendants()) do
+            if (c:IsA("ImageButton") or c:IsA("TextButton")) and c.Name == "Claim" then
+                if c.Visible then
+                    local ok = pcall(function()
+                        if firesignal then firesignal(c.MouseButton1Click) else c:Activate() end
+                    end)
+                    if ok then
+                        claimed = claimed + 1
+                        task.wait(0.5)
+                    end
                 end
             end
         end
     end
 
-    task.wait(0.3)
+    processTab("DailyQuests")
+    processTab("WeeklyQuests")
+
+    task.wait(0.5)
     local exitBtn = questUI:FindFirstChild("Exit")
     if exitBtn then
         pcall(function()
             if firesignal then firesignal(exitBtn.MouseButton1Click) else exitBtn:Activate() end
         end)
     end
+
     return claimed
 end
 
@@ -889,7 +898,7 @@ function _G.STHAIN.RedeemAllCodes()
 end
 
 -- ============================================================
--- TELEPORT SYSTEM
+-- TELEPORT SYSTEM (Sama kayak sebelumnya)
 -- ============================================================
 local function getMapFolder()
     local activeMap = workspace:FindFirstChild("ActiveMap")
