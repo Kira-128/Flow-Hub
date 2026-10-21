@@ -85,7 +85,7 @@ local Config = {
     -- CONFIG
     -- ========================================================
     Config = {
-        AutoSave = false,
+        AutoSave = true, 
     },
 }
 
