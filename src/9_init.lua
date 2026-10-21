@@ -1,26 +1,16 @@
 --[[
 ============================================================
-  [9] INIT
+  [9] INIT — Command An Army
 ============================================================
 ]]
 
 local S = _G.STHAIN
+if not S then return end
 
--- Ubah jadi true kalau lagi ngetes (biar muncul di console)
--- Biarin false kalau mau publish (console 100% bersih)
-local DEBUG = false
-
-local function log(msg)
-    if DEBUG then print("[FLOW] " .. tostring(msg)) end
-end
-
-local function logWarn(msg)
-    if DEBUG then warn("[FLOW] " .. tostring(msg)) end
-end
-
-if S and S.GUI then
-    log("Initialized successfully!")
-    log("Platform: " .. (S.IsMobile and "Mobile" or "PC"))
-else
-    logWarn("Init failed - check modules")
-end
+-- Load config kalau ada
+task.spawn(function()
+    task.wait(0.5)
+    if S.Utils and S.Utils.LoadConfig then
+        S.Utils.LoadConfig()
+    end
+end)
