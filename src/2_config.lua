@@ -2,7 +2,7 @@
 ============================================================
   [2] CONFIG — Command An Army
   Author  : Cabu
-  Version : 1.0
+  Version : 1.1
 ============================================================
 ]]
 
@@ -63,12 +63,13 @@ local Config = {
     -- ========================================================
     Movement = {
         WalkSpeed = 16,
+        EnableRunSpeed = false, -- ✅ FITUR BARU
         Noclip = false,
         Fly = false,
         InfJump = false,
 
         FlySpeed = 60,
-        HipHeight = 0,
+        -- HipHeight = 0, -- ❌ DIHAPUS
         JumpPower = 50,
     },
 
