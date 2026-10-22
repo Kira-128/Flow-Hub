@@ -99,12 +99,35 @@ function Utils.LoadConfig()
     return false
 end
 
+-- [PERBAIKAN] Fungsi DeleteConfig yang sudah diperbaiki
 function Utils.DeleteConfig()
-    if not delfile then return false end
-    if isfile(CONFIG_FILE) then
-        pcall(function() delfile(CONFIG_FILE) end)
+    local deleted = false
+
+    -- 1. Hapus file config.json di dalam folder FlowHub_Configs
+    if delfile and isfile then
+        local ok, exist = pcall(isfile, CONFIG_FILE)
+        if ok and exist then
+            local success = pcall(function() 
+                delfile(CONFIG_FILE) 
+            end)
+            if success then
+                deleted = true
+            end
+        end
     end
-    return true
+
+    -- 2. Hapus foldernya agar bersih total
+    if delfolder and isfolder then
+        local ok, exist = pcall(isfolder, CONFIG_FOLDER)
+        if ok and exist then
+            pcall(function() 
+                delfolder(CONFIG_FOLDER) 
+            end)
+        end
+    end
+
+    -- 3. Kembalikan status sebenarnya (true jika berhasil, false jika gagal)
+    return deleted
 end
 
 S.Utils = Utils
