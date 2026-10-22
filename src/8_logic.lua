@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [8] LOGIC — Command An Army (FINAL AUTO COMBAT)
+  [8] LOGIC — Command An Army (OPTIMIZED)
 ============================================================
 ]]
 
@@ -19,10 +19,11 @@ local UIS = S.Services.UIS
 local Players = S.Services.Players
 local RS = game:GetService("ReplicatedStorage")
 
--- ✅ Ambil Remote buat Combat
 local Shared = RS:FindFirstChild("Shared")
 local Remotes = Shared and Shared:FindFirstChild("Remotes")
 local TroopStateRequest = Remotes and Remotes:FindFirstChild("TroopStateRequest")
+local RushRequest = Remotes and Remotes:FindFirstChild("RushRequest")
+local RespawnUnitRequest = Remotes and Remotes:FindFirstChild("RespawnUnitRequest")
 
 local State = {
     Fly = false, Noclip = false, Invisible = false,
@@ -30,32 +31,18 @@ local State = {
     ESP = false, TargetLock = false,
 }
 
+_G.FlowHubConnections = _G.FlowHubConnections or {}
+local function addConn(conn)
+    table.insert(_G.FlowHubConnections, conn)
+    return conn
+end
+
 local function getChar() return LP.Character end
 local function getHRP() local c = LP.Character return c and c:FindFirstChild("HumanoidRootPart") end
 local function getHum() local c = LP.Character return c and c:FindFirstChildOfClass("Humanoid") end
 
--- ============================================================
--- SEND KEY (FIX HP & PC) - Buat Heal dll
--- ============================================================
 local function sendKey(keyCode, hold)
-    if S.IsMobile then
-        local PG = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
-        local targetName = nil
-        if keyCode == Enum.KeyCode.H then targetName = "Heal" end
-
-        if targetName then
-            for _, v in pairs(PG:GetDescendants()) do
-                if (v:IsA("TextButton") or v:IsA("ImageButton")) and v.Name == targetName and v.Visible then
-                    pcall(function()
-                        if firesignal then firesignal(v.MouseButton1Click) else v:Activate() end
-                    end)
-                    return true
-                end
-            end
-        end
-        return false
-    end
-
+    if S.IsMobile then return false end
     local delay = hold or 0.05
     if keypress and keyrelease then
         local keyStr = keyCode.Name:lower()
@@ -66,7 +53,6 @@ local function sendKey(keyCode, hold)
         end)
         if ok then return true end
     end
-
     if VIM then
         local ok = pcall(function()
             VIM:SendKeyEvent(true, keyCode, false, game)
@@ -85,23 +71,24 @@ end)
 -- ============================================================
 -- MOVEMENT
 -- ============================================================
-Run.RenderStepped:Connect(function()
+addConn(Run.RenderStepped:Connect(function()
     local hum = getHum()
     if not hum then return end
     local mv = Config.Movement
-    pcall(function()
-        if mv.EnableRunSpeed then
-            if mv.WalkSpeed and mv.WalkSpeed > 0 then hum.WalkSpeed = mv.WalkSpeed end
-        else
-            if hum.WalkSpeed ~= 16 then hum.WalkSpeed = 16 end
+    
+    if mv.EnableRunSpeed then
+        if mv.WalkSpeed and mv.WalkSpeed > 0 and hum.WalkSpeed ~= mv.WalkSpeed then 
+            hum.WalkSpeed = mv.WalkSpeed 
         end
+    else
+        if hum.WalkSpeed ~= 16 then hum.WalkSpeed = 16 end
+    end
 
-        if mv.JumpPower and mv.JumpPower > 0 then
-            hum.UseJumpPower = true
-            hum.JumpPower = mv.JumpPower
-        end
-    end)
-end)
+    if mv.JumpPower and mv.JumpPower > 0 then
+        hum.UseJumpPower = true
+        if hum.JumpPower ~= mv.JumpPower then hum.JumpPower = mv.JumpPower end
+    end
+end))
 
 -- ============================================================
 -- NOCLIP
@@ -109,34 +96,26 @@ end)
 local noclipOriginal = {}
 local function cleanupNoclip()
     for part, orig in pairs(noclipOriginal) do
-        if part and part.Parent then
-            pcall(function() part.CanCollide = orig end)
-        end
+        if part and part.Parent then pcall(function() part.CanCollide = orig end) end
     end
     noclipOriginal = {}
 end
 
-Run.Heartbeat:Connect(function()
+addConn(Run.Heartbeat:Connect(function()
+    if not Config.Movement.Noclip then
+        if State.Noclip then cleanupNoclip() State.Noclip = false end
+        return
+    end
     local char = getChar()
     if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    if Config.Movement.Noclip then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                if noclipOriginal[part] == nil then
-                    noclipOriginal[part] = part.CanCollide
-                end
-                part.CanCollide = false
-            end
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if noclipOriginal[part] == nil then noclipOriginal[part] = part.CanCollide end
+            part.CanCollide = false
         end
-        State.Noclip = true
-    elseif State.Noclip then
-        cleanupNoclip()
-        hrp.CanCollide = true
-        State.Noclip = false
     end
-end)
+    State.Noclip = true
+end))
 
 -- ============================================================
 -- FLY
@@ -151,19 +130,9 @@ local function stopFly()
         hrp.Velocity = Vector3.zero
         hrp.RotVelocity = Vector3.zero
         hrp.CanCollide = true
-        for _, c in pairs(hrp:GetChildren()) do
-            if c:IsA("BodyVelocity") or c:IsA("BodyGyro") or c:IsA("BodyPosition") then
-                pcall(function() c:Destroy() end)
-            end
-        end
     end
     local hum = getHum()
-    if hum then
-        pcall(function()
-            hum.PlatformStand = false
-            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end)
-    end
+    if hum then pcall(function() hum.PlatformStand = false end) end
 end
 
 local function startFly()
@@ -193,7 +162,7 @@ local function startFly()
 end
 
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.5) do
         if Config.Movement.Fly and not State.Fly then
             startFly(); State.Fly = true
         elseif not Config.Movement.Fly and State.Fly then
@@ -237,32 +206,29 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- ✅ AUTO ATTACK / RUSH / FOLLOW (FIX REMOTE)
+-- AUTO ATTACK / RUSH / FOLLOW (FIX REMOTE)
 -- ============================================================
 local atkTimer, rushTimer, followTimer = 0, 0, 0
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.15) do
+        local anyActive = Config.Combat.AutoAttack or Config.Combat.AutoRush or Config.Combat.AutoFollow
+        if not anyActive then continue end
+
         local now = tick()
         
         if Config.Combat.AutoAttack and now - atkTimer >= Config.Combat.AttackDelay then
             atkTimer = now
-            if TroopStateRequest then
-                pcall(function() TroopStateRequest:FireServer("Attack") end)
-            end
+            if TroopStateRequest then pcall(function() TroopStateRequest:FireServer("Attack") end) end
         end
         
         if Config.Combat.AutoRush and now - rushTimer >= Config.Combat.RushDelay then
             rushTimer = now
-            if TroopStateRequest then
-                pcall(function() TroopStateRequest:FireServer("Rush") end)
-            end
+            if RushRequest then pcall(function() RushRequest:FireServer() end) end
         end
         
         if Config.Combat.AutoFollow and now - followTimer >= Config.Combat.FollowDelay then
             followTimer = now
-            if TroopStateRequest then
-                pcall(function() TroopStateRequest:FireServer("Follow") end)
-            end
+            if TroopStateRequest then pcall(function() TroopStateRequest:FireServer("Follow") end) end
         end
     end
 end)
@@ -272,29 +238,26 @@ end)
 -- ============================================================
 local killAuraCD = 0
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.5) do
         if Config.Combat.KillAura then
-            local char = getChar()
-            local hrp = getHRP()
-            if not (char and hrp) then continue end
-            local nearest, nearestDist = nil, Config.Combat.KillAuraRange
-            for _, model in pairs(workspace:GetChildren()) do
-                if model == char or not model:IsA("Model") then continue end
-                local mhum = model:FindFirstChildOfClass("Humanoid")
-                if not mhum or mhum.Health <= 0 then continue end
-                local thrp = model:FindFirstChild("HumanoidRootPart")
-                if not thrp then continue end
-                local dist = (thrp.Position - hrp.Position).Magnitude
-                if dist < 5 then continue end
-                if dist < nearestDist then
-                    nearest = thrp
-                    nearestDist = dist
+            local char, hrp = getChar(), getHRP()
+            if char and hrp then
+                local nearest, nearestDist = nil, Config.Combat.KillAuraRange
+                for _, model in pairs(workspace:GetChildren()) do
+                    if model == char or not model:IsA("Model") then continue end
+                    local mhum = model:FindFirstChildOfClass("Humanoid")
+                    if not mhum or mhum.Health <= 0 then continue end
+                    local thrp = model:FindFirstChild("HumanoidRootPart")
+                    if not thrp then continue end
+                    local dist = (thrp.Position - hrp.Position).Magnitude
+                    if dist > 5 and dist < nearestDist then
+                        nearest = thrp
+                        nearestDist = dist
+                    end
                 end
-            end
-            if nearest and tick() - killAuraCD >= 0.3 then
-                killAuraCD = tick()
-                if TroopStateRequest then
-                    pcall(function() TroopStateRequest:FireServer("Attack") end)
+                if nearest and tick() - killAuraCD >= 0.5 then
+                    killAuraCD = tick()
+                    if TroopStateRequest then pcall(function() TroopStateRequest:FireServer("Attack") end) end
                 end
             end
         end
@@ -311,7 +274,7 @@ task.spawn(function()
             local hum = getHum()
             if hum and hum.Health > 0 then
                 local pct = (hum.Health / hum.MaxHealth) * 100
-                if pct <= Config.Combat.HealThreshold and tick() - healCD >= 2 then
+                if pct <= Config.Combat.HealThreshold and tick() - healCD >= 2.5 then
                     healCD = tick()
                     sendKey(Enum.KeyCode.H, 0.05)
                 end
@@ -367,7 +330,7 @@ local function aimPredict(part)
     return part.Position + (v * 0.18)
 end
 
-Run.RenderStepped:Connect(function(dt)
+addConn(Run.RenderStepped:Connect(function(dt)
     if not Config.Combat.TargetLock then
         if State.TargetLock then
             aimLock = nil
@@ -400,16 +363,10 @@ Run.RenderStepped:Connect(function(dt)
     aimSmoothCF = aimSmoothCF:Lerp(target, a)
     Cam.CFrame = aimSmoothCF
     State.TargetLock = true
-end)
-
-LP.CharacterAdded:Connect(function()
-    aimSmoothCF = nil
-    aimLock = nil
-    aimLostAt = 0
-end)
+end))
 
 -- ============================================================
--- ESP (Sama kayak sebelumnya)
+-- ESP
 -- ============================================================
 local espCache = {}
 local espGuiParent = (gethui and gethui()) or game:GetService("CoreGui")
@@ -422,176 +379,88 @@ local function isTeammate(model)
     if not plr then return false end
     local myTeam = LP:GetAttribute("SelectedTeam") or (LP.Team and LP.Team.Name)
     local theirTeam = plr:GetAttribute("SelectedTeam") or (plr.Team and plr.Team.Name)
-    if myTeam and theirTeam then
-        return myTeam == theirTeam
-    end
+    if myTeam and theirTeam then return myTeam == theirTeam end
     return false
 end
 
 local function cleanupESP()
     for _, objs in pairs(espCache) do
         for _, obj in pairs(objs) do
-            if obj and typeof(obj) == "Instance" then
-                pcall(function() obj:Destroy() end)
-            end
+            if obj and typeof(obj) == "Instance" then pcall(function() obj:Destroy() end) end
         end
     end
     espCache = {}
 end
 
 task.spawn(function()
-    while task.wait(0.25) do
-        local masterOn = Config.Visual.Chams
-        if not masterOn then
+    while task.wait(0.5) do
+        if not Config.Visual.Chams then
             if next(espCache) then cleanupESP() end
-        else
-            local myChar = getChar()
-            local myHRP = getHRP()
+            continue
+        end
+        
+        local myChar, myHRP = getChar(), getHRP()
+        local anySetting = Config.Visual.ESPShowDistance or Config.Visual.ESPHealth or Config.Visual.ESPName
 
-            for _, model in pairs(workspace:GetChildren()) do
-                if model == myChar or not model:IsA("Model") then continue end
-                local hum = model:FindFirstChildOfClass("Humanoid")
-                if not hum or hum.Health <= 0 then continue end
-                local hrp = model:FindFirstChild("HumanoidRootPart")
-                if not hrp then continue end
+        for _, model in pairs(workspace:GetChildren()) do
+            if model == myChar or not model:IsA("Model") then continue end
+            local hum = model:FindFirstChildOfClass("Humanoid")
+            if not hum or hum.Health <= 0 then continue end
+            local hrp = model:FindFirstChild("HumanoidRootPart")
+            if not hrp then continue end
 
-                local isTeam = isTeammate(model)
-                local markerColor = isTeam and COLOR_TEAM or COLOR_ENEMY
+            local isTeam = isTeammate(model)
+            local markerColor = isTeam and COLOR_TEAM or COLOR_ENEMY
 
-                if not espCache[model] then
-                    espCache[model] = {}
-                    espCache[model].isTeam = isTeam
-                    local hl = Instance.new("Highlight")
-                    hl.Name = "CA_ESP_HL"
-                    hl.FillColor = markerColor
-                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    hl.FillTransparency = 0.5
-                    hl.Adornee = model
-                    hl.Parent = espGuiParent
-                    espCache[model].hl = hl
-                end
-
-                local anySetting = Config.Visual.ESPShowDistance or Config.Visual.ESPHealth or Config.Visual.ESPName
-
-                if anySetting and not espCache[model].infoBB then
-                    local bb = Instance.new("BillboardGui")
-                    bb.Name = "CA_ESP_Info"
-                    bb.Size = UDim2.new(0, 200, 0, 24)
-                    bb.StudsOffset = Vector3.new(0, 3.5, 0)
-                    bb.AlwaysOnTop = true
-                    bb.Adornee = hrp
-                    bb.Parent = espGuiParent
-                    local lbl = Instance.new("TextLabel")
-                    lbl.Size = UDim2.new(1, 0, 1, 0)
-                    lbl.Text = ""
-                    lbl.TextColor3 = markerColor
-                    lbl.TextStrokeTransparency = 0
-                    lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-                    lbl.TextSize = 13
-                    lbl.Font = Enum.Font.GothamBold
-                    lbl.BackgroundTransparency = 1
-                    lbl.Parent = bb
-                    espCache[model].infoBB = bb
-                    espCache[model].infoLbl = lbl
-                end
-
-                if not anySetting and espCache[model].infoBB then
-                    pcall(function() espCache[model].infoBB:Destroy() end)
-                    espCache[model].infoBB = nil
-                    espCache[model].infoLbl = nil
-                end
-
-                local cachedTeam = espCache[model].isTeam
-                if cachedTeam ~= isTeam and espCache[model].hl then
-                    espCache[model].hl.FillColor = markerColor
-                    espCache[model].isTeam = isTeam
-                end
-
-                if espCache[model].infoLbl and myHRP then
-                    local parts = {}
-                    if Config.Visual.ESPName then table.insert(parts, model.Name) end
-                    if Config.Visual.ESPHealth then table.insert(parts, "[ "..math.floor(hum.Health).." HP ]") end
-                    if Config.Visual.ESPShowDistance then
-                        local dist = (hrp.Position - myHRP.Position).Magnitude
-                        table.insert(parts, "[ "..math.floor(dist).." M ]")
-                    end
-                    espCache[model].infoLbl.Text = table.concat(parts, " ")
-                    espCache[model].infoLbl.TextColor3 = markerColor
-                end
+            if not espCache[model] then
+                espCache[model] = { isTeam = isTeam }
+                local hl = Instance.new("Highlight")
+                hl.FillColor = markerColor
+                hl.OutlineColor = Color3.new(1,1,1)
+                hl.FillTransparency = 0.5
+                hl.Adornee = model
+                hl.Parent = espGuiParent
+                espCache[model].hl = hl
             end
 
-            local activeMap = workspace:FindFirstChild("ActiveMap")
-            if activeMap then
-                for _, mapChild in pairs(activeMap:GetChildren()) do
-                    local inter = mapChild:FindFirstChild("Interactable")
-                    if inter then
-                        local supplies = inter:FindFirstChild("Supplies")
-                        if supplies then
-                            for _, obj in pairs(supplies:GetChildren()) do
-                                if obj:IsA("Model") then
-                                    if Config.Visual.ESPSupply then
-                                        if not espCache[obj] then
-                                            espCache[obj] = { isObject = true }
-                                            local hl = Instance.new("Highlight")
-                                            hl.Name = "CA_ESP_Supply"
-                                            hl.FillColor = COLOR_SUPPLY
-                                            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                            hl.FillTransparency = 0.6
-                                            hl.Adornee = obj
-                                            hl.Parent = espGuiParent
-                                            espCache[obj].hl = hl
-                                        end
-                                    else
-                                        if espCache[obj] and espCache[obj].isObject then
-                                            if espCache[obj].hl then
-                                                pcall(function() espCache[obj].hl:Destroy() end)
-                                            end
-                                            espCache[obj] = nil
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                        local points = inter:FindFirstChild("Points")
-                        if points then
-                            for _, obj in pairs(points:GetChildren()) do
-                                if obj:IsA("Model") then
-                                    if Config.Visual.ESPCapture then
-                                        if not espCache[obj] then
-                                            espCache[obj] = { isObject = true }
-                                            local hl = Instance.new("Highlight")
-                                            hl.Name = "CA_ESP_Capture"
-                                            hl.FillColor = COLOR_SUPPLY
-                                            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                            hl.FillTransparency = 0.6
-                                            hl.Adornee = obj
-                                            hl.Parent = espGuiParent
-                                            espCache[obj].hl = hl
-                                        end
-                                    else
-                                        if espCache[obj] and espCache[obj].isObject then
-                                            if espCache[obj].hl then
-                                                pcall(function() espCache[obj].hl:Destroy() end)
-                                            end
-                                            espCache[obj] = nil
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
+            if anySetting and not espCache[model].infoBB then
+                local bb = Instance.new("BillboardGui")
+                bb.Size = UDim2.new(0, 200, 0, 24)
+                bb.StudsOffset = Vector3.new(0, 3.5, 0)
+                bb.AlwaysOnTop = true
+                bb.Adornee = hrp
+                bb.Parent = espGuiParent
+                local lbl = Instance.new("TextLabel")
+                lbl.Size = UDim2.new(1, 0, 1, 0)
+                lbl.TextColor3 = markerColor
+                lbl.TextStrokeTransparency = 0
+                lbl.TextStrokeColor3 = Color3.new(0,0,0)
+                lbl.TextSize = 13
+                lbl.Font = Enum.Font.GothamBold
+                lbl.BackgroundTransparency = 1
+                lbl.Parent = bb
+                espCache[model].infoBB = bb
+                espCache[model].infoLbl = lbl
             end
 
-            for model, objs in pairs(espCache) do
-                if not model.Parent then
-                    for _, obj in pairs(objs) do
-                        if obj and typeof(obj) == "Instance" then
-                            pcall(function() obj:Destroy() end)
-                        end
-                    end
-                    espCache[model] = nil
+            if espCache[model].infoLbl and myHRP then
+                local parts = {}
+                if Config.Visual.ESPName then table.insert(parts, model.Name) end
+                if Config.Visual.ESPHealth then table.insert(parts, "[ "..math.floor(hum.Health).." HP ]") end
+                if Config.Visual.ESPShowDistance then
+                    table.insert(parts, "[ "..math.floor((hrp.Position - myHRP.Position).Magnitude).." M ]")
                 end
+                espCache[model].infoLbl.Text = table.concat(parts, " ")
+                espCache[model].infoLbl.TextColor3 = markerColor
+            end
+        end
+
+        for model, objs in pairs(espCache) do
+            if not model.Parent then
+                for _, obj in pairs(objs) do
+                    if obj and typeof(obj) == "Instance" then pcall(function() obj:Destroy() end) end
+                end
+                espCache[model] = nil
             end
         end
     end
@@ -600,54 +469,16 @@ end)
 -- ============================================================
 -- FULLBRIGHT / NO FOG
 -- ============================================================
-local savedLighting = {
-    Brightness = nil,
-    Ambient = nil,
-    OutdoorAmbient = nil,
-    FogEnd = nil,
-    FogStart = nil,
-}
-
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.5) do
         if Config.Visual.Fullbright then
-            if savedLighting.Brightness == nil then
-                savedLighting.Brightness = Lighting.Brightness
-                savedLighting.Ambient = Lighting.Ambient
-                savedLighting.OutdoorAmbient = Lighting.OutdoorAmbient
-            end
             Lighting.Brightness = 3
             Lighting.Ambient = Color3.fromRGB(200, 200, 200)
             Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
-            State.Fullbright = true
-        elseif State.Fullbright then
-            if savedLighting.Brightness ~= nil then
-                Lighting.Brightness = savedLighting.Brightness
-                Lighting.Ambient = savedLighting.Ambient
-                Lighting.OutdoorAmbient = savedLighting.OutdoorAmbient
-                savedLighting.Brightness = nil
-                savedLighting.Ambient = nil
-                savedLighting.OutdoorAmbient = nil
-            end
-            State.Fullbright = false
         end
-
         if Config.Visual.NoFog then
-            if savedLighting.FogEnd == nil then
-                savedLighting.FogEnd = Lighting.FogEnd
-                savedLighting.FogStart = Lighting.FogStart
-            end
             Lighting.FogEnd = 100000
             Lighting.FogStart = 100000
-            State.NoFog = true
-        elseif State.NoFog then
-            if savedLighting.FogEnd ~= nil then
-                Lighting.FogEnd = savedLighting.FogEnd
-                Lighting.FogStart = savedLighting.FogStart
-                savedLighting.FogEnd = nil
-                savedLighting.FogStart = nil
-            end
-            State.NoFog = false
         end
     end
 end)
@@ -667,7 +498,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- SPAWN UNIT
+-- AUTO SPAWN
 -- ============================================================
 function _G.STHAIN.SpawnUnit(slot)
     local PG = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
@@ -688,9 +519,8 @@ function _G.STHAIN.SpawnUnit(slot)
         return true
     end
 
-    local motionRemote = Remotes and Remotes:FindFirstChild("TroopMotionControl")
-    if motionRemote then
-        pcall(function() motionRemote:FireServer("ready") end)
+    if RespawnUnitRequest then
+        pcall(function() RespawnUnitRequest:FireServer(tonumber(slot) or 1) end)
         return true
     end
     return false
@@ -707,23 +537,9 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO JOIN TEAM
+-- AUTO JOIN TEAM (Fix spam)
 -- ============================================================
-local function getTeamRemote()
-    return Remotes and Remotes:FindFirstChild("TeamRequest")
-end
-
-function _G.STHAIN.JoinTeam(teamName)
-    local remote = getTeamRemote()
-    if not remote then return false end
-    local teamStr = "Attackers"
-    if teamName == "defender" or teamName == "Defenders" then
-        teamStr = "Defenders"
-    end
-    local ok = pcall(function() remote:FireServer(teamStr) end)
-    return ok
-end
-
+local teamAttempts = 0
 task.spawn(function()
     while task.wait(1) do
         local team = Config.Misc.AutoJoinTeam
@@ -732,8 +548,13 @@ task.spawn(function()
             if LP.Team and LP.Team.Name == targetName then
                 Config.Misc.AutoJoinTeam = "none"
             else
-                _G.STHAIN.JoinTeam(team)
+                local TeamRequest = Remotes and Remotes:FindFirstChild("TeamRequest")
+                if TeamRequest then pcall(function() TeamRequest:FireServer(targetName) end) end
+                teamAttempts = teamAttempts + 1
+                if teamAttempts > 10 then Config.Misc.AutoJoinTeam = "none" end
             end
+        else
+            teamAttempts = 0
         end
     end
 end)
@@ -764,7 +585,6 @@ function _G.STHAIN.ClaimQuests()
     if not questUI then return 0 end
 
     local claimed = 0
-
     local function processTab(tabName)
         local tabBtn = questUI:FindFirstChild(tabName)
         if tabBtn then
@@ -773,17 +593,13 @@ function _G.STHAIN.ClaimQuests()
             end)
             task.wait(1)
         end
-
         for _, c in pairs(questUI:GetDescendants()) do
             if (c:IsA("ImageButton") or c:IsA("TextButton")) and c.Name == "Claim" then
                 if c.Visible then
                     local ok = pcall(function()
                         if firesignal then firesignal(c.MouseButton1Click) else c:Activate() end
                     end)
-                    if ok then
-                        claimed = claimed + 1
-                        task.wait(0.5)
-                    end
+                    if ok then claimed = claimed + 1 task.wait(0.3) end
                 end
             end
         end
@@ -792,14 +608,13 @@ function _G.STHAIN.ClaimQuests()
     processTab("DailyQuests")
     processTab("WeeklyQuests")
 
-    task.wait(0.5)
+    task.wait(0.3)
     local exitBtn = questUI:FindFirstChild("Exit")
     if exitBtn then
         pcall(function()
             if firesignal then firesignal(exitBtn.MouseButton1Click) else exitBtn:Activate() end
         end)
     end
-
     return claimed
 end
 
@@ -817,24 +632,13 @@ local function ambilCode()
     local codes = {}
     local seen = {}
     for li in section:gmatch("<li[^>]*>(.-)</li>") do
-        local code = li:match("<strong>([A-Z][A-Z0-9]+)</strong>")
-            or li:match("^%s*([A-Z][A-Z0-9]+)")
+        local code = li:match("<strong>([A-Z][A-Z0-9]+)</strong>") or li:match("^%s*([A-Z][A-Z0-9]+)")
         if code and #code >= 3 and #code <= 20 and not seen[code] then
             seen[code] = true
             table.insert(codes, code)
         end
     end
     return codes
-end
-
-local function cariCodeUI()
-    local PG = LP:FindFirstChild("PlayerGui")
-    if not PG then return nil, nil end
-    local interactable = PG:FindFirstChild("Interactable")
-    if not interactable then return nil, nil end
-    local codeUI = interactable:FindFirstChild("CodeUI")
-    if not codeUI then return nil, nil end
-    return codeUI:FindFirstChild("TextBox"), codeUI:FindFirstChild("Claim")
 end
 
 function _G.STHAIN.RedeemAllCodes()
@@ -858,7 +662,10 @@ function _G.STHAIN.RedeemAllCodes()
         end
     end
 
-    local tb, btn = cariCodeUI()
+    local interactable = PG and PG:FindFirstChild("Interactable")
+    local codeUI = interactable and interactable:FindFirstChild("CodeUI")
+    local tb = codeUI and codeUI:FindFirstChild("TextBox")
+    local btn = codeUI and codeUI:FindFirstChild("Claim")
     if not tb then return 0 end
 
     local focusBlock = UIS:AddFocusBlock()
@@ -868,24 +675,21 @@ function _G.STHAIN.RedeemAllCodes()
     local sukses = 0
     for i, code in ipairs(codes) do
         pcall(function() tb.Text = code end)
-        task.wait(0.4)
-
+        task.wait(0.3)
         local fired = false
         if btn then
             fired = pcall(function()
                 if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end
             end)
         end
-
         if fired then sukses = sukses + 1 end
-        task.wait(1.5)
+        task.wait(1)
     end
 
     pcall(function() tb.TextEditable = savedEditable end)
     focusBlock:Disconnect()
 
     task.wait(0.3)
-    local codeUI = tb.Parent
     if codeUI then
         local exitBtn = codeUI:FindFirstChild("Exit")
         if exitBtn then
@@ -898,7 +702,7 @@ function _G.STHAIN.RedeemAllCodes()
 end
 
 -- ============================================================
--- TELEPORT SYSTEM (Sama kayak sebelumnya)
+-- TELEPORT
 -- ============================================================
 local function getMapFolder()
     local activeMap = workspace:FindFirstChild("ActiveMap")
@@ -1194,21 +998,19 @@ function _G.STHAIN.TeleportToTeammate()
 end
 
 -- ============================================================
--- CONFIG SAVE / LOAD (MARKDIRTY)
+-- CONFIG SAVE / LOAD
 -- ============================================================
-local CONFIG_FOLDER = "FlowHub_Configs"
-local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
-
 local isDirty = false
 local saveThread = nil
 
 function _G.STHAIN.MarkDirty()
+    if not _G.STHAIN.Config.Config.AutoSave then return end 
     isDirty = true
     if saveThread then task.cancel(saveThread) end
     saveThread = task.delay(2, function()
         if isDirty then
-            if Utils and Utils.SaveConfig then
-                Utils.SaveConfig()
+            if _G.STHAIN.Config.Config.AutoSave then
+                if Utils and Utils.SaveConfig then Utils.SaveConfig() end
             end
             isDirty = false
             saveThread = nil
@@ -1232,7 +1034,7 @@ function _G.STHAIN.DeleteConfig()
 end
 
 -- ============================================================
--- RESPAWN
+-- RESPAWN HANDLER
 -- ============================================================
 LP.CharacterAdded:Connect(function(char)
     task.wait(1.5)
