@@ -1,5 +1,5 @@
 --[[
-  FLOW HUB - LOADER (MULTI-REPO FINAL FIX)
+  FLOW HUB - LOADER (MULTI-REPO FINAL FIX + DELAY)
 ============================================================
 ]]
 
@@ -7,9 +7,8 @@ local BASE_GUI   = "https://raw.githubusercontent.com/Kira-128/Flow-GUI/main/src
 local BASE_LOGIC = "https://raw.githubusercontent.com/Kira-128/Flow/main/src/"
 
 local Modules = {
-    -- URUTAN 1 SAMPAI 9 (BIAR AMAN & GAK ERROR)
     { name = "1_services",   url = BASE_GUI },
-    { name = "2_config",     url = BASE_LOGIC }, -- ✅ Config naik ke atas
+    { name = "2_config",     url = BASE_LOGIC }, -- Config naik ke atas
     { name = "3_theme",      url = BASE_GUI },
     { name = "4_utils",      url = BASE_GUI },
     { name = "5_gui",        url = BASE_GUI },
@@ -69,7 +68,15 @@ for _, mod in ipairs(Modules) do
             end
         end
     end
-    task.wait()
+    
+    -- ✅ KASIH JEDA DI SINI
+    -- Kalau 7_pages (GUI) abis di-load, kita jeda 0.5 detik
+    -- biar dia sempet render kotak-kotaknya dulu sebelum 8_logic jalan
+    if mod.name == "7_pages" then
+        task.wait(0.5) 
+    else
+        task.wait(0.1) 
+    end
 end
 
 log("=== LOAD END ===")
