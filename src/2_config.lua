@@ -5,7 +5,8 @@
 ]]
 
 local Config = {
-    -- ... (SEMUA TABEL CONFIG LU TETAP SAMA) ...
+    ConfigVersion = 2,
+
     Combat = {
         AutoAttack = false,
         AutoRush = false,
@@ -20,10 +21,12 @@ local Config = {
         KillAuraRange = 20,
         HealThreshold = 30,
     },
+
     Spawn = {
         UnitSlot = 1,
         AutoSpawn = false,
     },
+
     Visual = {
         Chams = false,
         ESPSupply = false,
@@ -34,11 +37,13 @@ local Config = {
         Fullbright = false,
         NoFog = false,
     },
+
     Teleport = {
         OffsetY = 5,
         EnemySupplyTarget = "AttackerSupply1",
         OwnerSupplyTarget = "DefenderSupply1",
     },
+
     Movement = {
         WalkSpeed = 16,
         EnableRunSpeed = false,
@@ -48,10 +53,12 @@ local Config = {
         FlySpeed = 60,
         JumpPower = 50,
     },
+
     Misc = {
         AutoJoinTeam = "none",
         AntiAFK = true,
     },
+
     Config = {
         AutoSave = true,
     },
@@ -59,21 +66,28 @@ local Config = {
 
 _G.STHAIN.Config = Config
 
--- ============================================================
--- AUTO LOAD CONFIG PAS AWAL (BIAR GUI SINKRON)
--- ============================================================
 if readfile and isfile then
-    local CONFIG_FILE = "FlowHub_Configs/config.json"
+    local CONFIG_FOLDER = "FlowHub_Configs"
+    local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
+    
     if isfile(CONFIG_FILE) then
         local ok, data = pcall(readfile, CONFIG_FILE)
         if ok and data and #data > 0 then
             local Http = game:GetService("HttpService")
             local ok2, decoded = pcall(function() return Http:JSONDecode(data) end)
+            
             if ok2 and type(decoded) == "table" then
-                for category, values in pairs(decoded) do
-                    if Config[category] then
-                        for key, val in pairs(values) do
-                            Config[category][key] = val
+                local savedVersion = decoded.ConfigVersion or 1
+                local currentVersion = Config.ConfigVersion or 2
+                
+                if savedVersion < currentVersion then
+                    pcall(function() delfile(CONFIG_FILE) end)
+                else
+                    for category, values in pairs(decoded) do
+                        if Config[category] then
+                            for key, val in pairs(values) do
+                                Config[category][key] = val
+                            end
                         end
                     end
                 end
