@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [4] UTILS + CONFIG SYSTEM
+  [4] UTILS — Command An Army
 ============================================================
 ]]
 
@@ -13,9 +13,18 @@ function Utils.getChar() return LP.Character end
 function Utils.getHRP() local c = LP.Character return c and c:FindFirstChild("HumanoidRootPart") end
 function Utils.getHum() local c = LP.Character return c and c:FindFirstChildOfClass("Humanoid") end
 
+function Utils.isEnemy(model)
+    if not model or model == LP.Character then return false end
+    if not model:IsA("Model") then return false end
+    if not model:FindFirstChild("HumanoidRootPart") then return false end
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return false end
+    return true
+end
+
 function Utils.sendKey(k, hold)
     local delay = hold or 0.02
-    if S.IsMobile then return false end -- Mobile gak pake sendKey (pake remote)
+    if S.IsMobile then return false end
     
     if keypress and keyrelease then
         local keyStr = k.Name:lower()
@@ -45,9 +54,6 @@ function Utils.worldToScreen(worldPos)
     return Vector2.new(screenPos.X, screenPos.Y), onScreen, screenPos.Z
 end
 
--- ============================================================
--- CONFIG SYSTEM (SAVE / LOAD / DELETE)
--- ============================================================
 local CONFIG_FOLDER = "FlowHub_Configs"
 local CONFIG_FILE = CONFIG_FOLDER .. "/config.json"
 
@@ -70,7 +76,16 @@ function Utils.LoadConfig()
     if ok and data and #data > 0 then
         local Http = game:GetService("HttpService")
         local ok2, decoded = pcall(function() return Http:JSONDecode(data) end)
+        
         if ok2 and type(decoded) == "table" then
+            local savedVersion = decoded.ConfigVersion or 1
+            local currentVersion = _G.STHAIN.Config.ConfigVersion or 2
+            
+            if savedVersion < currentVersion then
+                pcall(function() delfile(CONFIG_FILE) end)
+                return false
+            end
+            
             for category, values in pairs(decoded) do
                 if _G.STHAIN.Config[category] then
                     for key, val in pairs(values) do
