@@ -2,7 +2,7 @@
 ============================================================
   FLOW HUB - LOADER
   Author  : Cabu
-  Version : 1.1 (Clean Console)
+  Version : 1.2 (Anti-Duplicate + Clean Console)
 ============================================================
 ]]
 
@@ -23,12 +23,29 @@ local Modules = {
 _G.STHAIN = _G.STHAIN or {}
 _G.STHAIN.Modules = _G.STHAIN.Modules or {}
 
--- ✅ Set true kalau lu mau debug (muncul di console)
--- ✅ Set false buat publish (console 100% bersih)
 local DEBUG = false
 
 local function log(msg)
     if DEBUG then print("[FLOW] " .. tostring(msg)) end
+end
+
+local CoreGui = game:GetService("CoreGui")
+local PlayerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local oldGui1 = CoreGui:FindFirstChild("FlowHub")
+if oldGui1 then oldGui1:Destroy() end
+
+local oldGui2 = PlayerGui:FindFirstChild("FlowHub")
+if oldGui2 then oldGui2:Destroy() end
+
+_G.STHAIN = nil
+_G.STHAIN = { Modules = {} }
+
+if _G.FlowHubConnections then
+    for _, conn in pairs(_G.FlowHubConnections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    _G.FlowHubConnections = nil
 end
 
 local function fetch(name)
