@@ -1,24 +1,18 @@
 --[[
-============================================================
-  FLOW HUB - MULTI-REPO LOADER
-  Version : 2.0 (Split GUI & Logic)
+  FLOW HUB - LOADER (MULTI-REPO FINAL FIX)
 ============================================================
 ]]
 
--- Ganti URL ini sesuai nama repo lu (kalo udah di-rename)
 local BASE_GUI   = "https://raw.githubusercontent.com/Kira-128/Flow-GUI/main/src/"
 local BASE_LOGIC = "https://raw.githubusercontent.com/Kira-128/Flow/main/src/"
 
 local Modules = {
-    -- 1. Load GUI Dulu (Biar Layar Cepat Muncul)
     { name = "1_services",   url = BASE_GUI },
     { name = "3_theme",      url = BASE_GUI },
     { name = "4_utils",      url = BASE_GUI },
     { name = "5_gui",        url = BASE_GUI },
     { name = "6_components", url = BASE_GUI },
     { name = "7_pages",      url = BASE_GUI },
-    
-    -- 2. Load Logic (Otak Script)
     { name = "2_config",     url = BASE_LOGIC },
     { name = "8_logic",      url = BASE_LOGIC },
     { name = "9_init",       url = BASE_LOGIC },
@@ -27,13 +21,13 @@ local Modules = {
 _G.STHAIN = _G.STHAIN or {}
 _G.STHAIN.Modules = _G.STHAIN.Modules or {}
 
-local DEBUG = false -- Ubah ke true kalo mau liat log error di console
+local DEBUG = false
 
 local function log(msg)
     if DEBUG then print("[FLOW] " .. tostring(msg)) end
 end
 
--- Bersihin GUI lama biar ga numpuk
+-- Bersihin GUI Lama
 local CoreGui = game:GetService("CoreGui")
 local PlayerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
@@ -46,16 +40,8 @@ if oldGui2 then oldGui2:Destroy() end
 _G.STHAIN = nil
 _G.STHAIN = { Modules = {} }
 
-if _G.FlowHubConnections then
-    for _, conn in pairs(_G.FlowHubConnections) do
-        pcall(function() conn:Disconnect() end)
-    end
-    _G.FlowHubConnections = nil
-end
-
 local function fetch(url, name)
-    local fullUrl = url .. name .. ".lua"
-    local ok, src = pcall(game.HttpGet, game, fullUrl)
+    local ok, src = pcall(game.HttpGet, game, url .. name .. ".lua")
     if ok and src and #src > 0 then
         log(("[OK] %s (%d bytes)"):format(name, #src))
         return src
@@ -66,7 +52,7 @@ end
 
 log("=== LOAD START ===")
 
-for i, mod in ipairs(Modules) do
+for _, mod in ipairs(Modules) do
     local src = fetch(mod.url, mod.name)
     if src then
         local fn, cerr = loadstring(src, "@" .. mod.name .. ".lua")
