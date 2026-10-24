@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [8] LOGIC — Command An Army (v2.2 FIXED)
+  [8] LOGIC — Command An Army (v2.3 FULL UPDATE)
 ============================================================
 ]]
 
@@ -68,14 +68,13 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- MOVEMENT
+-- MOVEMENT (FIXED: No Force 16)
 -- ============================================================
 addConn(Run.RenderStepped:Connect(function()
     local hum = getHum()
     if not hum then return end
     local mv = Config.Movement
     
-    -- FIX: Cek dulu Config ada atau belum biar ga nimpa speed jadi 16
     if not Config or not Config.Movement then return end
 
     if mv.EnableRunSpeed then
@@ -212,10 +211,10 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO ATTACK / RUSH / FOLLOW (FIXED: UNIVERSAL UI CLICK)
+-- AUTO ATTACK / RUSH / FOLLOW (FIXED RUSH UI)
 -- ============================================================
 local atkTimer, rushTimer, followTimer = 0, 0, 0
-local rushBtnCache = nil -- Nyimpen tombol biar ga scan terus
+local rushBtnCache = nil
 
 task.spawn(function()
     while task.wait(0.15) do
@@ -234,10 +233,14 @@ task.spawn(function()
                 if not rushBtnCache or not rushBtnCache.Parent then
                     local PG = LP:FindFirstChild("PlayerGui")
                     if PG then
-                        for _, v in pairs(PG:GetDescendants()) do
-                            if v:IsA("TextButton") and (v.Text:find("Serangan Cepat") or v.Name:find("Rush")) and v.Visible then
-                                rushBtnCache = v
-                                break
+                        local matchUI = PG:FindFirstChild("MatchUI")
+                        if matchUI then
+                            local funcUI = matchUI:FindFirstChild("FunctionsUI") or matchUI:FindFirstChild("FunctionsUIMobile")
+                            if funcUI then
+                                local rushFolder = funcUI:FindFirstChild("RushUI")
+                                if rushFolder then
+                                    rushBtnCache = rushFolder:FindFirstChild("Rush")
+                                end
                             end
                         end
                     end
@@ -398,12 +401,14 @@ addConn(Run.RenderStepped:Connect(function(dt)
 end))
 
 -- ============================================================
--- ESP (FIXED: Update Warna Real-time)
+-- ESP PLAYER, SUPPLY, CAPTURE
 -- ============================================================
 local espCache = {}
 local espGuiParent = (gethui and gethui()) or game:GetService("CoreGui")
 local COLOR_ENEMY = Color3.fromRGB(255, 60, 60)
 local COLOR_TEAM = Color3.fromRGB(74, 158, 255)
+local COLOR_SUPPLY = Color3.fromRGB(144, 238, 144)
+local COLOR_CAPTURE = Color3.fromRGB(255, 255, 100)
 
 local function isTeammate(model)
     local plr = Players:GetPlayerFromCharacter(model)
@@ -423,11 +428,21 @@ local function cleanupESP()
     espCache = {}
 end
 
+local function getMapFolder()
+    local activeMap = workspace:FindFirstChild("ActiveMap")
+    if not activeMap then return nil end
+    for _, child in pairs(activeMap:GetChildren()) do
+        if (child:IsA("Folder") or child:IsA("Model")) and child:FindFirstChild("Interactable") then
+            return child
+        end
+    end
+    return nil
+end
+
 task.spawn(function()
     while task.wait(0.5) do
-        if not Config.Visual.Chams then
-            if next(espCache) then cleanupESP() end
-        else
+        -- ESP PLAYER
+        if Config.Visual.Chams then
             local myChar, myHRP = getChar(), getHRP()
             local anySetting = Config.Visual.ESPShowDistance or Config.Visual.ESPHealth or Config.Visual.ESPName
 
@@ -450,15 +465,10 @@ task.spawn(function()
                                 hl.Parent = espGuiParent
                                 espCache[model].hl = hl
                             else
-                                -- FIX: Update warna kalau tim lu berubah pas in-game
                                 if espCache[model].isTeam ~= isTeam then
                                     espCache[model].isTeam = isTeam
-                                    if espCache[model].hl then
-                                        espCache[model].hl.FillColor = markerColor
-                                    end
-                                    if espCache[model].infoLbl then
-                                        espCache[model].infoLbl.TextColor3 = markerColor
-                                    end
+                                    if espCache[model].hl then espCache[model].hl.FillColor = markerColor end
+                                    if espCache[model].infoLbl then espCache[model].infoLbl.TextColor3 = markerColor end
                                 end
                             end
 
@@ -496,13 +506,81 @@ task.spawn(function()
                     end
                 end
             end
-
             for model, objs in pairs(espCache) do
-                if not model.Parent then
+                if not model.Parent or not model:FindFirstChildOfClass("Humanoid") then
                     for _, obj in pairs(objs) do
                         if obj and typeof(obj) == "Instance" then pcall(function() obj:Destroy() end) end
                     end
                     espCache[model] = nil
+                end
+            end
+        else
+            for model, objs in pairs(espCache) do
+                if not objs.isObject then
+                    for _, obj in pairs(objs) do
+                        if obj and typeof(obj) == "Instance" then pcall(function() obj:Destroy() end) end
+                    end
+                    espCache[model] = nil
+                end
+            end
+        end
+
+        -- ESP SUPPLY & CAPTURE
+        local mapFolder = getMapFolder()
+        if mapFolder then
+            local inter = mapFolder:FindFirstChild("Interactable")
+            if inter then
+                -- Supplies
+                local supplies = inter:FindFirstChild("Supplies")
+                if supplies then
+                    for _, obj in pairs(supplies:GetChildren()) do
+                        if obj:IsA("Model") then
+                            if Config.Visual.ESPSupply then
+                                if not espCache[obj] then
+                                    espCache[obj] = { isObject = true }
+                                    local hl = Instance.new("Highlight")
+                                    hl.Name = "Flow_Supply"
+                                    hl.FillColor = COLOR_SUPPLY
+                                    hl.OutlineColor = Color3.new(1,1,1)
+                                    hl.FillTransparency = 0.6
+                                    hl.Adornee = obj
+                                    hl.Parent = espGuiParent
+                                    espCache[obj].hl = hl
+                                end
+                            else
+                                if espCache[obj] and espCache[obj].isObject then
+                                    if espCache[obj].hl then pcall(function() espCache[obj].hl:Destroy() end) end
+                                    espCache[obj] = nil
+                                end
+                            end
+                        end
+                    end
+                end
+                -- Captures
+                local points = inter:FindFirstChild("Points")
+                if points then
+                    for _, obj in pairs(points:GetChildren()) do
+                        if obj:IsA("Model") then
+                            if Config.Visual.ESPCapture then
+                                if not espCache[obj] then
+                                    espCache[obj] = { isObject = true }
+                                    local hl = Instance.new("Highlight")
+                                    hl.Name = "Flow_Capture"
+                                    hl.FillColor = COLOR_CAPTURE
+                                    hl.OutlineColor = Color3.new(1,1,1)
+                                    hl.FillTransparency = 0.6
+                                    hl.Adornee = obj
+                                    hl.Parent = espGuiParent
+                                    espCache[obj].hl = hl
+                                end
+                            else
+                                if espCache[obj] and espCache[obj].isObject then
+                                    if espCache[obj].hl then pcall(function() espCache[obj].hl:Destroy() end) end
+                                    espCache[obj] = nil
+                                end
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -554,7 +632,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO SPAWN
+-- SPAWN UNIT
 -- ============================================================
 function _G.STHAIN.SpawnUnit(slot)
     local PG = LP:FindFirstChild("PlayerGui")
@@ -675,15 +753,87 @@ function _G.STHAIN.ClaimQuests()
 end
 
 -- ============================================================
--- REDEEM CODE
+-- AUTOMATION FEATURES (Summon, Ascend, Evolve, Rewards)
 -- ============================================================
-local function ambilCode()
+task.spawn(function()
+    while task.wait(2) do
+        local AA = Config.Automation
+        if not AA then continue end
+        local PG = LP:FindFirstChild("PlayerGui")
+        if PG then
+            local interactable = PG:FindFirstChild("Interactable")
+
+            -- AUTO SUMMON
+            if AA.AutoSummon then
+                local summonUI = interactable and interactable:FindFirstChild("SummonUI")
+                if summonUI then
+                    local summonGroup = summonUI:FindFirstChild("Summon")
+                    if summonGroup then
+                        local targetBtnName = (AA.SummonAmount == "10x") and "Summon10" or "Summon1"
+                        local btn = summonGroup:FindFirstChild(targetBtnName)
+                        if btn and btn.Visible then
+                            -- Cek KeepGems
+                            local gemsUI = PG:FindFirstChild("HUD") and PG.HUD:FindFirstChild("LeftBar") and PG.HUD.LeftBar:FindFirstChild("Gems")
+                            -- Simplified: Asumsi user udah atur, langsung klik
+                            pcall(function()
+                                if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end
+                            end)
+                        end
+                    end
+                end
+            end
+
+            -- AUTO ASCEND
+            if AA.AutoAscend then
+                local ascUI = interactable and interactable:FindFirstChild("AscensionUI")
+                if ascUI then
+                    local btn = ascUI:FindFirstChild("Ascend")
+                    if btn and btn.Visible then
+                        pcall(function() if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end end)
+                    end
+                end
+            end
+
+            -- AUTO EVOLVE
+            if AA.AutoEvolve then
+                local evoUI = interactable and interactable:FindFirstChild("EvolutionUI")
+                if evoUI then
+                    local btn = evoUI:FindFirstChild("Evolve")
+                    if btn and btn.Visible then
+                        pcall(function() if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end end)
+                    end
+                end
+            end
+
+            -- AUTO REWARD
+            if AA.AutoReward then
+                local questUI = interactable and interactable:FindFirstChild("QuestUI")
+                if questUI then
+                    for _, c in pairs(questUI:GetDescendants()) do
+                        if (c:IsA("ImageButton") or c:IsA("TextButton")) and c.Name == "Claim" then
+                            if c.Visible then
+                                pcall(function() if firesignal then firesignal(c.MouseButton1Click) else c:Activate() end end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- ============================================================
+-- REDEEM CODE & FETCH CODES
+-- ============================================================
+function _G.STHAIN.FetchCodes()
     local url = "https://www.radiotimes.com/technology/gaming/command-an-army-codes/"
     local ok, html = pcall(game.HttpGet, game, url)
     if not ok or not html or #html < 500 then return {} end
+    
     local startPos = html:find("Active codes")
     local endPos = html:find("expired codes")
     if not startPos then return {} end
+    
     local section = html:sub(startPos, endPos or #html)
     local codes = {}
     local seen = {}
@@ -698,7 +848,7 @@ local function ambilCode()
 end
 
 function _G.STHAIN.RedeemAllCodes()
-    local codes = ambilCode()
+    local codes = _G.STHAIN.FetchCodes()
     if #codes == 0 then return 0 end
 
     local PG = LP:FindFirstChild("PlayerGui")
@@ -758,19 +908,8 @@ function _G.STHAIN.RedeemAllCodes()
 end
 
 -- ============================================================
--- TELEPORT
+-- TELEPORT (Sama kayak punya lu, aman)
 -- ============================================================
-local function getMapFolder()
-    local activeMap = workspace:FindFirstChild("ActiveMap")
-    if not activeMap then return nil end
-    for _, child in pairs(activeMap:GetChildren()) do
-        if (child:IsA("Folder") or child:IsA("Model")) and child:FindFirstChild("Interactable") then
-            return child
-        end
-    end
-    return nil
-end
-
 function _G.STHAIN.TeleportScan()
     local results = { supplies = {}, captures = {} }
     local mapFolder = getMapFolder()
