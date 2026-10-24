@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [3] THEME — Flow Hub (Mint Accent)
+  [3] THEME — Flow Hub (Mint Accent) v2.2
 ============================================================
 ]]
 
@@ -28,28 +28,29 @@ local Theme = {
     },
 
     Icons = {
-        combat   = "rbxassetid://99199363807265",
-        visual   = "rbxassetid://127234874352422",
-        settings = "rbxassetid://106205298246017",
-        config   = "rbxassetid://112330254035751",
-        teleport = "rbxassetid://90293255250749",
-        search   = "rbxassetid://72296609649861",
+        combat     = "rbxassetid://99199363807265",
+        visual     = "rbxassetid://127234874352422",
+        settings   = "rbxassetid://106205298246017",
+        config     = "rbxassetid://112330254035751",
+        teleport   = "rbxassetid://90293255250749",
+        search     = "rbxassetid://72296609649861",
+        automation = "rbxassetid://137660494219613", -- Icon Tab Automation
 
         logo     = "rbxassetid://101516376369531",
         icon     = "rbxassetid://80944443292236",
     },
 
     Font = {
-        bold = Enum.Font.GothamBold,
-        norm = Enum.Font.Gotham,
+        bold   = Enum.Font.GothamBold,
+        norm   = Enum.Font.Gotham,
         medium = Enum.Font.GothamMedium,
     },
 
     Radius = {
-        small = UDim.new(0, 4),
+        small  = UDim.new(0, 4),
         medium = UDim.new(0, 6),
-        large = UDim.new(0, 10),
-        round = UDim.new(1, 0),
+        large  = UDim.new(0, 10),
+        round  = UDim.new(1, 0),
     },
 }
 
