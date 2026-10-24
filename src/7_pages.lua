@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v2.1 FIXED)
+  [7] PAGES — Command An Army (v2.2 Automation Update)
 ============================================================
 ]]
 
@@ -453,12 +453,14 @@ end
 createPage("Combat")
 createPage("Esp")
 createPage("Teleport")
+createPage("Automation")
 createPage("Settings")
 createPage("Config")
 
 makeTab(I.combat, "Combat")
 makeTab(I.visual, "Esp")
 makeTab(I.teleport, "Teleport")
+makeTab(I.automation, "Automation")
 makeTab(I.settings, "Settings")
 makeTab(I.config, "Config")
 
@@ -501,7 +503,6 @@ S.Comp.makeToggle(spawnContent, "Auto Respawn [BETA]", SS.AutoSpawn == true, fun
     SS.AutoSpawn = v 
     save() 
 end)
-
 task.defer(function() task.wait(0.1) forceFixSection(spawnSection) end)
 
 local pvpSection = S.Comp.makeSection(pages["Combat"], "PvP", false)
@@ -638,6 +639,95 @@ task.spawn(function()
 end)
 
 -- ============================================================
+-- TAB AUTOMATION
+-- ============================================================
+local AA = S.Config.Automation or {}
+
+-- 1. SUMMON SECTION
+local summonSection = S.Comp.makeSection(pages["Automation"], "Summon", false)
+S.Comp.makeToggle(summonSection, "Auto Summon", AA.AutoSummon == true, function(v) 
+    AA.AutoSummon = v 
+    save() 
+end)
+
+local summonAmountDropdown = makeDynamicDropdown(summonSection, "Summon Amount", {"1x", "10x"}, function(val)
+    AA.SummonAmount = val
+    save()
+end)
+
+S.Comp.makeInput(summonSection, "Keep Gems", AA.KeepGems or 0, function(v)
+    AA.KeepGems = v
+    save()
+end)
+task.defer(function() task.wait(0.1) forceFixSection(summonSection) end)
+
+-- 2. ASCEND SECTION
+local ascendSection = S.Comp.makeSection(pages["Automation"], "Ascend", false)
+S.Comp.makeToggle(ascendSection, "Auto Ascend", AA.AutoAscend == true, function(v) 
+    AA.AutoAscend = v 
+    save() 
+end)
+task.defer(function() task.wait(0.1) forceFixSection(ascendSection) end)
+
+-- 3. EVOLVE SECTION
+local evolveSection = S.Comp.makeSection(pages["Automation"], "Evolve", false)
+S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(v) 
+    AA.AutoEvolve = v 
+    save() 
+end)
+task.defer(function() task.wait(0.1) forceFixSection(evolveSection) end)
+
+-- 4. REWARDS SECTION
+local rewardSection = S.Comp.makeSection(pages["Automation"], "Rewards", false)
+S.Comp.makeToggle(rewardSection, "Auto Reward (Daily/Weekly)", AA.AutoReward == true, function(v) 
+    AA.AutoReward = v 
+    save() 
+end)
+task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
+
+-- 5. CLAIM CODE SECTION
+local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
+
+-- Input Code Container
+local codeInputContainer = Instance.new("Frame")
+codeInputContainer.Name = "CodeInputContainer"
+codeInputContainer.Size = UDim2.new(1, 0, 0, 34)
+codeInputContainer.BackgroundTransparency = 1
+codeInputContainer.Parent = codeSection
+
+local codeBox = Instance.new("TextBox")
+codeBox.Size = UDim2.new(1, -12, 0, 22)
+codeBox.Position = UDim2.new(0, 12, 0.5, -11)
+codeBox.BackgroundColor3 = C.bg4
+codeBox.BorderSizePixel = 0
+codeBox.Text = ""
+codeBox.PlaceholderText = "Enter A Code..."
+codeBox.TextColor3 = C.text
+codeBox.PlaceholderColor3 = C.textDim2
+codeBox.TextSize = 11
+codeBox.Font = F.norm
+codeBox.ClearTextOnFocus = false
+codeBox.Parent = codeInputContainer
+Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
+
+-- Dropdown Dynamic (Available Codes)
+-- Nanti lu bisa update opsi dropdown ini pake: codeDropdown.UpdateOptions({"CODE1", "CODE2"})
+local codeDropdown = makeDynamicDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
+    codeBox.Text = val
+end)
+
+-- Button Claim
+S.Comp.makeButton(codeSection, "Claim Code", function()
+    local code = codeBox.Text
+    if code ~= "" and _G.STHAIN.RedeemAllCodes then
+        -- Panggil fungsi redeem code lu di sini nanti
+        -- _G.STHAIN.RedeemAllCodes(code)
+    end
+end)
+task.defer(function() task.wait(0.1) forceFixSection(codeSection) end)
+
+
+-- ============================================================
 -- TAB SETTINGS
 -- ============================================================
 local MM = S.Config.Movement
@@ -661,15 +751,6 @@ local visualContent = S.Comp.makeSection(pages["Settings"], "Visuals", false)
 S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright == true, function(v) VV.Fullbright = v save() end)
 S.Comp.makeToggle(visualContent, "No Fog", VV.NoFog == true, function(v) VV.NoFog = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(visualContent) end)
-
-local autoClaimContent = S.Comp.makeSection(pages["Settings"], "Auto Claim", false)
-S.Comp.makeButton(autoClaimContent, "Claim Quest Now", function()
-    if _G.STHAIN.ClaimQuests then _G.STHAIN.ClaimQuests() end
-end)
-S.Comp.makeButton(autoClaimContent, "Claim All Code Now", function()
-    if _G.STHAIN.RedeemAllCodes then _G.STHAIN.RedeemAllCodes() end
-end)
-task.defer(function() task.wait(0.1) forceFixSection(autoClaimContent) end)
 
 local autoJoinContent = S.Comp.makeSection(pages["Settings"], "Auto Join Team", false)
 local setJoinDefender, setJoinAttacker
@@ -748,7 +829,7 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
 -- ============================================================
--- DRAG MAIN FRAME (FIXED: Pakai Header)
+-- DRAG MAIN FRAME (Pakai Header)
 -- ============================================================
 local mainDrag, mainStart, mainPos
 S.GUI.Header.InputBegan:Connect(function(input)
@@ -800,7 +881,6 @@ S.GUI.FloatBtn.MouseButton1Click:Connect(function()
     S.GUI.MainFrame.Visible = true
 end)
 
--- UPDATE: GUI langsung kebuka pas start
 S.GUI.MainFrame.Visible = true
 S.GUI.FloatBtn.Visible = false
 
@@ -859,7 +939,6 @@ if S.GUI.SearchBox then
                             end
                         end
 
-                        -- FIX: Pake task.defer biar ga freeze
                         task.defer(function()
                             if page:IsA("ScrollingFrame") then
                                 page.CanvasPosition = Vector2.new(0, section.Position.Y.Offset)
