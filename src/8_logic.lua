@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [8] LOGIC — Command An Army (v2.1 FIXED)
+  [8] LOGIC — Command An Army (v2.2 FIXED)
 ============================================================
 ]]
 
@@ -25,10 +25,8 @@ local TroopStateRequest = Remotes and Remotes:FindFirstChild("TroopStateRequest"
 local RushRequest = Remotes and Remotes:FindFirstChild("RushRequest")
 local RespawnUnitRequest = Remotes and Remotes:FindFirstChild("RespawnUnitRequest")
 
--- Cache State
 local State = {
     Fly = false, Noclip = false,
-    Fullbright = false, NoFog = false,
     ESP = false, TargetLock = false,
     AntiStun = false,
 }
@@ -77,12 +75,13 @@ addConn(Run.RenderStepped:Connect(function()
     if not hum then return end
     local mv = Config.Movement
     
+    -- FIX: Cek dulu Config ada atau belum biar ga nimpa speed jadi 16
+    if not Config or not Config.Movement then return end
+
     if mv.EnableRunSpeed then
         if mv.WalkSpeed and mv.WalkSpeed > 0 and hum.WalkSpeed ~= mv.WalkSpeed then 
             hum.WalkSpeed = mv.WalkSpeed 
         end
-    else
-        if hum.WalkSpeed ~= 16 then hum.WalkSpeed = 16 end
     end
 
     if mv.JumpPower and mv.JumpPower > 0 then
@@ -92,7 +91,7 @@ addConn(Run.RenderStepped:Connect(function()
 end))
 
 -- ============================================================
--- NOCLIP (FIXED)
+-- NOCLIP
 -- ============================================================
 local noclipOriginal = {}
 local function cleanupNoclip()
@@ -190,38 +189,40 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- ANTI-STUN (FIXED: Bisa dimatiin)
+-- ANTI-STUN
 -- ============================================================
 task.spawn(function()
     while task.wait(0.5) do
         local hum = getHum()
-        if not hum then continue end
-        local enable = Config.Combat.AntiStun
-        if enable then
-            pcall(function()
-                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-            end)
-        else
-            pcall(function()
-                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
-            end)
+        if hum then
+            local enable = Config.Combat.AntiStun
+            if enable then
+                pcall(function()
+                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                end)
+            else
+                pcall(function()
+                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+                end)
+            end
         end
     end
 end)
 
 -- ============================================================
--- AUTO ATTACK / RUSH / FOLLOW (FIXED: Anti-kick)
+-- AUTO ATTACK / RUSH / FOLLOW (FIXED: UNIVERSAL UI CLICK)
 -- ============================================================
 local atkTimer, rushTimer, followTimer = 0, 0, 0
+local rushBtnCache = nil -- Nyimpen tombol biar ga scan terus
+
 task.spawn(function()
     while task.wait(0.15) do
         local anyActive = Config.Combat.AutoAttack or Config.Combat.AutoRush or Config.Combat.AutoFollow
-        if not anyActive then
-            -- Lanjut loop tanpa nge-block
-        else
+        if anyActive then
             local now = tick()
+            
             if Config.Combat.AutoAttack and now - atkTimer >= Config.Combat.AttackDelay then
                 atkTimer = now
                 if TroopStateRequest then pcall(function() TroopStateRequest:FireServer("Attack") end) end
@@ -229,7 +230,26 @@ task.spawn(function()
             
             if Config.Combat.AutoRush and now - rushTimer >= Config.Combat.RushDelay then
                 rushTimer = now
-                if RushRequest then pcall(function() RushRequest:FireServer() end) end
+                
+                if not rushBtnCache or not rushBtnCache.Parent then
+                    local PG = LP:FindFirstChild("PlayerGui")
+                    if PG then
+                        for _, v in pairs(PG:GetDescendants()) do
+                            if v:IsA("TextButton") and (v.Text:find("Serangan Cepat") or v.Name:find("Rush")) and v.Visible then
+                                rushBtnCache = v
+                                break
+                            end
+                        end
+                    end
+                end
+                
+                if rushBtnCache and rushBtnCache.Parent and rushBtnCache.Visible then
+                    pcall(function()
+                        if firesignal then firesignal(rushBtnCache.MouseButton1Click) else rushBtnCache:Activate() end
+                    end)
+                elseif RushRequest then
+                    pcall(function() RushRequest:FireServer() end)
+                end
             end
             
             if Config.Combat.AutoFollow and now - followTimer >= Config.Combat.FollowDelay then
@@ -241,7 +261,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- KILL AURA (FIXED: Cek tim & Range)
+-- KILL AURA
 -- ============================================================
 task.spawn(function()
     while task.wait(0.5) do
@@ -256,7 +276,6 @@ task.spawn(function()
                             local thrp = model:FindFirstChild("HumanoidRootPart")
                             if thrp then
                                 local dist = (thrp.Position - hrp.Position).Magnitude
-                                -- Cek Tim (Jangan nembak temen)
                                 local player = Players:GetPlayerFromCharacter(model)
                                 local isEnemy = true
                                 if player and LP.Team and player.Team == LP.Team then isEnemy = false end
@@ -278,7 +297,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO HEAL (FIXED: Pake sendKey yang aman)
+-- AUTO HEAL
 -- ============================================================
 local healCD = 0
 task.spawn(function()
@@ -297,7 +316,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AIMBOT (Target Lock) — TETAP
+-- AIMBOT (Target Lock)
 -- ============================================================
 local aimLock, aimLostAt, aimSmoothCF = nil, 0, nil
 
@@ -379,13 +398,12 @@ addConn(Run.RenderStepped:Connect(function(dt)
 end))
 
 -- ============================================================
--- ESP (FIXED: Cleanup memory)
+-- ESP (FIXED: Update Warna Real-time)
 -- ============================================================
 local espCache = {}
 local espGuiParent = (gethui and gethui()) or game:GetService("CoreGui")
 local COLOR_ENEMY = Color3.fromRGB(255, 60, 60)
 local COLOR_TEAM = Color3.fromRGB(74, 158, 255)
-local COLOR_SUPPLY = Color3.fromRGB(144, 238, 144)
 
 local function isTeammate(model)
     local plr = Players:GetPlayerFromCharacter(model)
@@ -431,6 +449,17 @@ task.spawn(function()
                                 hl.Adornee = model
                                 hl.Parent = espGuiParent
                                 espCache[model].hl = hl
+                            else
+                                -- FIX: Update warna kalau tim lu berubah pas in-game
+                                if espCache[model].isTeam ~= isTeam then
+                                    espCache[model].isTeam = isTeam
+                                    if espCache[model].hl then
+                                        espCache[model].hl.FillColor = markerColor
+                                    end
+                                    if espCache[model].infoLbl then
+                                        espCache[model].infoLbl.TextColor3 = markerColor
+                                    end
+                                end
                             end
 
                             if anySetting and not espCache[model].infoBB then
@@ -481,7 +510,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- FULLBRIGHT / NO FOG (FIXED: Bisa balik normal)
+-- FULLBRIGHT / NO FOG
 -- ============================================================
 local originalLighting = {}
 task.spawn(function()
@@ -729,7 +758,7 @@ function _G.STHAIN.RedeemAllCodes()
 end
 
 -- ============================================================
--- TELEPORT (Sama kayak punya lu, aman)
+-- TELEPORT
 -- ============================================================
 local function getMapFolder()
     local activeMap = workspace:FindFirstChild("ActiveMap")
