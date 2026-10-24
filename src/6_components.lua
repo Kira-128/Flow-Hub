@@ -1,12 +1,10 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub Style v5)
-  - Section = 1 card solid (bg3)
-  - Header + items nyatu dalam card yang sama
-  - Divider tipis 1px antar item
-  - Item transparan (no bg)
-  - makeToggle return setState (buat exclusive toggle)
-  - Fix recalc collapsed = 32px
+  [6] COMPONENTS (Flow Hub v2.1)
+  - Arrow moved to right
+  - Accent bar on left of title
+  - Smooth Tween animations for Section collapse/expand
+  - Divider softened
 ============================================================
 ]]
 
@@ -19,18 +17,17 @@ local Comp = {}
 local CARD_PADDING = 6         -- gap antar section
 local CARD_BG = C.bg3          -- warna card solid
 local CARD_TRANS = 0.15        -- transparency card
-local DIVIDER_TRANS = 0.6      -- transparency divider antar item
+local DIVIDER_TRANS = 0.8      -- transparency divider antar item (lebih soft)
 local ITEM_H = 34              -- tinggi 1 item
 local HEADER_H = 32            -- tinggi header section
 
 -- ============================================================
--- HELPER: Recalculate section height
+-- HELPER: Recalculate section height (Fallback)
 -- ============================================================
 local function recalcSection(card, content)
     if not card or not card.Parent then return end
 
     if not content.Visible then
-        -- collapsed: cuma header
         card.Size = UDim2.new(1, 0, 0, HEADER_H)
         return
     end
@@ -41,12 +38,11 @@ local function recalcSection(card, content)
         totalH = layout.AbsoluteContentSize.Y
     end
 
-    -- header + content + padding
     card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
 end
 
 -- ============================================================
--- HELPER: Auto recalc saat child ditambahin (cuma kalau visible)
+-- HELPER: Auto recalc saat child ditambahin
 -- ============================================================
 local function hookAutoRecalc(card, content)
     content.ChildAdded:Connect(function()
@@ -65,7 +61,8 @@ end
 local function makeDivider(parent)
     local d = Instance.new("Frame")
     d.Name = "Divider"
-    d.Size = UDim2.new(1, -20, 0, 1)
+    d.Size = UDim2.new(1, -24, 0, 1)
+    d.Position = UDim2.new(0, 12, 0, 0)
     d.BackgroundColor3 = C.stroke
     d.BackgroundTransparency = DIVIDER_TRANS
     d.BorderSizePixel = 0
@@ -115,10 +112,6 @@ function Comp.makeToggle(parent, name, default, callback)
 
     local state = default
 
-    -- ============================================================
-    -- setState: dipanggil dari luar (exclusive logic)
-    -- skipCallback = true kalau cuma update visual, ga trigger logic
-    -- ============================================================
     local function setState(newState, skipCallback)
         if state == newState then return end
         state = newState
@@ -296,7 +289,7 @@ function Comp.makeDropdown(parent, name, options, callback)
 end
 
 -- ============================================================
--- SECTION: 1 card solid
+-- SECTION: 1 card solid + Animasi Tween (FIXED v2.1)
 -- ============================================================
 function Comp.makeSection(parent, title, defaultOpen)
     -- CARD UTAMA
@@ -322,20 +315,20 @@ function Comp.makeSection(parent, title, defaultOpen)
     header.ZIndex = 2
     header.Parent = card
 
-    local arrow = Instance.new("TextLabel")
-    arrow.Size = UDim2.new(0, 16, 1, 0)
-    arrow.Position = UDim2.new(0, 10, 0, 0)
-    arrow.Text = defaultOpen and "▼" or "▶"
-    arrow.TextColor3 = C.accent
-    arrow.TextSize = 10
-    arrow.Font = F.bold
-    arrow.BackgroundTransparency = 1
-    arrow.ZIndex = 3
-    arrow.Parent = header
+    -- GARIS AKSEN (Mint) DI KIRI
+    local accentBar = Instance.new("Frame")
+    accentBar.Size = UDim2.new(0, 3, 0, 14)
+    accentBar.Position = UDim2.new(0, 0, 0.5, -7)
+    accentBar.BackgroundColor3 = C.accent
+    accentBar.BorderSizePixel = 0
+    accentBar.ZIndex = 3
+    accentBar.Parent = header
+    Instance.new("UICorner", accentBar).CornerRadius = UDim.new(1, 0)
 
+    -- JUDUL SECTION (Digeser ke kanan biar ga nabrak garis)
     local titleLbl = Instance.new("TextLabel")
-    titleLbl.Size = UDim2.new(1, -30, 1, 0)
-    titleLbl.Position = UDim2.new(0, 28, 0, 0)
+    titleLbl.Size = UDim2.new(1, -50, 1, 0)
+    titleLbl.Position = UDim2.new(0, 12, 0, 0)
     titleLbl.Text = title
     titleLbl.TextColor3 = C.text
     titleLbl.TextSize = 11
@@ -344,6 +337,19 @@ function Comp.makeSection(parent, title, defaultOpen)
     titleLbl.BackgroundTransparency = 1
     titleLbl.ZIndex = 3
     titleLbl.Parent = header
+
+    -- PANAH SEGITIGA (PINDAH KE KANAN)
+    local arrow = Instance.new("TextLabel")
+    arrow.Size = UDim2.new(0, 16, 1, 0)
+    arrow.Position = UDim2.new(1, -26, 0, 0)
+    arrow.AnchorPoint = Vector2.new(1, 0) 
+    arrow.Text = defaultOpen and "▼" or "▶"
+    arrow.TextColor3 = C.textDim
+    arrow.TextSize = 10
+    arrow.Font = F.bold
+    arrow.BackgroundTransparency = 1
+    arrow.ZIndex = 3
+    arrow.Parent = header
 
     -- CONTENT (nyatu di dalam card)
     local content = Instance.new("Frame")
@@ -369,19 +375,38 @@ function Comp.makeSection(parent, title, defaultOpen)
     local isOpen = defaultOpen
     hookAutoRecalc(card, content)
 
+    -- LOGIKA KLIK HEADER PAKE TWEEN (SMOOTH ANIMATION)
     header.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         arrow.Text = isOpen and "▼" or "▶"
-        content.Visible = isOpen
-        task.defer(function()
-            task.wait(0.02)
-            recalcSection(card, content)
-        end)
+        
+        if isOpen then
+            content.Visible = true
+            -- Hitung tinggi konten secara dinamis
+            local layout = content:FindFirstChildOfClass("UIListLayout")
+            local targetH = HEADER_H + (layout and layout.AbsoluteContentSize.Y or 0) + 8
+            S.Services.TS:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, 0, 0, targetH)
+            }):Play()
+        else
+            -- Animasi menutup
+            S.Services.TS:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, 0, 0, HEADER_H)
+            }):Play()
+            task.delay(0.2, function() 
+                if not isOpen then content.Visible = false end 
+            end)
+        end
     end)
 
+    -- Setup awal kalau defaultOpen = true
     task.defer(function()
         task.wait(0.15)
-        if defaultOpen then recalcSection(card, content) end
+        if defaultOpen then 
+            local layout = content:FindFirstChildOfClass("UIListLayout")
+            local targetH = HEADER_H + (layout and layout.AbsoluteContentSize.Y or 0) + 8
+            card.Size = UDim2.new(1, 0, 0, targetH)
+        end
     end)
 
     return content, function() recalcSection(card, content) end, card, makeDivider
