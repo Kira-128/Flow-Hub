@@ -1,7 +1,7 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v2.1)
-  - Size updated to 450x300
+  [5] GUI (Flow Hub v2.2)
+  - Size: 460x320
   - Fix gethui crash on mobile
   - Anti-Double GUI
   - Separate Header for drag handle
@@ -82,12 +82,12 @@ floatBtn.InputChanged:Connect(function(input)
 end)
 
 -- ============================================================
--- MAIN FRAME (Size: 450x300)
+-- MAIN FRAME (Size: 460x320)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 450, 0, 300)
-mainFrame.Position = UDim2.new(0.5, -225, 0.5, -150) -- Center pos
+mainFrame.Size = UDim2.new(0, 460, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -230, 0.5, -160)
 mainFrame.BackgroundColor3 = C.panel
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
