@@ -1,6 +1,10 @@
 --[[
 ============================================================
   [5] GUI (Flow Hub v2.1)
+  - Size updated to 450x300
+  - Fix gethui crash on mobile
+  - Anti-Double GUI
+  - Separate Header for drag handle
 ============================================================
 ]]
 
@@ -78,12 +82,12 @@ floatBtn.InputChanged:Connect(function(input)
 end)
 
 -- ============================================================
--- MAIN FRAME
+-- MAIN FRAME (Size: 450x300)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 460, 0, 320)
-mainFrame.Position = UDim2.new(0.5, -230, 0.5, -160)
+mainFrame.Size = UDim2.new(0, 450, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -225, 0.5, -150) -- Center pos
 mainFrame.BackgroundColor3 = C.panel
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
@@ -99,7 +103,7 @@ mStroke.Transparency = 0.3
 mStroke.Parent = mainFrame
 
 -- ============================================================
--- HEADER (FIX: Dibikin Frame khusus biar bisa jadi Drag Handle)
+-- HEADER (Drag Handle)
 -- ============================================================
 local HEADER_H = 36
 
@@ -109,7 +113,7 @@ header.Size = UDim2.new(1, 0, 0, HEADER_H)
 header.BackgroundColor3 = C.bg2
 header.BackgroundTransparency = 0.1
 header.BorderSizePixel = 0
-header.Active = true -- Wajib true biar bisa didrag
+header.Active = true
 header.Parent = mainFrame
 Instance.new("UICorner", header).CornerRadius = UDim.new(0, 8)
 
@@ -302,7 +306,7 @@ S.GUI = {
     Screen = gui,
     FloatBtn = floatBtn,
     MainFrame = mainFrame,
-    Header = header, -- FIX: Export Header biar bisa dipake drag di 7_pages
+    Header = header,
     Sidebar = sidebar,
     Content = contentPanel,
     ContentScroll = contentScroll,
