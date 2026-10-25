@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [8] LOGIC — Command An Army (v2.3 FULL UPDATE)
+  [8] LOGIC — Command An Army (v2.4 FULL UPDATE)
 ============================================================
 ]]
 
@@ -68,18 +68,17 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- MOVEMENT (FIXED: No Force 16)
+-- MOVEMENT
 -- ============================================================
 addConn(Run.RenderStepped:Connect(function()
     local hum = getHum()
     if not hum then return end
     local mv = Config.Movement
-    
     if not Config or not Config.Movement then return end
 
     if mv.EnableRunSpeed then
-        if mv.WalkSpeed and mv.WalkSpeed > 0 and hum.WalkSpeed ~= mv.WalkSpeed then 
-            hum.WalkSpeed = mv.WalkSpeed 
+        if mv.WalkSpeed and mv.WalkSpeed > 0 and hum.WalkSpeed ~= mv.WalkSpeed then
+            hum.WalkSpeed = mv.WalkSpeed
         end
     end
 
@@ -211,7 +210,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AUTO ATTACK / RUSH / FOLLOW (FIXED RUSH UI)
+-- AUTO ATTACK / RUSH / FOLLOW
 -- ============================================================
 local atkTimer, rushTimer, followTimer = 0, 0, 0
 local rushBtnCache = nil
@@ -221,15 +220,14 @@ task.spawn(function()
         local anyActive = Config.Combat.AutoAttack or Config.Combat.AutoRush or Config.Combat.AutoFollow
         if anyActive then
             local now = tick()
-            
+
             if Config.Combat.AutoAttack and now - atkTimer >= Config.Combat.AttackDelay then
                 atkTimer = now
                 if TroopStateRequest then pcall(function() TroopStateRequest:FireServer("Attack") end) end
             end
-            
+
             if Config.Combat.AutoRush and now - rushTimer >= Config.Combat.RushDelay then
                 rushTimer = now
-                
                 if not rushBtnCache or not rushBtnCache.Parent then
                     local PG = LP:FindFirstChild("PlayerGui")
                     if PG then
@@ -245,7 +243,6 @@ task.spawn(function()
                         end
                     end
                 end
-                
                 if rushBtnCache and rushBtnCache.Parent and rushBtnCache.Visible then
                     pcall(function()
                         if firesignal then firesignal(rushBtnCache.MouseButton1Click) else rushBtnCache:Activate() end
@@ -254,7 +251,7 @@ task.spawn(function()
                     pcall(function() RushRequest:FireServer() end)
                 end
             end
-            
+
             if Config.Combat.AutoFollow and now - followTimer >= Config.Combat.FollowDelay then
                 followTimer = now
                 if TroopStateRequest then pcall(function() TroopStateRequest:FireServer("Follow") end) end
@@ -282,7 +279,6 @@ task.spawn(function()
                                 local player = Players:GetPlayerFromCharacter(model)
                                 local isEnemy = true
                                 if player and LP.Team and player.Team == LP.Team then isEnemy = false end
-                                
                                 if isEnemy and dist > 5 and dist < nearestDist then
                                     nearest = thrp
                                     nearestDist = dist
@@ -319,7 +315,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- AIMBOT (Target Lock)
+-- AIMBOT
 -- ============================================================
 local aimLock, aimLostAt, aimSmoothCF = nil, 0, nil
 
@@ -441,7 +437,6 @@ end
 
 task.spawn(function()
     while task.wait(0.5) do
-        -- ESP PLAYER
         if Config.Visual.Chams then
             local myChar, myHRP = getChar(), getHRP()
             local anySetting = Config.Visual.ESPShowDistance or Config.Visual.ESPHealth or Config.Visual.ESPName
@@ -525,12 +520,10 @@ task.spawn(function()
             end
         end
 
-        -- ESP SUPPLY & CAPTURE
         local mapFolder = getMapFolder()
         if mapFolder then
             local inter = mapFolder:FindFirstChild("Interactable")
             if inter then
-                -- Supplies
                 local supplies = inter:FindFirstChild("Supplies")
                 if supplies then
                     for _, obj in pairs(supplies:GetChildren()) do
@@ -556,7 +549,6 @@ task.spawn(function()
                         end
                     end
                 end
-                -- Captures
                 local points = inter:FindFirstChild("Points")
                 if points then
                     for _, obj in pairs(points:GetChildren()) do
@@ -753,68 +745,112 @@ function _G.STHAIN.ClaimQuests()
 end
 
 -- ============================================================
--- AUTOMATION FEATURES (Summon, Ascend, Evolve, Rewards)
+-- AUTOMATION: SUMMON / ASCEND / EVOLVE / REWARD
 -- ============================================================
+local function findProximityPrompt(keyword)
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            local parentName = obj.Parent and obj.Parent.Name or ""
+            local promptName = obj.Name or ""
+            local combined = string.lower(parentName .. " " .. promptName)
+            if string.find(combined, string.lower(keyword)) then
+                return obj
+            end
+        end
+    end
+    return nil
+end
+
+local function firePrompt(prompt)
+    if not prompt then return false end
+    local ok = pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt)
+        else
+            prompt:InputHoldBegin()
+            task.wait(0.1)
+            prompt:InputHoldEnd()
+        end
+    end)
+    return ok
+end
+
+local function findPartByKeyword(keyword)
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and string.find(string.lower(obj.Name), string.lower(keyword)) then
+            return obj
+        end
+    end
+    return nil
+end
+
+local function doAutoSummon(AA)
+    local PG = LP:FindFirstChild("PlayerGui")
+    if not PG then return false end
+
+    local interactable = PG:FindFirstChild("Interactable")
+    local summonUI = interactable and interactable:FindFirstChild("SummonUI")
+
+    if not summonUI then
+        local portal = findPartByKeyword("summon") or findPartByKeyword("open summon")
+        local hrp = getHRP()
+        if portal and hrp then
+            pcall(function()
+                hrp.CFrame = CFrame.new(portal.Position + Vector3.new(0, 5, 0))
+            end)
+            task.wait(1.5)
+        end
+        local prompt = findProximityPrompt("summon")
+        if prompt then firePrompt(prompt) task.wait(1) end
+        summonUI = interactable and interactable:FindFirstChild("SummonUI")
+    end
+
+    if not summonUI then return false end
+    local summonGroup = summonUI:FindFirstChild("Summon")
+    if not summonGroup then return false end
+
+    local targetBtnName = (AA.SummonAmount == "10x") and "Summon10" or "Summon1"
+    local btn = summonGroup:FindFirstChild(targetBtnName)
+    if btn and btn.Visible then
+        pcall(function()
+            if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end
+        end)
+        return true
+    end
+    return false
+end
+
+local function doAutoAscend()
+    local prompt = findProximityPrompt("ascend")
+    if prompt then return firePrompt(prompt) end
+    return false
+end
+
+local function doAutoEvolve()
+    local prompt = findProximityPrompt("evolve") or findProximityPrompt("evolution")
+    if prompt then return firePrompt(prompt) end
+    return false
+end
+
 task.spawn(function()
     while task.wait(2) do
         local AA = Config.Automation
         if not AA then continue end
-        local PG = LP:FindFirstChild("PlayerGui")
-        if PG then
-            local interactable = PG:FindFirstChild("Interactable")
 
-            -- AUTO SUMMON
-            if AA.AutoSummon then
-                local summonUI = interactable and interactable:FindFirstChild("SummonUI")
-                if summonUI then
-                    local summonGroup = summonUI:FindFirstChild("Summon")
-                    if summonGroup then
-                        local targetBtnName = (AA.SummonAmount == "10x") and "Summon10" or "Summon1"
-                        local btn = summonGroup:FindFirstChild(targetBtnName)
-                        if btn and btn.Visible then
-                            -- Cek KeepGems
-                            local gemsUI = PG:FindFirstChild("HUD") and PG.HUD:FindFirstChild("LeftBar") and PG.HUD.LeftBar:FindFirstChild("Gems")
-                            -- Simplified: Asumsi user udah atur, langsung klik
-                            pcall(function()
-                                if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end
-                            end)
-                        end
-                    end
-                end
-            end
+        if AA.AutoSummon then pcall(function() doAutoSummon(AA) end) end
+        if AA.AutoAscend then pcall(function() doAutoAscend() end) end
+        if AA.AutoEvolve then pcall(function() doAutoEvolve() end) end
 
-            -- AUTO ASCEND
-            if AA.AutoAscend then
-                local ascUI = interactable and interactable:FindFirstChild("AscensionUI")
-                if ascUI then
-                    local btn = ascUI:FindFirstChild("Ascend")
-                    if btn and btn.Visible then
-                        pcall(function() if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end end)
-                    end
-                end
-            end
-
-            -- AUTO EVOLVE
-            if AA.AutoEvolve then
-                local evoUI = interactable and interactable:FindFirstChild("EvolutionUI")
-                if evoUI then
-                    local btn = evoUI:FindFirstChild("Evolve")
-                    if btn and btn.Visible then
-                        pcall(function() if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end end)
-                    end
-                end
-            end
-
-            -- AUTO REWARD
-            if AA.AutoReward then
-                local questUI = interactable and interactable:FindFirstChild("QuestUI")
-                if questUI then
-                    for _, c in pairs(questUI:GetDescendants()) do
-                        if (c:IsA("ImageButton") or c:IsA("TextButton")) and c.Name == "Claim" then
-                            if c.Visible then
-                                pcall(function() if firesignal then firesignal(c.MouseButton1Click) else c:Activate() end end)
-                            end
-                        end
+        if AA.AutoReward then
+            local PG = LP:FindFirstChild("PlayerGui")
+            local interactable = PG and PG:FindFirstChild("Interactable")
+            local questUI = interactable and interactable:FindFirstChild("QuestUI")
+            if questUI then
+                for _, c in pairs(questUI:GetDescendants()) do
+                    if (c:IsA("ImageButton") or c:IsA("TextButton")) and c.Name == "Claim" and c.Visible then
+                        pcall(function()
+                            if firesignal then firesignal(c.MouseButton1Click) else c:Activate() end
+                        end)
                     end
                 end
             end
@@ -823,92 +859,223 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- REDEEM CODE & FETCH CODES
+-- AUTO DAILY REWARD
 -- ============================================================
-function _G.STHAIN.FetchCodes()
-    local url = "https://www.radiotimes.com/technology/gaming/command-an-army-codes/"
-    local ok, html = pcall(game.HttpGet, game, url)
-    if not ok or not html or #html < 500 then return {} end
-    
-    local startPos = html:find("Active codes")
-    local endPos = html:find("expired codes")
-    if not startPos then return {} end
-    
-    local section = html:sub(startPos, endPos or #html)
-    local codes = {}
-    local seen = {}
-    for li in section:gmatch("<li[^>]*>(.-)</li>") do
-        local code = li:match("<strong>([A-Z][A-Z0-9]+)</strong>") or li:match("^%s*([A-Z][A-Z0-9]+)")
-        if code and #code >= 3 and #code <= 20 and not seen[code] then
-            seen[code] = true
-            table.insert(codes, code)
-        end
-    end
-    return codes
-end
+task.spawn(function()
+    while task.wait(60) do
+        if not Config.Automation or not Config.Automation.AutoDailyReward then continue end
+        local PG = LP:FindFirstChild("PlayerGui")
+        if not PG then continue end
 
-function _G.STHAIN.RedeemAllCodes()
-    local codes = _G.STHAIN.FetchCodes()
-    if #codes == 0 then return 0 end
-
-    local PG = LP:FindFirstChild("PlayerGui")
-    if PG then
-        local hud = PG:FindFirstChild("HUD")
-        if hud then
-            local rightBar = hud:FindFirstChild("RightBar")
-            if rightBar then
-                local codeBtn = rightBar:FindFirstChild("Code")
-                if codeBtn and codeBtn.Visible then
+        for _, v in pairs(PG:GetDescendants()) do
+            if (v:IsA("TextButton") or v:IsA("ImageButton")) and v.Visible then
+                local n = string.lower(v.Name .. " " .. (v.Text or ""))
+                if (n:find("daily") or n:find("login") or n:find("checkin") or n:find("check%-in"))
+                   and (n:find("claim") or n:find("reward") or n:find("collect")) then
                     pcall(function()
-                        if firesignal then firesignal(codeBtn.MouseButton1Click) else codeBtn:Activate() end
+                        if firesignal then firesignal(v.MouseButton1Click) else v:Activate() end
                     end)
-                    task.wait(1)
+                    task.wait(0.5)
                 end
             end
         end
     end
+end)
 
-    local interactable = PG and PG:FindFirstChild("Interactable")
+-- ============================================================
+-- SMART CODE PIPELINE (Full Fetch, No Hardcode)
+-- ============================================================
+local PipelineState = {
+    sourceHealth = {},
+    knownCodes   = {},
+    deadCodes    = {},
+}
+
+if S.Config and S.Config.Codes then
+    PipelineState.deadCodes  = S.Config.Codes.deadCodes  or {}
+    PipelineState.knownCodes = S.Config.Codes.knownCodes or {}
+end
+
+local CODE_SOURCES = {
+    { name = "RobloxDen", url = "https://robloxden.com/game-codes/command-an-army", pattern = ">([A-Z][A-Z0-9]+)<", weight = 3 },
+    { name = "Eurogamer", url = "https://www.eurogamer.net/roblox-command-an-army-codes", pattern = "<li><strong>([A-Z][A-Z0-9]+)</strong>", weight = 2 },
+    { name = "GameRant",  url = "https://gamerant.com/command-army-codes-roblox/", pattern = "<li>([A-Z][A-Z0-9]+) %-", weight = 1 },
+}
+
+local function fetchSource(src)
+    local h = PipelineState.sourceHealth[src.url] or { success = 0, fail = 0, lastOk = 0 }
+    if h.fail >= 3 and (tick() - h.lastOk) < 1800 then return nil end
+
+    local ok, html = pcall(game.HttpGet, game, src.url)
+    if not ok or not html or #html < 500 then
+        h.fail = h.fail + 1
+        PipelineState.sourceHealth[src.url] = h
+        return nil
+    end
+
+    local codes, seen = {}, {}
+    for code in html:gmatch(src.pattern) do
+        if #code >= 3 and #code <= 25 and not seen[code] then
+            seen[code] = true
+            table.insert(codes, code)
+        end
+    end
+
+    if #codes > 0 then
+        h.success = h.success + 1
+        h.lastOk  = tick()
+        PipelineState.sourceHealth[src.url] = h
+        return codes
+    end
+    h.fail = h.fail + 1
+    PipelineState.sourceHealth[src.url] = h
+    return nil
+end
+
+local function mergeAndScore(results)
+    local votes = {}
+    for srcName, codes in pairs(results) do
+        local w = 1
+        for _, s in ipairs(CODE_SOURCES) do
+            if s.name == srcName then w = s.weight break end
+        end
+        for _, code in ipairs(codes) do
+            votes[code] = (votes[code] or 0) + w
+        end
+    end
+
+    local scored = {}
+    for code, score in pairs(votes) do
+        if PipelineState.deadCodes[code] then score = score - 100 end
+        PipelineState.knownCodes[code] = PipelineState.knownCodes[code] or { firstSeen = tick() }
+        table.insert(scored, { code = code, score = score })
+    end
+    table.sort(scored, function(a, b)
+        if a.score ~= b.score then return a.score > b.score end
+        return (PipelineState.knownCodes[a.code].firstSeen or 0) >
+               (PipelineState.knownCodes[b.code].firstSeen or 0)
+    end)
+    return scored
+end
+
+function _G.STHAIN.FetchCodesSmart()
+    local results, done, total = {}, 0, #CODE_SOURCES
+    for _, src in ipairs(CODE_SOURCES) do
+        task.spawn(function()
+            local c = fetchSource(src)
+            if c then results[src.name] = c end
+            done = done + 1
+        end)
+    end
+
+    local waited = 0
+    while waited < 8 and done < total do
+        task.wait(0.25) waited = waited + 0.25
+    end
+
+    local scored = mergeAndScore(results)
+    local final = {}
+    for _, item in ipairs(scored) do
+        if item.score > 0 then table.insert(final, item.code) end
+    end
+    return final
+end
+
+function _G.STHAIN.RedeemAllCodesSmart()
+    local codes = _G.STHAIN.FetchCodesSmart()
+    if #codes == 0 then return 0 end
+
+    local PG = LP:FindFirstChild("PlayerGui")
+    if not PG then return 0 end
+
+    local hud = PG:FindFirstChild("HUD")
+    local rightBar = hud and hud:FindFirstChild("RightBar")
+    local codeBtn = rightBar and rightBar:FindFirstChild("Code")
+    if not codeBtn or not codeBtn.Visible then return 0 end
+
+    pcall(function() if firesignal then firesignal(codeBtn.MouseButton1Click) else codeBtn:Activate() end end)
+    task.wait(1)
+
+    local interactable = PG:FindFirstChild("Interactable")
     local codeUI = interactable and interactable:FindFirstChild("CodeUI")
     local tb = codeUI and codeUI:FindFirstChild("TextBox")
     local btn = codeUI and codeUI:FindFirstChild("Claim")
-    if not tb then return 0 end
+    if not tb or not btn then return 0 end
 
     local focusBlock = UIS:AddFocusBlock()
     local savedEditable = tb.TextEditable
     pcall(function() tb.TextEditable = false end)
 
-    local sukses = 0
-    for i, code in ipairs(codes) do
-        pcall(function() tb.Text = code end)
-        task.wait(0.3)
-        local fired = false
-        if btn then
-            fired = pcall(function()
-                if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end
-            end)
+    local function getGemCount()
+        local gemsUI = PG:FindFirstChild("HUD")
+            and PG.HUD:FindFirstChild("LeftBar")
+            and PG.HUD.LeftBar:FindFirstChild("Gems")
+        if gemsUI and gemsUI:IsA("TextLabel") then
+            return tonumber(gemsUI.Text:gsub("[^%d]", "")) or 0
         end
-        if fired then sukses = sukses + 1 end
-        task.wait(1)
+        return nil
+    end
+
+    local sukses = 0
+    for _, code in ipairs(codes) do
+        if not PipelineState.deadCodes[code] then
+            pcall(function() tb.Text = code end)
+            task.wait(0.4)
+            local gemsBefore = getGemCount()
+            local fired = false
+            if btn.Visible then
+                fired = pcall(function()
+                    if firesignal then firesignal(btn.MouseButton1Click) else btn:Activate() end
+                end)
+            end
+            task.wait(1.5)
+            local gemsAfter = getGemCount()
+            local delta = (gemsBefore and gemsAfter) and (gemsAfter - gemsBefore) or 0
+            local notif = false
+            for _, v in pairs(PG:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Visible then
+                    local t = string.lower(v.Text or "")
+                    if t:find("success") or t:find("redeemed") or t:find("claimed") then notif = true break end
+                end
+            end
+            if delta > 0 or notif then
+                sukses = sukses + 1
+                PipelineState.deadCodes[code] = nil
+            else
+                PipelineState.deadCodes[code] = tick()
+            end
+        end
+    end
+
+    local now = tick()
+    for code, t in pairs(PipelineState.deadCodes) do
+        if now - t > 86400 then PipelineState.deadCodes[code] = nil end
     end
 
     pcall(function() tb.TextEditable = savedEditable end)
     focusBlock:Disconnect()
 
     task.wait(0.3)
-    if codeUI then
-        local exitBtn = codeUI:FindFirstChild("Exit")
-        if exitBtn then
-            pcall(function()
-                if firesignal then firesignal(exitBtn.MouseButton1Click) else exitBtn:Activate() end
-            end)
-        end
+    local exitBtn = codeUI:FindFirstChild("Exit")
+    if exitBtn then
+        pcall(function() if firesignal then firesignal(exitBtn.MouseButton1Click) else exitBtn:Activate() end end)
     end
+
+    if S.Config and S.Utils and S.Utils.SaveConfig then
+        S.Config.Codes = S.Config.Codes or {}
+        S.Config.Codes.deadCodes  = PipelineState.deadCodes
+        S.Config.Codes.knownCodes = PipelineState.knownCodes
+        S.Utils.SaveConfig()
+    end
+
     return sukses
 end
 
+_G.STHAIN.FetchCodes     = _G.STHAIN.FetchCodesSmart
+_G.STHAIN.RedeemAllCodes = _G.STHAIN.RedeemAllCodesSmart
+
 -- ============================================================
--- TELEPORT (Sama kayak punya lu, aman)
+-- TELEPORT
 -- ============================================================
 function _G.STHAIN.TeleportScan()
     local results = { supplies = {}, captures = {} }
@@ -1063,9 +1230,7 @@ function _G.STHAIN.TeleportToSupplyEnemy(target)
     local enemyTeam = (myTeam == "attacker") and "defender" or "attacker"
     local candidates = {}
     for _, sup in ipairs(results.supplies) do
-        if sup.team == enemyTeam then
-            table.insert(candidates, sup)
-        end
+        if sup.team == enemyTeam then table.insert(candidates, sup) end
     end
     if #candidates == 0 then return false end
     if target ~= "" then
@@ -1089,9 +1254,7 @@ function _G.STHAIN.TeleportToSupplyOwner(target)
     if myTeam == "unknown" then return false end
     local candidates = {}
     for _, sup in ipairs(results.supplies) do
-        if sup.team == myTeam then
-            table.insert(candidates, sup)
-        end
+        if sup.team == myTeam then table.insert(candidates, sup) end
     end
     if #candidates == 0 then return false end
     if target ~= "" then
@@ -1199,7 +1362,7 @@ local isDirty = false
 local saveThread = nil
 
 function _G.STHAIN.MarkDirty()
-    if not _G.STHAIN.Config.Config.AutoSave then return end 
+    if not _G.STHAIN.Config.Config.AutoSave then return end
     isDirty = true
     if saveThread then task.cancel(saveThread) end
     saveThread = task.delay(2, function()
