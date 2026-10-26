@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v2.2 Automation Update)
+  [7] PAGES — Command An Army (v2.3 Automation Update)
 ============================================================
 ]]
 
@@ -645,7 +645,7 @@ local AA = S.Config.Automation or {}
 
 -- 1. SUMMON SECTION
 local summonSection = S.Comp.makeSection(pages["Automation"], "Summon", false)
-S.Comp.makeToggle(summonSection, "Auto Summon", AA.AutoSummon == true, function(v) 
+S.Comp.makeToggle(summonSection, "Auto Summon (Direct)", AA.AutoSummon == true, function(v) 
     AA.AutoSummon = v 
     save() 
 end)
@@ -679,8 +679,12 @@ task.defer(function() task.wait(0.1) forceFixSection(evolveSection) end)
 
 -- 4. REWARDS SECTION
 local rewardSection = S.Comp.makeSection(pages["Automation"], "Rewards", false)
-S.Comp.makeToggle(rewardSection, "Auto Reward (Daily/Weekly)", AA.AutoReward == true, function(v) 
+S.Comp.makeToggle(rewardSection, "Auto Quest Reward", AA.AutoReward == true, function(v) 
     AA.AutoReward = v 
+    save() 
+end)
+S.Comp.makeToggle(rewardSection, "Auto Daily Login", AA.AutoDailyReward == true, function(v) 
+    AA.AutoDailyReward = v 
     save() 
 end)
 task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
@@ -688,7 +692,7 @@ task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
 -- 5. CLAIM CODE SECTION
 local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
 
--- Input Code Container
+-- Input Code
 local codeInputContainer = Instance.new("Frame")
 codeInputContainer.Name = "CodeInputContainer"
 codeInputContainer.Size = UDim2.new(1, 0, 0, 34)
@@ -710,22 +714,40 @@ codeBox.ClearTextOnFocus = false
 codeBox.Parent = codeInputContainer
 Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
 
--- Dropdown Dynamic (Available Codes)
--- Nanti lu bisa update opsi dropdown ini pake: codeDropdown.UpdateOptions({"CODE1", "CODE2"})
-local codeDropdown = makeDynamicDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
-    codeBox.Text = val
+-- Dropdown Available Codes
+local codeDropdown = makeDynamicDropdown(codeSection, "Available Codes", {"None"}, function(val)
+    if val ~= "None" and val ~= "Failed to fetch" then
+        codeBox.Text = val
+    end
 end)
 
 -- Button Claim
 S.Comp.makeButton(codeSection, "Claim Code", function()
     local code = codeBox.Text
-    if code ~= "" and _G.STHAIN.RedeemAllCodes then
-        -- Panggil fungsi redeem code lu di sini nanti
-        -- _G.STHAIN.RedeemAllCodes(code)
+    if code ~= "" and code ~= "None" then
+        local Remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Shared") and game:GetService("ReplicatedStorage").Shared:FindFirstChild("Remotes")
+        local RedeemCode = Remotes and Remotes:FindFirstChild("RedeemCode")
+        if RedeemCode then
+            pcall(function() RedeemCode:InvokeServer(code) end)
+        end
     end
 end)
-task.defer(function() task.wait(0.1) forceFixSection(codeSection) end)
 
+-- Button Fetch
+S.Comp.makeButton(codeSection, "Fetch Latest Codes", function()
+    codeDropdown.UpdateOptions({"Loading..."})
+    task.spawn(function()
+        if _G.STHAIN.FetchCodesSmart then
+            local codes = _G.STHAIN.FetchCodesSmart()
+            if codes and #codes > 0 then
+                codeDropdown.UpdateOptions(codes)
+            else
+                codeDropdown.UpdateOptions({"Failed to fetch"})
+            end
+        end
+    end)
+end)
+task.defer(function() task.wait(0.1) forceFixSection(codeSection) end)
 
 -- ============================================================
 -- TAB SETTINGS
