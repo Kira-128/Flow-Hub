@@ -1,9 +1,10 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub v2.1)
+  [6] COMPONENTS (Flow Hub v2.2)
   - Arrow di kanan
   - Accent bar dihapus
   - Animasi instan (tanpa Tween)
+  - Tambah fungsi Lynx Style (Solid Button, Info Text, Thin Line)
 ============================================================
 ]]
 
@@ -37,6 +38,7 @@ local function recalcSection(card, content)
         totalH = layout.AbsoluteContentSize.Y
     end
 
+    -- Tambah 8px padding bawah biar ga mentok
     card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
 end
 
@@ -174,7 +176,7 @@ function Comp.makeInput(parent, name, default, callback)
 end
 
 -- ============================================================
--- BUTTON
+-- BUTTON (Transparan - Bawaan Lama)
 -- ============================================================
 function Comp.makeButton(parent, name, callback)
     local b = Instance.new("TextButton")
@@ -206,7 +208,7 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN
+-- DROPDOWN (Bawaan Lama)
 -- ============================================================
 function Comp.makeDropdown(parent, name, options, callback)
     local f = Instance.new("Frame")
@@ -288,7 +290,7 @@ function Comp.makeDropdown(parent, name, options, callback)
 end
 
 -- ============================================================
--- SECTION (FIXED v2.1: Tanpa Garis Accent & Tanpa Animasi)
+-- SECTION (Bawaan Lama)
 -- ============================================================
 function Comp.makeSection(parent, title, defaultOpen)
     -- CARD UTAMA
@@ -314,10 +316,10 @@ function Comp.makeSection(parent, title, defaultOpen)
     header.ZIndex = 2
     header.Parent = card
 
-    -- JUDUL SECTION (Langsung rata kiri)
+    -- JUDUL SECTION
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -50, 1, 0)
-    titleLbl.Position = UDim2.new(0, 12, 0, 0) -- Position 12 (rata kiri)
+    titleLbl.Position = UDim2.new(0, 12, 0, 0)
     titleLbl.Text = title
     titleLbl.TextColor3 = C.text
     titleLbl.TextSize = 11
@@ -327,7 +329,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     titleLbl.ZIndex = 3
     titleLbl.Parent = header
 
-    -- PANAH SEGITIGA (Mentok Kanan)
+    -- PANAH SEGITIGA
     local arrow = Instance.new("TextLabel")
     arrow.Size = UDim2.new(0, 16, 1, 0)
     arrow.Position = UDim2.new(1, -26, 0, 0)
@@ -364,7 +366,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     local isOpen = defaultOpen
     hookAutoRecalc(card, content)
 
-    -- LOGIKA KLIK HEADER (TANPA ANIMASI)
+    -- LOGIKA KLIK HEADER
     header.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         arrow.Text = isOpen and "▼" or "▶"
@@ -382,6 +384,81 @@ function Comp.makeSection(parent, title, defaultOpen)
     end)
 
     return content, function() recalcSection(card, content) end, card, makeDivider
+end
+
+-- ============================================================
+-- KHUSUS GAYA LYNX (Tombol Kotak & Info Box)
+-- ============================================================
+
+-- 1. Tombol Kotak Solid (Buat Config Management)
+function Comp.makeSolidButton(parent, name, callback)
+    local b = Instance.new("TextButton")
+    b.Name = "SolidBtn_" .. name
+    b.Size = UDim2.new(1, 0, 0, 34)
+    b.Text = name
+    b.TextColor3 = C.text
+    b.TextSize = 11
+    b.Font = F.norm
+    b.BackgroundColor3 = C.bg4 -- Warna kotak solid
+    b.BackgroundTransparency = 0.3
+    b.BorderSizePixel = 0
+    b.AutoButtonColor = false
+    b.Parent = parent
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
+
+    b.MouseButton1Click:Connect(function()
+        pcall(callback)
+    end)
+    b.MouseEnter:Connect(function()
+        S.Services.TS:Create(b, TweenInfo.new(0.15), {
+            BackgroundTransparency = 0.1
+        }):Play()
+    end)
+    b.MouseLeave:Connect(function()
+        S.Services.TS:Create(b, TweenInfo.new(0.15), {
+            BackgroundTransparency = 0.3
+        }):Play()
+    end)
+    return b
+end
+
+-- 2. Info Text (Teks Deskripsi Panjang ala Lynx)
+function Comp.makeInfoText(parent, text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Name = "InfoText"
+    lbl.Size = UDim2.new(1, -24, 0, 0) -- Margin 12px kiri kanan
+    lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = C.textDim2
+    lbl.TextSize = 9
+    lbl.Font = F.norm
+    lbl.TextWrapped = true
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Top
+    lbl.AutomaticSize = Enum.AutomaticSize.Y
+    lbl.Parent = parent
+    
+    -- Kasih jarak atas bawah
+    local pad = Instance.new("UIPadding")
+    pad.PaddingTop = UDim.new(0, 6)
+    pad.PaddingBottom = UDim.new(0, 6)
+    pad.Parent = lbl
+    
+    return lbl
+end
+
+-- 3. Garis Pemisah Tipis (Buat misahin tombol)
+function Comp.makeThinLine(parent)
+    local line = Instance.new("Frame")
+    line.Name = "ThinLine"
+    line.Size = UDim2.new(1, -24, 0, 1)
+    line.Position = UDim2.new(0, 12, 0, 0)
+    line.BackgroundColor3 = C.stroke
+    line.BackgroundTransparency = 0.5
+    line.BorderSizePixel = 0
+    line.Parent = parent
+    return line
 end
 
 S.Comp = Comp
