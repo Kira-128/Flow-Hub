@@ -1,6 +1,8 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v4.5 Fixed)
+  [7] PAGES — Command An Army (v4.3)
+  - Fixed Clickable Config Management
+  - Clean English Warning Note
 ============================================================
 ]]
 
@@ -28,7 +30,7 @@ local function save()
 end
 
 -- ============================================================
--- FORCE SECTION AUTO-SIZE
+-- FORCE SECTION AUTO-SIZE (Buat Tab Lain)
 -- ============================================================
 local function forceFixSection(sectionFrame)
     if not sectionFrame then return end
@@ -50,7 +52,7 @@ local function forceFixSection(sectionFrame)
 end
 
 -- ============================================================
--- CREATE PAGE (Jarak 3px)
+-- CREATE PAGE
 -- ============================================================
 local function createPage(name)
     local page = Instance.new("ScrollingFrame")
@@ -70,7 +72,7 @@ local function createPage(name)
     page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 3) -- JARAK 3 PIXEL
+    layout.Padding = UDim.new(0, 4)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -823,7 +825,7 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG
+-- TAB CONFIG (Benerin Manual)
 -- ============================================================
 local cfg = S.Config.Config
 
@@ -843,7 +845,7 @@ end)
 local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 136, 0) 
+        resetBtn.BackgroundColor3 = C.yellow
         task.delay(3, function()
             if resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
@@ -859,24 +861,7 @@ local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     end
 end)
 
-local infoLbl = Instance.new("TextLabel")
-infoLbl.Size = UDim2.new(1, -24, 0, 0)
-infoLbl.AutomaticSize = Enum.AutomaticSize.Y
-infoLbl.BackgroundTransparency = 1
-infoLbl.Text = "⚠️ Note:\nReset applies UI changes immediately. You must Rejoin or Respawn for character stats and in-game features to take effect.\n\nConfig is auto-saved every 2 seconds. Ensure Auto Save is ON before leaving."
-infoLbl.TextColor3 = C.textDim
-infoLbl.TextSize = 9
-infoLbl.Font = F.norm
-infoLbl.TextWrapped = true
-infoLbl.TextXAlignment = Enum.TextXAlignment.Left
-infoLbl.TextYAlignment = Enum.TextYAlignment.Top
-infoLbl.Parent = configMgmt
-
-local pad = Instance.new("UIPadding")
-pad.PaddingLeft = UDim.new(0, 12)
-pad.PaddingRight = UDim.new(0, 12)
-pad.PaddingBottom = UDim.new(0, 8)
-pad.Parent = infoLbl
+S.Comp.makeInfoText(configMgmt, "⚠️ Note:\nReset applies UI changes immediately. You must Rejoin or Respawn for character stats and in-game features to take effect.\n\nConfig is auto-saved every 2 seconds. Ensure Auto Save is ON before leaving.")
 
 S.Comp.makeButton(configMgmt, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
@@ -884,7 +869,7 @@ S.Comp.makeButton(configMgmt, "Delete Config File", function()
     end
 end)
 
-task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
+-- HAPUS forceFixSection DI SINI BIAR TOMBOL BISA DIKLIK
 
 -- ============================================================
 -- DRAG MAIN FRAME
@@ -898,7 +883,7 @@ S.GUI.Header.InputBegan:Connect(function(input)
     end
 end)
 S.GUI.Header.InputChanged:Connect(function(input)
-    if mainDrag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+    if mainDrag and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
         local delta = input.Position - mainStart
         S.GUI.MainFrame.Position = UDim2.new(
             mainPos.X.Scale, mainPos.X.Offset + delta.X,
