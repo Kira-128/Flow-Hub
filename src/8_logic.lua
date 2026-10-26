@@ -1,7 +1,6 @@
 --[[
 ============================================================
-  [8] LOGIC — Command An Army (v2.5 FINAL)
-  Fitur: Auto Summon (Direct Remote), Auto Evolve, Combat, dll.
+  [8] LOGIC — Command An Army (v2.6 FINAL)
 ============================================================
 ]]
 
@@ -748,88 +747,93 @@ function _G.STHAIN.ClaimQuests()
 end
 
 -- ============================================================
--- AUTOMATION: SUMMON & EVOLVE
+-- AUTOMATION
 -- ============================================================
+local function getGemsUI()
+    local PG = LP:FindFirstChild("PlayerGui")
+    local hud = PG and PG:FindFirstChild("HUD")
+    local leftBar = hud and hud:FindFirstChild("LeftBar")
+    local gemsUI = leftBar and leftBar:FindFirstChild("Gems")
+    if gemsUI and gemsUI:IsA("TextLabel") then
+        return tonumber(gemsUI.Text:gsub("[^%d]", "")) or 0
+    end
+    return 0
+end
+
+-- LOOP SUM MON (Chronix KeepGems Logic)
 task.spawn(function()
     while task.wait(2) do
         local AA = Config.Automation
-        if not AA then continue end
+        if not AA or not AA.AutoSummon or not BannerRequest then continue end
 
-        -- AUTO SUMMON (DIRECT REMOTE)
-        if AA.AutoSummon and BannerRequest then
-            local summonKey = HttpService:GenerateGUID(false)
-            local requestId = HttpService:GenerateGUID(false)
-            
-            pcall(function()
-                BannerRequest:FireServer({
-                    SummonKey = summonKey,
-                    Type = "Summon",
-                    BannerId = "Standard", -- Atau sesuaikan sama config
-                    Count = (AA.SummonAmount == "10x") and 10 or 1,
-                    RequestId = requestId
-                })
-            end)
-            
-            -- Auto Skip Animasi
-            task.wait(1)
-            local PG = LP:FindFirstChild("PlayerGui")
-            local summonAnim = PG and PG:FindFirstChild("Summon")
-            if summonAnim then
-                local skipBtn = summonAnim:FindFirstChild("Summoned")
-                skipBtn = skipBtn and skipBtn:FindFirstChild("Skip")
-                if skipBtn and skipBtn.Visible then
-                    pcall(function()
-                        if firesignal then firesignal(skipBtn.MouseButton1Click) else skipBtn:Activate() end
-                    end)
-                end
+        -- Cek KeepGems (Logika Chronix: Berhenti kalau Gems <= KeepGems)
+        local keepGems = AA.KeepGems or 0
+        if keepGems > 0 then
+            local currentGems = getGemsUI()
+            if currentGems <= keepGems then
+                AA.AutoSummon = false
+                AA.KeepGems = 0
+                if S.Utils and S.Utils.SaveConfig then task.spawn(S.Utils.SaveConfig) end
+                pcall(function()
+                    game:GetService("StarterGui"):SetCore("SendNotification", {
+                        Title = "Auto Summon",
+                        Text = "Batas Gems tercapai ("..keepGems.."). Auto OFF.",
+                        Duration = 5
+                    })
+                end)
+                continue
             end
         end
 
-        -- AUTO EVOLVE (DUPLICATE BASED)
-        if AA.AutoEvolve and Remotes then
-            local EvolutionRequest = Remotes:FindFirstChild("EvolutionRequest")
-            if EvolutionRequest then
-                -- Kita tembak request buat auto-evolve semua unit duplikat
-                -- Game biasanya nge-handle pengecekan duplikat di server
-                pcall(function()
-                    EvolutionRequest:FireServer("EvolveAllDuplicates")
-                end)
+        -- Eksekusi Summon
+        local summonKey = HttpService:GenerateGUID(false)
+        local requestId = HttpService:GenerateGUID(false)
+        pcall(function()
+            BannerRequest:FireServer({
+                SummonKey = summonKey,
+                Type = "Summon",
+                BannerId = "Standard",
+                Count = (AA.SummonAmount == "10x") and 10 or 1,
+                RequestId = requestId
+            })
+        end)
+
+        -- Auto Skip Animasi
+        task.wait(1)
+        local PG = LP:FindFirstChild("PlayerGui")
+        local summonAnim = PG and PG:FindFirstChild("Summon")
+        if summonAnim then
+            local skipBtn = summonAnim:FindFirstChild("Summoned")
+            skipBtn = skipBtn and skipBtn:FindFirstChild("Skip")
+            if skipBtn and skipBtn.Visible then
+                pcall(function() if firesignal then firesignal(skipBtn.MouseButton1Click) else skipBtn:Activate() end end)
             end
         end
     end
 end)
 
--- ============================================================
--- AUTO DAILY REWARD
--- ============================================================
+-- LOOP QUEST REWARD
 task.spawn(function()
-    while task.wait(60) do
-        if not Config.Automation or not Config.Automation.AutoDailyReward then continue end
-        local PG = LP:FindFirstChild("PlayerGui")
-        if not PG then continue end
+    while task.wait(10) do
+        if not Config.Automation or not Config.Automation.AutoReward then continue end
+        local QuestRequest = Remotes and Remotes:FindFirstChild("QuestRequest")
+        if not QuestRequest then continue end
 
-        local interactable = PG:FindFirstChild("Interactable")
-        local dailyUI = interactable and interactable:FindFirstChild("DailyRewardsUI")
-        
-        if not dailyUI or not dailyUI.Visible then
-            local DailyRewardRequest = Remotes and Remotes:FindFirstChild("DailyRewardRequest")
-            if DailyRewardRequest then
-                pcall(function() DailyRewardRequest:InvokeServer() end)
-                task.wait(1)
-            end
-            dailyUI = interactable and interactable:FindFirstChild("DailyRewardsUI")
-        end
+        local success, response = pcall(function()
+            return QuestRequest:InvokeServer({Type = "GetState"})
+        end)
 
-        if dailyUI and dailyUI.Visible then
-            local days = dailyUI:FindFirstChild("Days")
-            if days then
-                for i = 1, 7 do
-                    local day = days:FindFirstChild("Day" .. i)
-                    if day then
-                        local status = day:FindFirstChild("Status")
-                        if status and status.Visible then
+        if success and response and response.State and response.State.Periods then
+            for periodName, periodData in pairs(response.State.Periods) do
+                if periodData.Quests then
+                    for _, questInfo in pairs(periodData.Quests) do
+                        if questInfo.Completed == true and questInfo.Claimed == false then
                             pcall(function()
-                                if firesignal then firesignal(status.MouseButton1Click) else status:Activate() end
+                                QuestRequest:InvokeServer({
+                                    Type = "Claim",
+                                    Period = periodName,
+                                    QuestId = questInfo.Id
+                                })
                             end)
                             task.wait(0.5)
                         end
@@ -840,8 +844,79 @@ task.spawn(function()
     end
 end)
 
+-- LOOP DAILY REWARD
+task.spawn(function()
+    while task.wait(60) do
+        if not Config.Automation or not Config.Automation.AutoDailyReward then continue end
+        local DailyRewardRequest = Remotes and Remotes:FindFirstChild("DailyRewardRequest")
+        if DailyRewardRequest then
+            pcall(function() DailyRewardRequest:InvokeServer() end)
+        end
+    end
+end)
+
+-- LOOP AUTO ASCEND (Direct Prompt)
+task.spawn(function()
+    while task.wait(5) do
+        local AA = Config.Automation
+        if not AA.AutoAscend then continue end
+        
+        local prompt = nil
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent.Name == "Ascension" then
+                prompt = obj
+                break
+            end
+        end
+        
+        if prompt then
+            pcall(function()
+                if fireproximityprompt then
+                    fireproximityprompt(prompt)
+                else
+                    prompt:InputHoldBegin() task.wait(0.1) prompt:InputHoldEnd()
+                end
+            end)
+            task.wait(1.5)
+            
+            local PG = LP:FindFirstChild("PlayerGui")
+            local interactable = PG and PG:FindFirstChild("Interactable")
+            local ascUI = interactable and interactable:FindFirstChild("AscensionUI")
+            
+            if ascUI and ascUI.Visible then
+                local allBtn = ascUI:FindFirstChild("AscendAllTroops")
+                if allBtn and allBtn.Visible then
+                    pcall(function()
+                        if firesignal then firesignal(allBtn.MouseButton1Click) else allBtn:Activate() end
+                    end)
+                    task.wait(0.5)
+                end
+                local exitBtn = ascUI:FindFirstChild("Exit")
+                if exitBtn then
+                    pcall(function() if firesignal then firesignal(exitBtn.MouseButton1Click) else exitBtn:Activate() end end)
+                end
+            end
+        end
+    end
+end)
+
+-- LOOP AUTO EVOLVE
+task.spawn(function()
+    while task.wait(5) do
+        local AA = Config.Automation
+        if not AA.AutoEvolve then continue end
+        
+        local EvolutionRequest = Remotes and Remotes:FindFirstChild("EvolutionRequest")
+        if EvolutionRequest then
+            pcall(function()
+                EvolutionRequest:FireServer("EvolveAllDuplicates")
+            end)
+        end
+    end
+end)
+
 -- ============================================================
--- REDEEM CODE (SMART FETCH + REMOTE EXECUTE)
+-- REDEEM CODE & FETCH (SMART)
 -- ============================================================
 local PipelineState = {
     sourceHealth = {},
