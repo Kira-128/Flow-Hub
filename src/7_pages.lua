@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v2.7 Final UI)
+  [7] PAGES — Command An Army (v2.8 Final UI)
 ============================================================
 ]]
 
@@ -837,17 +837,17 @@ task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 
--- Helper: Bikin pemisah dengan jarak yang lega (persis kayak jarak section)
+-- Helper: Garis pemisah tipis dengan jarak secukupnya
 local function addDivider(parent)
     local wrapper = Instance.new("Frame")
-    wrapper.Size = UDim2.new(1, 0, 0, 24) -- Total tinggi 24px (jarak atas + bawah)
+    wrapper.Size = UDim2.new(1, 0, 0, 13) -- Total tinggi 13px (6 atas, 6 bawah, 1 garis)
     wrapper.BackgroundTransparency = 1
     wrapper.Parent = parent
 
     local line = Instance.new("Frame")
     line.Size = UDim2.new(1, -24, 0, 1)
     line.Position = UDim2.new(0, 12, 0.5, -0.5)
-    line.BackgroundColor3 = C.bg4 -- Warna garis samain kayak background gelap
+    line.BackgroundColor3 = C.bg4 
     line.BorderSizePixel = 0
     line.Parent = wrapper
 end
@@ -870,7 +870,7 @@ local function addDesc(parent, text)
     local pad = Instance.new("UIPadding")
     pad.PaddingLeft = UDim.new(0, 12)
     pad.PaddingRight = UDim.new(0, 12)
-    pad.PaddingBottom = UDim.new(0, 8)
+    pad.PaddingBottom = UDim.new(0, 6)
     pad.Parent = lbl
 end
 
