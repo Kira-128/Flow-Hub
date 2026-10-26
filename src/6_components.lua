@@ -1,10 +1,10 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub v2.2)
+  [6] COMPONENTS (Flow Hub v2.3)
   - Arrow di kanan
   - Accent bar dihapus
   - Animasi instan (tanpa Tween)
-  - Tambah fungsi Lynx Style (Solid Button, Info Text, Thin Line)
+  - Tambah Custom Card, Btn, Warn
 ============================================================
 ]]
 
@@ -38,7 +38,6 @@ local function recalcSection(card, content)
         totalH = layout.AbsoluteContentSize.Y
     end
 
-    -- Tambah 8px padding bawah biar ga mentok
     card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
 end
 
@@ -176,7 +175,7 @@ function Comp.makeInput(parent, name, default, callback)
 end
 
 -- ============================================================
--- BUTTON (Transparan - Bawaan Lama)
+-- BUTTON
 -- ============================================================
 function Comp.makeButton(parent, name, callback)
     local b = Instance.new("TextButton")
@@ -208,7 +207,7 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (Bawaan Lama)
+-- DROPDOWN
 -- ============================================================
 function Comp.makeDropdown(parent, name, options, callback)
     local f = Instance.new("Frame")
@@ -293,7 +292,6 @@ end
 -- SECTION (Bawaan Lama)
 -- ============================================================
 function Comp.makeSection(parent, title, defaultOpen)
-    -- CARD UTAMA
     local card = Instance.new("Frame")
     card.Name = "Section_" .. title
     card.Size = UDim2.new(1, 0, 0, HEADER_H)
@@ -304,7 +302,6 @@ function Comp.makeSection(parent, title, defaultOpen)
     card.Parent = parent
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
 
-    -- HEADER
     local header = Instance.new("TextButton")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, HEADER_H)
@@ -316,7 +313,6 @@ function Comp.makeSection(parent, title, defaultOpen)
     header.ZIndex = 2
     header.Parent = card
 
-    -- JUDUL SECTION
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -50, 1, 0)
     titleLbl.Position = UDim2.new(0, 12, 0, 0)
@@ -329,7 +325,6 @@ function Comp.makeSection(parent, title, defaultOpen)
     titleLbl.ZIndex = 3
     titleLbl.Parent = header
 
-    -- PANAH SEGITIGA
     local arrow = Instance.new("TextLabel")
     arrow.Size = UDim2.new(0, 16, 1, 0)
     arrow.Position = UDim2.new(1, -26, 0, 0)
@@ -342,7 +337,6 @@ function Comp.makeSection(parent, title, defaultOpen)
     arrow.ZIndex = 3
     arrow.Parent = header
 
-    -- CONTENT
     local content = Instance.new("Frame")
     content.Name = "Content"
     content.Size = UDim2.new(1, 0, 0, 0)
@@ -366,7 +360,6 @@ function Comp.makeSection(parent, title, defaultOpen)
     local isOpen = defaultOpen
     hookAutoRecalc(card, content)
 
-    -- LOGIKA KLIK HEADER
     header.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         arrow.Text = isOpen and "▼" or "▶"
@@ -377,7 +370,6 @@ function Comp.makeSection(parent, title, defaultOpen)
         end)
     end)
 
-    -- Setup awal kalau defaultOpen = true
     task.defer(function()
         task.wait(0.15)
         if defaultOpen then recalcSection(card, content) end
@@ -387,78 +379,101 @@ function Comp.makeSection(parent, title, defaultOpen)
 end
 
 -- ============================================================
--- KHUSUS GAYA LYNX (Tombol Kotak & Info Box)
+-- CUSTOM CARD (Buat Config Management Manual)
 -- ============================================================
+function Comp.makeCustomCard(parent, title)
+    local card = Instance.new("Frame")
+    card.Name = "CustomCard_" .. title
+    card.Size = UDim2.new(1, 0, 0, 0)
+    card.BackgroundColor3 = CARD_BG
+    card.BackgroundTransparency = CARD_TRANS
+    card.BorderSizePixel = 0
+    card.AutomaticSize = Enum.AutomaticSize.Y
+    card.Parent = parent
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
 
--- 1. Tombol Kotak Solid (Buat Config Management)
-function Comp.makeSolidButton(parent, name, callback)
+    local content = Instance.new("Frame")
+    content.Name = "Content"
+    content.Size = UDim2.new(1, 0, 0, 0)
+    content.Position = UDim2.new(0, 0, 0, 12)
+    content.BackgroundTransparency = 1
+    content.AutomaticSize = Enum.AutomaticSize.Y
+    content.Parent = card
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 6) -- Jarak antar elemen (6px)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = content
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0, 12)
+    pad.PaddingRight = UDim.new(0, 12)
+    pad.PaddingBottom = UDim.new(0, 12)
+    pad.Parent = content
+
+    return content
+end
+
+-- ============================================================
+-- CUSTOM BUTTON (Buat di dalem Custom Card)
+-- ============================================================
+function Comp.makeCustomBtn(parent, text, callback)
     local b = Instance.new("TextButton")
-    b.Name = "SolidBtn_" .. name
-    b.Size = UDim2.new(1, 0, 0, 34)
-    b.Text = name
+    b.Size = UDim2.new(1, 0, 0, 32)
+    b.BackgroundColor3 = C.bg4
+    b.BorderSizePixel = 0
+    b.Text = text
     b.TextColor3 = C.text
     b.TextSize = 11
     b.Font = F.norm
-    b.BackgroundColor3 = C.bg4 -- Warna kotak solid
-    b.BackgroundTransparency = 0.3
-    b.BorderSizePixel = 0
     b.AutoButtonColor = false
     b.Parent = parent
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
-
-    b.MouseButton1Click:Connect(function()
-        pcall(callback)
-    end)
-    b.MouseEnter:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), {
-            BackgroundTransparency = 0.1
-        }):Play()
-    end)
-    b.MouseLeave:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), {
-            BackgroundTransparency = 0.3
-        }):Play()
-    end)
+    
+    b.MouseButton1Click:Connect(function() pcall(callback) end)
     return b
 end
 
--- 2. Info Text (Teks Deskripsi Panjang ala Lynx)
-function Comp.makeInfoText(parent, text)
+-- ============================================================
+-- CUSTOM WARNING BOX (Buat di dalem Custom Card)
+-- ============================================================
+function Comp.makeCustomWarn(parent, text)
+    local box = Instance.new("Frame")
+    box.Size = UDim2.new(1, 0, 0, 0)
+    box.BackgroundColor3 = C.bg2
+    box.BackgroundTransparency = 0.5
+    box.BorderSizePixel = 0
+    box.AutomaticSize = Enum.AutomaticSize.Y
+    box.Parent = parent
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 5)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = C.stroke
+    stroke.Thickness = 1
+    stroke.Transparency = 0.5
+    stroke.Parent = box
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingTop = UDim.new(0, 10)
+    pad.PaddingBottom = UDim.new(0, 10)
+    pad.PaddingLeft = UDim.new(0, 10)
+    pad.PaddingRight = UDim.new(0, 10)
+    pad.Parent = box
+
     local lbl = Instance.new("TextLabel")
-    lbl.Name = "InfoText"
-    lbl.Size = UDim2.new(1, -24, 0, 0) -- Margin 12px kiri kanan
-    lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.Size = UDim2.new(1, 0, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
-    lbl.TextColor3 = C.textDim2
-    lbl.TextSize = 9
+    lbl.TextColor3 = C.textDim
+    lbl.TextSize = 10
     lbl.Font = F.norm
     lbl.TextWrapped = true
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.TextYAlignment = Enum.TextYAlignment.Top
     lbl.AutomaticSize = Enum.AutomaticSize.Y
-    lbl.Parent = parent
-    
-    -- Kasih jarak atas bawah
-    local pad = Instance.new("UIPadding")
-    pad.PaddingTop = UDim.new(0, 6)
-    pad.PaddingBottom = UDim.new(0, 6)
-    pad.Parent = lbl
-    
-    return lbl
-end
+    lbl.Parent = box
 
--- 3. Garis Pemisah Tipis (Buat misahin tombol)
-function Comp.makeThinLine(parent)
-    local line = Instance.new("Frame")
-    line.Name = "ThinLine"
-    line.Size = UDim2.new(1, -24, 0, 1)
-    line.Position = UDim2.new(0, 12, 0, 0)
-    line.BackgroundColor3 = C.stroke
-    line.BackgroundTransparency = 0.5
-    line.BorderSizePixel = 0
-    line.Parent = parent
-    return line
+    return box
 end
 
 S.Comp = Comp
