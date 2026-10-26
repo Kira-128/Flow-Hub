@@ -71,8 +71,8 @@ local function createPage(name)
     page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
-    -- JARAK ANTAR SECTION (6 PIXEL)
-    layout.Padding = UDim.new(0, 6)
+    -- JARAK ANTAR SECTION (4 PIXEL)
+    layout.Padding = UDim.new(0, 4)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -678,7 +678,7 @@ S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(
 end)
 task.defer(function() task.wait(0.1) forceFixSection(evolveSection) end)
 
--- 4. REWARDS SECTION (Daily Login digabung ke Quest)
+-- 4. REWARDS SECTION
 local rewardSection = S.Comp.makeSection(pages["Automation"], "Rewards", false)
 S.Comp.makeToggle(rewardSection, "Auto Quest & Daily", AA.AutoReward == true, function(v) 
     AA.AutoReward = v 
@@ -689,7 +689,6 @@ task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
 -- 5. CLAIM CODE SECTION
 local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
 
--- Input Code
 local codeInputContainer = Instance.new("Frame")
 codeInputContainer.Name = "CodeInputContainer"
 codeInputContainer.Size = UDim2.new(1, 0, 0, 34)
@@ -711,16 +710,14 @@ codeBox.ClearTextOnFocus = false
 codeBox.Parent = codeInputContainer
 Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
 
--- Dropdown Available Codes (Otomatis Fetch)
 local codeDropdown = makeDynamicDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
     if val ~= "Fetching..." and val ~= "None" then
         codeBox.Text = val
     end
 end)
 
--- Auto Fetch pas halaman dibuka
 task.spawn(function()
-    task.wait(2) -- Tunggu UI ready
+    task.wait(2)
     if _G.STHAIN.FetchCodesSmart then
         local codes = _G.STHAIN.FetchCodesSmart()
         if codes and #codes > 0 then
@@ -731,7 +728,6 @@ task.spawn(function()
     end
 end)
 
--- Button Claim
 S.Comp.makeButton(codeSection, "Claim Code", function()
     local code = codeBox.Text
     if code ~= "" and code ~= "Fetching..." and code ~= "None" then
@@ -838,18 +834,17 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
 -- 2. SECTION CONFIG MANAGEMENT (Pake Custom Card)
-local configContent = S.Comp.makeCustomCard(pages["Config"], "Config Management")
+local configMgmtSection = S.Comp.makeSection(pages["Config"], "Config Management", true)
+local configContent = S.Comp.makeCustomCard(configMgmtSection, "Config Content")
 
--- A. Tombol Save
 S.Comp.makeCustomBtn(configContent, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
 
--- B. Tombol Reset
 local resetBtn = S.Comp.makeCustomBtn(configContent, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = C.yellow
+        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 136, 0)
         task.delay(3, function()
             if resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
@@ -865,15 +860,15 @@ local resetBtn = S.Comp.makeCustomBtn(configContent, "Reset to Default", functio
     end
 end)
 
--- C. Kotak Warning
 S.Comp.makeCustomWarn(configContent, "⚠️ Perhatian\n\nSetelah melakukan Reset to Default, beberapa setingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk setingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya.")
 
--- D. Tombol Delete
 S.Comp.makeCustomBtn(configContent, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
     end
 end)
+
+task.defer(function() task.wait(0.1) forceFixSection(configMgmtSection) end)
 
 -- ============================================================
 -- DRAG MAIN FRAME
@@ -944,13 +939,11 @@ if S.GUI.SearchBox then
                 if section.Name:find("Section_") or section.Name:find("CustomCard_") then
                     local matchFound = false
                     
-                    -- Cek nama section/card
                     local sectionName = string.lower(section.Name:gsub("Section_", ""):gsub("CustomCard_", ""))
                     if string.find(sectionName, query) then
                         matchFound = true
                     end
                     
-                    -- Cek isi di dalamnya
                     if not matchFound then
                         for _, item in pairs(section:GetDescendants()) do
                             if item:IsA("TextLabel") and string.find(string.lower(item.Text), query) then
