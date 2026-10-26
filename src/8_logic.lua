@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [8] LOGIC — Command An Army (v2.6 FINAL)
+  [8] LOGIC — Command An Army (v2.7 FINAL)
 ============================================================
 ]]
 
@@ -26,6 +26,8 @@ local TroopStateRequest = Remotes and Remotes:FindFirstChild("TroopStateRequest"
 local RushRequest = Remotes and Remotes:FindFirstChild("RushRequest")
 local RespawnUnitRequest = Remotes and Remotes:FindFirstChild("RespawnUnitRequest")
 local BannerRequest = Remotes and Remotes:FindFirstChild("BannerRequest")
+local QuestRequest = Remotes and Remotes:FindFirstChild("QuestRequest")
+local DailyRewardRequest = Remotes and Remotes:FindFirstChild("DailyRewardRequest")
 
 local State = {
     Fly = false, Noclip = false,
@@ -755,32 +757,45 @@ local function getGemsUI()
     local leftBar = hud and hud:FindFirstChild("LeftBar")
     local gemsUI = leftBar and leftBar:FindFirstChild("Gems")
     if gemsUI and gemsUI:IsA("TextLabel") then
-        return tonumber(gemsUI.Text:gsub("[^%d]", "")) or 0
+        local text = gemsUI.Text:gsub("[^%d]", "")
+        if text and text ~= "" then
+            return tonumber(text)
+        end
     end
-    return 0
+    return nil
 end
 
--- LOOP SUM MON (Chronix KeepGems Logic)
+-- LOOP AUTO SUMMON (KeepGems Fix)
 task.spawn(function()
     while task.wait(2) do
         local AA = Config.Automation
         if not AA or not AA.AutoSummon or not BannerRequest then continue end
 
-        -- Cek KeepGems (Logika Chronix: Berhenti kalau Gems <= KeepGems)
+        local currentGems = getGemsUI()
         local keepGems = AA.KeepGems or 0
-        if keepGems > 0 then
-            local currentGems = getGemsUI()
+        
+        -- Cek Keep Gems
+        if keepGems > 0 and currentGems then
             if currentGems <= keepGems then
                 AA.AutoSummon = false
                 AA.KeepGems = 0
                 if S.Utils and S.Utils.SaveConfig then task.spawn(S.Utils.SaveConfig) end
-                pcall(function()
-                    game:GetService("StarterGui"):SetCore("SendNotification", {
-                        Title = "Auto Summon",
-                        Text = "Batas Gems tercapai ("..keepGems.."). Auto OFF.",
-                        Duration = 5
-                    })
-                end)
+                
+                -- Paksa UI mati
+                if S.GUI and S.GUI.MainFrame then
+                    local autoPage = S.GUI.ContentScroll:FindFirstChild("Page_Automation")
+                    if autoPage then
+                        for _, v in pairs(autoPage:GetDescendants()) do
+                            if v:IsA("TextLabel") and v.Text == "Auto Summon (Direct)" then
+                                local parent = v.Parent
+                                local toggleBtn = parent:FindFirstChild("Toggle") or parent:FindFirstChild("Btn")
+                                if toggleBtn and toggleBtn:IsA("TextButton") then
+                                    toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+                                end
+                            end
+                        end
+                    end
+                end
                 continue
             end
         end
@@ -815,9 +830,7 @@ end)
 -- LOOP QUEST REWARD
 task.spawn(function()
     while task.wait(10) do
-        if not Config.Automation or not Config.Automation.AutoReward then continue end
-        local QuestRequest = Remotes and Remotes:FindFirstChild("QuestRequest")
-        if not QuestRequest then continue end
+        if not Config.Automation or not Config.Automation.AutoReward or not QuestRequest then continue end
 
         local success, response = pcall(function()
             return QuestRequest:InvokeServer({Type = "GetState"})
@@ -847,15 +860,12 @@ end)
 -- LOOP DAILY REWARD
 task.spawn(function()
     while task.wait(60) do
-        if not Config.Automation or not Config.Automation.AutoDailyReward then continue end
-        local DailyRewardRequest = Remotes and Remotes:FindFirstChild("DailyRewardRequest")
-        if DailyRewardRequest then
-            pcall(function() DailyRewardRequest:InvokeServer() end)
-        end
+        if not Config.Automation or not Config.Automation.AutoDailyReward or not DailyRewardRequest then continue end
+        pcall(function() DailyRewardRequest:InvokeServer() end)
     end
 end)
 
--- LOOP AUTO ASCEND (Direct Prompt)
+-- LOOP AUTO ASCEND
 task.spawn(function()
     while task.wait(5) do
         local AA = Config.Automation
@@ -871,11 +881,8 @@ task.spawn(function()
         
         if prompt then
             pcall(function()
-                if fireproximityprompt then
-                    fireproximityprompt(prompt)
-                else
-                    prompt:InputHoldBegin() task.wait(0.1) prompt:InputHoldEnd()
-                end
+                if fireproximityprompt then fireproximityprompt(prompt)
+                else prompt:InputHoldBegin() task.wait(0.1) prompt:InputHoldEnd() end
             end)
             task.wait(1.5)
             
@@ -886,15 +893,11 @@ task.spawn(function()
             if ascUI and ascUI.Visible then
                 local allBtn = ascUI:FindFirstChild("AscendAllTroops")
                 if allBtn and allBtn.Visible then
-                    pcall(function()
-                        if firesignal then firesignal(allBtn.MouseButton1Click) else allBtn:Activate() end
-                    end)
+                    pcall(function() if firesignal then firesignal(allBtn.MouseButton1Click) else allBtn:Activate() end end)
                     task.wait(0.5)
                 end
                 local exitBtn = ascUI:FindFirstChild("Exit")
-                if exitBtn then
-                    pcall(function() if firesignal then firesignal(exitBtn.MouseButton1Click) else exitBtn:Activate() end end)
-                end
+                if exitBtn then pcall(function() if firesignal then firesignal(exitBtn.MouseButton1Click) else exitBtn:Activate() end end) end
             end
         end
     end
@@ -905,12 +908,9 @@ task.spawn(function()
     while task.wait(5) do
         local AA = Config.Automation
         if not AA.AutoEvolve then continue end
-        
         local EvolutionRequest = Remotes and Remotes:FindFirstChild("EvolutionRequest")
         if EvolutionRequest then
-            pcall(function()
-                EvolutionRequest:FireServer("EvolveAllDuplicates")
-            end)
+            pcall(function() EvolutionRequest:FireServer("EvolveAllDuplicates") end)
         end
     end
 end)
@@ -938,14 +938,12 @@ local CODE_SOURCES = {
 local function fetchSource(src)
     local h = PipelineState.sourceHealth[src.url] or { success = 0, fail = 0, lastOk = 0 }
     if h.fail >= 3 and (tick() - h.lastOk) < 1800 then return nil end
-
     local ok, html = pcall(game.HttpGet, game, src.url)
     if not ok or not html or #html < 500 then
         h.fail = h.fail + 1
         PipelineState.sourceHealth[src.url] = h
         return nil
     end
-
     local codes, seen = {}, {}
     for code in html:gmatch(src.pattern) do
         if #code >= 3 and #code <= 25 and not seen[code] then
@@ -953,7 +951,6 @@ local function fetchSource(src)
             table.insert(codes, code)
         end
     end
-
     if #codes > 0 then
         h.success = h.success + 1
         h.lastOk  = tick()
@@ -976,7 +973,6 @@ local function mergeAndScore(results)
             votes[code] = (votes[code] or 0) + w
         end
     end
-
     local scored = {}
     for code, score in pairs(votes) do
         if PipelineState.deadCodes[code] then score = score - 100 end
@@ -985,8 +981,7 @@ local function mergeAndScore(results)
     end
     table.sort(scored, function(a, b)
         if a.score ~= b.score then return a.score > b.score end
-        return (PipelineState.knownCodes[a.code].firstSeen or 0) >
-               (PipelineState.knownCodes[b.code].firstSeen or 0)
+        return (PipelineState.knownCodes[a.code].firstSeen or 0) > (PipelineState.knownCodes[b.code].firstSeen or 0)
     end)
     return scored
 end
@@ -1000,12 +995,10 @@ function _G.STHAIN.FetchCodesSmart()
             done = done + 1
         end)
     end
-
     local waited = 0
     while waited < 8 and done < total do
         task.wait(0.25) waited = waited + 0.25
     end
-
     local scored = mergeAndScore(results)
     local final = {}
     for _, item in ipairs(scored) do
@@ -1017,15 +1010,12 @@ end
 function _G.STHAIN.RedeemAllCodesSmart()
     local codes = _G.STHAIN.FetchCodesSmart()
     if #codes == 0 then return 0 end
-
     local RedeemCode = Remotes and Remotes:FindFirstChild("RedeemCode")
     if RedeemCode and RedeemCode:IsA("RemoteFunction") then
         local sukses = 0
         for _, code in ipairs(codes) do
             if not PipelineState.deadCodes[code] then
-                local ok, result = pcall(function()
-                    return RedeemCode:InvokeServer(code)
-                end)
+                local ok, result = pcall(function() return RedeemCode:InvokeServer(code) end)
                 if ok then
                     sukses = sukses + 1
                     PipelineState.deadCodes[code] = nil
@@ -1035,12 +1025,10 @@ function _G.STHAIN.RedeemAllCodesSmart()
                 task.wait(1.5)
             end
         end
-        
         local now = tick()
         for code, t in pairs(PipelineState.deadCodes) do
             if now - t > 86400 then PipelineState.deadCodes[code] = nil end
         end
-
         if S.Config and S.Utils and S.Utils.SaveConfig then
             S.Config.Codes = S.Config.Codes or {}
             S.Config.Codes.deadCodes  = PipelineState.deadCodes
