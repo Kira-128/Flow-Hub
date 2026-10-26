@@ -1,12 +1,12 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v3.0)
-  - Full Copy Lynx Config Management (Manual Frame)
+  [7] PAGES — Command An Army (v4.0)
 ============================================================
 ]]
 
 local S = _G.STHAIN
 
+-- ✅ SATPAM ANTI-CRASH (Tunggu Config dari repo Logic siap)
 repeat task.wait() until S.Config and S.Config.Combat 
 
 local C = S.Theme.Colors
@@ -71,7 +71,8 @@ local function createPage(name)
     page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 4)
+    -- Jarak antar Section (Card)
+    layout.Padding = UDim.new(0, 6) -- 6px
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -824,10 +825,11 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG (LYNX STYLE MANUAL FRAME)
+-- TAB CONFIG (LYNX STYLE FINAL)
 -- ============================================================
 local cfg = S.Config.Config
 
+-- 1. SECTION AUTO SAVE
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
     cfg.AutoSave = v
@@ -835,69 +837,20 @@ S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, fun
 end)
 task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
--- BIKIN CONFIG MANAGEMENT (MANUAL FRAME SEPERTI LYNX)
-local configMgmtSection = Instance.new("Frame")
-configMgmtSection.Name = "Section_ConfigManagement"
-configMgmtSection.Size = UDim2.new(1, 0, 0, 160) -- Tinggi fixed
-configMgmtSection.BackgroundColor3 = C.bg3
-configMgmtSection.BackgroundTransparency = 0.15
-configMgmtSection.BorderSizePixel = 0
-configMgmtSection.Parent = pages["Config"]
-Instance.new("UICorner", configMgmtSection).CornerRadius = UDim.new(0, 6)
-
--- Header Section
-local mgmtHeader = Instance.new("Frame")
-mgmtHeader.Size = UDim2.new(1, 0, 0, 32)
-mgmtHeader.BackgroundTransparency = 1
-mgmtHeader.Parent = configMgmtSection
-
-local mgmtTitle = Instance.new("TextLabel")
-mgmtTitle.Size = UDim2.new(1, -50, 1, 0)
-mgmtTitle.Position = UDim2.new(0, 12, 0, 0)
-mgmtTitle.Text = "Config Management"
-mgmtTitle.TextColor3 = C.text
-mgmtTitle.TextSize = 11
-mgmtTitle.Font = F.bold
-mgmtTitle.TextXAlignment = Enum.TextXAlignment.Left
-mgmtTitle.BackgroundTransparency = 1
-mgmtTitle.Parent = mgmtHeader
-
--- Container isi (manual, tanpa UIListLayout biar bisa diatur posisi)
-local mgmtContent = Instance.new("Frame")
-mgmtContent.Size = UDim2.new(1, 0, 0, 128)
-mgmtContent.Position = UDim2.new(0, 0, 0, 32)
-mgmtContent.BackgroundTransparency = 1
-mgmtContent.Parent = configMgmtSection
-
--- Helper Bikin Tombol Manual
-local function createBtn(posY, text, callback)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, -24, 0, 30)
-    b.Position = UDim2.new(0, 12, 0, posY)
-    b.BackgroundColor3 = C.bg4
-    b.BorderSizePixel = 0
-    b.Text = text
-    b.TextColor3 = C.text
-    b.TextSize = 11
-    b.Font = F.norm
-    b.AutoButtonColor = false
-    b.Parent = mgmtContent
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
-    
-    b.MouseButton1Click:Connect(function() pcall(callback) end)
-    return b
-end
-
--- 1. Tombol Save
-createBtn(0, "Save Config Now", function()
+-- 2. SECTION SAVE CONFIG
+local saveSection = S.Comp.makeSection(pages["Config"], "Save Config", false)
+S.Comp.makeButton(saveSection, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(saveSection) end)
 
--- 2. Tombol Reset
-local resetBtn = createBtn(36, "Reset to Default", function()
+-- 3. SECTION RESET CONFIG
+local resetSection = S.Comp.makeSection(pages["Config"], "Reset Config", false)
+local resetBtn = S.Comp.makeButton(resetSection, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = C.yellow
+        resetBtn.BackgroundColor3 = C.yellow 
+        
         task.delay(3, function()
             if resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
@@ -912,28 +865,21 @@ local resetBtn = createBtn(36, "Reset to Default", function()
         resetBtn.BackgroundColor3 = C.bg4
     end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(resetSection) end)
 
--- 3. Teks Info
-local infoText = Instance.new("TextLabel")
-infoText.Size = UDim2.new(1, -24, 0, 0)
-infoText.Position = UDim2.new(0, 12, 0, 72)
-infoText.BackgroundTransparency = 1
-infoText.Text = "After reset, some UI elements will update immediately. Character stats may require Rejoin."
-infoText.TextColor3 = C.textDim2
-infoText.TextSize = 9
-infoText.Font = F.norm
-infoText.TextWrapped = true
-infoText.TextXAlignment = Enum.TextXAlignment.Left
-infoText.TextYAlignment = Enum.TextYAlignment.Top
-infoText.AutomaticSize = Enum.AutomaticSize.Y
-infoText.Parent = mgmtContent
+-- 4. SECTION INFO (PAKE FUNGSI BARU)
+local infoSection = S.Comp.makeSection(pages["Config"], "Information", false)
+S.Comp.makeInfoText(infoSection, "Setelah melakukan Reset to Default, beberapa settingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk settingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya.\n\nFile config disimpan otomatis setiap 2 detik jika Auto Save aktif. Pastikan Auto Save ON sebelum keluar dari game agar settinganmu tidak hilang.")
+task.defer(function() task.wait(0.1) forceFixSection(infoSection) end)
 
--- 4. Tombol Delete (di bawah teks, posisi fix)
-local deleteBtn = createBtn(106, "Delete Config File", function()
+-- 5. SECTION DELETE CONFIG
+local deleteSection = S.Comp.makeSection(pages["Config"], "Delete Config", false)
+S.Comp.makeButton(deleteSection, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
     end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(deleteSection) end)
 
 -- ============================================================
 -- DRAG MAIN FRAME (Pakai Header)
