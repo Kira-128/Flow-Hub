@@ -1,9 +1,10 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v3.0)
+  [5] GUI (Flow Hub v3.1)
+  - Size: 460x320
+  - Float Button: Rounded Square (Kotak Tumpul)
   - PC & Mobile Detection
-  - Resize Handle (PC Only)
-  - Rounded Float Button
+  - Anti-Crash gethui
 ============================================================
 ]]
 
@@ -15,18 +16,6 @@ local UIS = game:GetService("UserInputService")
 
 -- Deteksi Platform
 local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
-
--- Setup Ukuran
-local DEFAULT_SIZE, MIN_SIZE, MAX_SIZE
-if isMobile then
-    DEFAULT_SIZE = UDim2.new(0, 420, 0, 280)
-    MIN_SIZE = Vector2.new(380, 250)
-    MAX_SIZE = Vector2.new(600, 450)
-else
-    DEFAULT_SIZE = UDim2.new(0, 560, 0, 360)
-    MIN_SIZE = Vector2.new(480, 320)
-    MAX_SIZE = Vector2.new(1000, 700)
-end
 
 -- Anti-Crash gethui
 local parentGui
@@ -43,7 +32,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parentGui
 
 -- ============================================================
--- FLOAT BUTTON (Dibikin Bulat / Rounded)
+-- FLOAT BUTTON (KOTAK TUMPUL)
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Size = UDim2.new(0, 48, 0, 48)
@@ -57,10 +46,17 @@ floatBtn.Parent = gui
 local fBg = Instance.new("Frame")
 fBg.Size = UDim2.new(1, 0, 1, 0)
 fBg.BackgroundColor3 = C.bg2
-fBg.BackgroundTransparency = 0.2
+fBg.BackgroundTransparency = 0.1
 fBg.BorderSizePixel = 0
 fBg.Parent = floatBtn
-Instance.new("UICorner", fBg).CornerRadius = UDim.new(1, 0) -- Bikin bulat sempurna
+-- Radius 12 = Kotak Tumpul
+Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12)
+
+local fStroke = Instance.new("UIStroke")
+fStroke.Color = C.stroke
+fStroke.Thickness = 1.5
+fStroke.Transparency = 0.3
+fStroke.Parent = fBg
 
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
@@ -95,12 +91,12 @@ floatBtn.InputChanged:Connect(function(input)
 end)
 
 -- ============================================================
--- MAIN FRAME
+-- MAIN FRAME (460x320)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = DEFAULT_SIZE
-mainFrame.Position = UDim2.new(0.5, -DEFAULT_SIZE.X.Offset / 2, 0.5, -DEFAULT_SIZE.Y.Offset / 2)
+mainFrame.Size = UDim2.new(0, 460, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -230, 0.5, -160)
 mainFrame.BackgroundColor3 = C.panel
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
@@ -143,8 +139,8 @@ if not isMobile then
     UIS.InputChanged:Connect(function(input)
         if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - resizeStart
-            local newW = math.clamp(startSize.X.Offset + delta.X, MIN_SIZE.X, MAX_SIZE.X)
-            local newH = math.clamp(startSize.Y.Offset + delta.Y, MIN_SIZE.Y, MAX_SIZE.Y)
+            local newW = math.max(380, startSize.X.Offset + delta.X)
+            local newH = math.max(250, startSize.Y.Offset + delta.Y)
             mainFrame.Size = UDim2.new(0, newW, 0, newH)
         end
     end)
@@ -156,7 +152,7 @@ if not isMobile then
 end
 
 -- ============================================================
--- HEADER (Drag Handle)
+-- HEADER
 -- ============================================================
 local HEADER_H = 36
 
