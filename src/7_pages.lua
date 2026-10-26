@@ -828,51 +828,32 @@ task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 -- ============================================================
 local cfg = S.Config.Config
 
-local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
+-- 1. SECTION AUTO SAVE
+local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", true) -- Default open
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
     cfg.AutoSave = v
     save()
 end)
 task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
--- SECTION CONFIG MANAGEMENT (DESAIN BARU)
-local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
-
--- Helper: Garis pemisah tipis
-local function addDivider(parent)
-    local wrapper = Instance.new("Frame")
-    wrapper.Size = UDim2.new(1, 0, 0, 13) 
-    wrapper.BackgroundTransparency = 1
-    wrapper.Parent = parent
-
-    local line = Instance.new("Frame")
-    line.Size = UDim2.new(1, -24, 0, 1)
-    line.Position = UDim2.new(0, 12, 0.5, -0.5)
-    line.BackgroundColor3 = C.stroke
-    line.BackgroundTransparency = 0.5
-    line.BorderSizePixel = 0
-    line.Parent = wrapper
-end
-
--- 1. Tombol Save Config
-S.Comp.makeButton(configMgmt, "Save Config Now", function()
-    if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then 
-        _G.STHAIN.Utils.SaveConfig() 
-    end
+-- 2. SECTION SAVE CONFIG
+local saveSection = S.Comp.makeSection(pages["Config"], "Save Config", true)
+S.Comp.makeButton(saveSection, "Save Config Now", function()
+    if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(saveSection) end)
 
-addDivider(configMgmt)
-
--- 2. Tombol Reset to Default (Pake Konfirmasi)
-local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
+-- 3. SECTION RESET CONFIG
+local resetSection = S.Comp.makeSection(pages["Config"], "Reset Config", true)
+local resetBtn = S.Comp.makeButton(resetSection, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = C.yellow -- Warna kuning/oranye
+        resetBtn.BackgroundColor3 = C.yellow 
         
         task.delay(3, function()
             if resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
-                resetBtn.BackgroundColor3 = C.bg4 -- Balik ke warna semula
+                resetBtn.BackgroundColor3 = C.bg4
             end
         end)
     elseif resetBtn.Text == "Click Again to Confirm" then
@@ -881,91 +862,45 @@ local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
         end
         resetBtn.Text = "Reset to Default"
         resetBtn.BackgroundColor3 = C.bg4
-        
-        -- Opsional: Kasih notifikasi ke user (kalau ada sistem notif)
-        -- print("Config berhasil di-reset!")
     end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(resetSection) end)
 
--- 3. SECTION INFO / WARNING (Kotak Deskripsi)
-local infoBox = Instance.new("Frame")
-infoBox.Name = "InfoBox"
-infoBox.Size = UDim2.new(1, -24, 0, 0)
-infoBox.Position = UDim2.new(0, 12, 0, 0)
-infoBox.BackgroundColor3 = C.bg4
-infoBox.BackgroundTransparency = 0.5
-infoBox.BorderSizePixel = 0
-infoBox.AutomaticSize = Enum.AutomaticSize.Y
-infoBox.Parent = configMgmt
-Instance.new("UICorner", infoBox).CornerRadius = UDim.new(0, 4)
+-- 4. SECTION INFO / DESCRIPTION
+local infoSection = S.Comp.makeSection(pages["Config"], "Info", true)
 
--- Garis Accent di kiri Info Box
-local infoAccent = Instance.new("Frame")
-infoAccent.Size = UDim2.new(0, 3, 1, 0)
-infoAccent.BackgroundColor3 = C.yellow
-infoAccent.BorderSizePixel = 0
-infoAccent.Parent = infoBox
-Instance.new("UICorner", infoAccent).CornerRadius = UDim.new(0, 4)
+-- Teks Deskripsi (tanpa garis kuning aneh)
+local descText = Instance.new("TextLabel")
+descText.Size = UDim2.new(1, -24, 0, 0)
+descText.Position = UDim2.new(0, 12, 0, 8) -- Padding atas
+descText.BackgroundTransparency = 1
+descText.Text = "Setelah melakukan Reset to Default, beberapa settingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk settingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya.\n\nFile config disimpan otomatis setiap 2 detik jika Auto Save aktif. Pastikan Auto Save ON sebelum keluar dari game."
+descText.TextColor3 = C.textDim
+descText.TextSize = 10
+descText.Font = F.norm
+descText.TextWrapped = true
+descText.TextXAlignment = Enum.TextXAlignment.Left
+descText.TextYAlignment = Enum.TextYAlignment.Top
+descText.AutomaticSize = Enum.AutomaticSize.Y
+descText.Parent = infoSection
 
--- Padding di dalam Info Box
-local infoPad = Instance.new("UIPadding")
-infoPad.PaddingTop = UDim.new(0, 10)
-infoPad.PaddingBottom = UDim.new(0, 10)
-infoPad.PaddingLeft = UDim.new(0, 12)
-infoPad.PaddingRight = UDim.new(0, 12)
-infoPad.Parent = infoBox
+-- Padding manual biar teksnya ga mentok
+local descPad = Instance.new("UIPadding")
+descPad.PaddingTop = UDim.new(0, 8)
+descPad.PaddingBottom = UDim.new(0, 8)
+descPad.Parent = infoSection
 
--- Judul "Perhatian"
-local infoTitle = Instance.new("TextLabel")
-infoTitle.Size = UDim2.new(1, 0, 0, 16)
-infoTitle.BackgroundTransparency = 1
-infoTitle.Text = "⚠️ Attention"
-infoTitle.TextColor3 = C.yellow
-infoTitle.TextSize = 11
-infoTitle.Font = F.bold
-infoTitle.TextXAlignment = Enum.TextXAlignment.Left
-infoTitle.LayoutOrder = 1
-infoTitle.Parent = infoBox
+task.defer(function() task.wait(0.1) forceFixSection(infoSection) end)
 
--- Teks Deskripsi
-local infoDesc = Instance.new("TextLabel")
-infoDesc.Size = UDim2.new(1, 0, 0, 0)
-infoDesc.Position = UDim2.new(0, 0, 0, 22)
-infoDesc.BackgroundTransparency = 1
-infoDesc.Text = "Setelah melakukan Reset to Default, beberapa settingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk settingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya.\n\nFile config disimpan otomatis setiap 2 detik jika Auto Save aktif. Pastikan Auto Save ON sebelum keluar dari game."
-infoDesc.TextColor3 = C.textDim
-infoDesc.TextSize = 9.5
-infoDesc.Font = F.norm
-infoDesc.TextWrapped = true
-infoDesc.TextXAlignment = Enum.TextXAlignment.Left
-infoDesc.TextYAlignment = Enum.TextYAlignment.Top
-infoDesc.AutomaticSize = Enum.AutomaticSize.Y
-infoDesc.LayoutOrder = 2
-infoDesc.Parent = infoBox
+-- 5. SECTION DELETE FILE
+local deleteSection = S.Comp.makeSection(pages["Config"], "Delete Config File", true)
+S.Comp.makeButton(deleteSection, "Delete File", function()
+    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
+        _G.STHAIN.Utils.DeleteConfig()
+    end
+end)
+task.defer(function() task.wait(0.1) forceFixSection(deleteSection) end)
 
--- Layout buat Info Box (biar Judul & Desc rapih)
-local infoLayout = Instance.new("UIListLayout")
-infoLayout.Padding = UDim.new(0, 4)
-infoLayout.SortOrder = Enum.SortOrder.LayoutOrder
-infoLayout.Parent = infoBox
-
--- Karena lu pake UIListLayout di dalam Section, kita bungkus InfoBox pake container
-local infoContainer = Instance.new("Frame")
-infoContainer.Size = UDim2.new(1, 0, 0, 0)
-infoContainer.BackgroundTransparency = 1
-infoContainer.AutomaticSize = Enum.AutomaticSize.Y
-infoContainer.Parent = configMgmt
-
--- Pindahin infoBox ke dalam infoContainer
-infoBox.Parent = infoContainer
-
--- Tambahin sedikit jarak sebelum info box
-local space = Instance.new("Frame")
-space.Size = UDim2.new(1, 0, 0, 8)
-space.BackgroundTransparency = 1
-space.Parent = configMgmt
-
-task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
 -- ============================================================
 -- DRAG MAIN FRAME (Pakai Header)
