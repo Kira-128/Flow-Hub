@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v2.4 Final UI)
+  [7] PAGES — Command An Army (v2.6 Final UI)
 ============================================================
 ]]
 
@@ -836,29 +836,39 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
+
+-- Fungsi bantuan buat bikin jarak antar tombol
+local function addSpacer(parent, height)
+    local spacer = Instance.new("Frame")
+    spacer.Size = UDim2.new(1, 0, 0, height)
+    spacer.BackgroundTransparency = 1
+    spacer.BorderSizePixel = 0
+    spacer.Parent = parent
+end
+
+-- Tombol 1
 S.Comp.makeButton(configMgmt, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
+
+addSpacer(configMgmt, 10) -- Jarak 10 pixel
+
+-- Tombol 2
 S.Comp.makeButton(configMgmt, "Reset to Default", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Config",
-            Text = "Config berhasil di-reset. Silakan rejoin game.",
-            Duration = 5
-        })
     end
 end)
+
+addSpacer(configMgmt, 10) -- Jarak 10 pixel
+
+-- Tombol 3
 S.Comp.makeButton(configMgmt, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Config",
-            Text = "File config dihapus. Silakan rejoin game.",
-            Duration = 5
-        })
     end
 end)
+
 task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
 -- ============================================================
