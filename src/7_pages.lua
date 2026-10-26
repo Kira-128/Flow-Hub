@@ -1,8 +1,9 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v4.3)
-  - Fixed Clickable Config Management
-  - Clean English Warning Note
+  [7] PAGES — Command An Army (v4.5 Final Fixed)
+  - Jarak Section 3px
+  - Tombol Reset warna Oranye
+  - Config Management Rapi & Bisa Diklik
 ============================================================
 ]]
 
@@ -30,7 +31,7 @@ local function save()
 end
 
 -- ============================================================
--- FORCE SECTION AUTO-SIZE (Buat Tab Lain)
+-- FORCE SECTION AUTO-SIZE
 -- ============================================================
 local function forceFixSection(sectionFrame)
     if not sectionFrame then return end
@@ -52,7 +53,7 @@ local function forceFixSection(sectionFrame)
 end
 
 -- ============================================================
--- CREATE PAGE
+-- CREATE PAGE (Jarak 3px)
 -- ============================================================
 local function createPage(name)
     local page = Instance.new("ScrollingFrame")
@@ -72,7 +73,7 @@ local function createPage(name)
     page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 4)
+    layout.Padding = UDim.new(0, 3) -- JARAK 3 PIXEL
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -164,7 +165,7 @@ local function makeTab(iconId, name)
 end
 
 -- ============================================================
--- CUSTOM DYNAMIC DROPDOWN
+-- CUSTOM DYNAMIC DROPDOWN (LENGKAP)
 -- ============================================================
 local function makeDynamicDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -825,7 +826,7 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG (Benerin Manual)
+-- TAB CONFIG (PAKE WARNA ORANYE)
 -- ============================================================
 local cfg = S.Config.Config
 
@@ -845,7 +846,7 @@ end)
 local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = C.yellow
+        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 136, 0) -- WARNA ORANYE
         task.delay(3, function()
             if resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
@@ -869,8 +870,6 @@ S.Comp.makeButton(configMgmt, "Delete Config File", function()
     end
 end)
 
--- HAPUS forceFixSection DI SINI BIAR TOMBOL BISA DIKLIK
-
 -- ============================================================
 -- DRAG MAIN FRAME
 -- ============================================================
@@ -883,7 +882,7 @@ S.GUI.Header.InputBegan:Connect(function(input)
     end
 end)
 S.GUI.Header.InputChanged:Connect(function(input)
-    if mainDrag and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+    if mainDrag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - mainStart
         S.GUI.MainFrame.Position = UDim2.new(
             mainPos.X.Scale, mainPos.X.Offset + delta.X,
