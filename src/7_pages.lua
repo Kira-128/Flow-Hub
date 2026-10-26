@@ -1,9 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v4.5 Final Fixed)
-  - Jarak Section 3px
-  - Tombol Reset warna Oranye
-  - Config Management Rapi & Bisa Diklik
+  [7] PAGES — Command An Army (v4.5 Fixed)
 ============================================================
 ]]
 
@@ -165,7 +162,7 @@ local function makeTab(iconId, name)
 end
 
 -- ============================================================
--- CUSTOM DYNAMIC DROPDOWN (LENGKAP)
+-- CUSTOM DYNAMIC DROPDOWN
 -- ============================================================
 local function makeDynamicDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -826,7 +823,7 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG (PAKE WARNA ORANYE)
+-- TAB CONFIG
 -- ============================================================
 local cfg = S.Config.Config
 
@@ -846,7 +843,7 @@ end)
 local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 136, 0) -- WARNA ORANYE
+        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 136, 0) 
         task.delay(3, function()
             if resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
@@ -862,13 +859,32 @@ local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     end
 end)
 
-S.Comp.makeInfoText(configMgmt, "⚠️ Note:\nReset applies UI changes immediately. You must Rejoin or Respawn for character stats and in-game features to take effect.\n\nConfig is auto-saved every 2 seconds. Ensure Auto Save is ON before leaving.")
+local infoLbl = Instance.new("TextLabel")
+infoLbl.Size = UDim2.new(1, -24, 0, 0)
+infoLbl.AutomaticSize = Enum.AutomaticSize.Y
+infoLbl.BackgroundTransparency = 1
+infoLbl.Text = "⚠️ Note:\nReset applies UI changes immediately. You must Rejoin or Respawn for character stats and in-game features to take effect.\n\nConfig is auto-saved every 2 seconds. Ensure Auto Save is ON before leaving."
+infoLbl.TextColor3 = C.textDim
+infoLbl.TextSize = 9
+infoLbl.Font = F.norm
+infoLbl.TextWrapped = true
+infoLbl.TextXAlignment = Enum.TextXAlignment.Left
+infoLbl.TextYAlignment = Enum.TextYAlignment.Top
+infoLbl.Parent = configMgmt
+
+local pad = Instance.new("UIPadding")
+pad.PaddingLeft = UDim.new(0, 12)
+pad.PaddingRight = UDim.new(0, 12)
+pad.PaddingBottom = UDim.new(0, 8)
+pad.Parent = infoLbl
 
 S.Comp.makeButton(configMgmt, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
     end
 end)
+
+task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
 -- ============================================================
 -- DRAG MAIN FRAME
