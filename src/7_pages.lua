@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v2.6 Final UI)
+  [7] PAGES — Command An Army (v2.7 Final UI)
 ============================================================
 ]]
 
@@ -837,13 +837,41 @@ task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 
--- Fungsi bantuan buat bikin jarak antar tombol
-local function addSpacer(parent, height)
-    local spacer = Instance.new("Frame")
-    spacer.Size = UDim2.new(1, 0, 0, height)
-    spacer.BackgroundTransparency = 1
-    spacer.BorderSizePixel = 0
-    spacer.Parent = parent
+-- Helper: Bikin pemisah dengan jarak yang lega (persis kayak jarak section)
+local function addDivider(parent)
+    local wrapper = Instance.new("Frame")
+    wrapper.Size = UDim2.new(1, 0, 0, 24) -- Total tinggi 24px (jarak atas + bawah)
+    wrapper.BackgroundTransparency = 1
+    wrapper.Parent = parent
+
+    local line = Instance.new("Frame")
+    line.Size = UDim2.new(1, -24, 0, 1)
+    line.Position = UDim2.new(0, 12, 0.5, -0.5)
+    line.BackgroundColor3 = C.bg4 -- Warna garis samain kayak background gelap
+    line.BorderSizePixel = 0
+    line.Parent = wrapper
+end
+
+-- Helper: Description text
+local function addDesc(parent, text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -24, 0, 0)
+    lbl.AutomaticSize = Enum.AutomaticSize.Y
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = C.textDim
+    lbl.TextSize = 9
+    lbl.Font = F.norm
+    lbl.TextWrapped = true
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Top
+    lbl.Parent = parent
+    
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0, 12)
+    pad.PaddingRight = UDim.new(0, 12)
+    pad.PaddingBottom = UDim.new(0, 8)
+    pad.Parent = lbl
 end
 
 -- Tombol 1
@@ -851,16 +879,32 @@ S.Comp.makeButton(configMgmt, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
 
-addSpacer(configMgmt, 10) -- Jarak 10 pixel
+addDivider(configMgmt)
 
--- Tombol 2
-S.Comp.makeButton(configMgmt, "Reset to Default", function()
-    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
-        _G.STHAIN.Utils.DeleteConfig()
+-- Tombol 2: Reset (Pake Konfirmasi Oranye)
+local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
+    if resetBtn.Text == "Reset to Default" then
+        resetBtn.Text = "Confirmation"
+        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 165, 0) 
+        
+        task.delay(3, function()
+            if resetBtn.Text == "Confirmation" then
+                resetBtn.Text = "Reset to Default"
+                resetBtn.BackgroundColor3 = C.bg4
+            end
+        end)
+    elseif resetBtn.Text == "Confirmation" then
+        if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
+            _G.STHAIN.Utils.DeleteConfig()
+        end
+        resetBtn.Text = "Reset to Default"
+        resetBtn.BackgroundColor3 = C.bg4
     end
 end)
 
-addSpacer(configMgmt, 10) -- Jarak 10 pixel
+addDesc(configMgmt, "This will reset all settings to their default values. Your current configuration will be lost, and this action cannot be undone.")
+
+addDivider(configMgmt)
 
 -- Tombol 3
 S.Comp.makeButton(configMgmt, "Delete Config File", function()
