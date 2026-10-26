@@ -1,12 +1,13 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v4.2 Final)
+  [7] PAGES — Command An Army (v4.3)
+  - Fixed Clickable Config Management
+  - Clean English Warning Note
 ============================================================
 ]]
 
 local S = _G.STHAIN
 
--- ✅ SATPAM ANTI-CRASH (Tunggu Config dari repo Logic siap)
 repeat task.wait() until S.Config and S.Config.Combat 
 
 local C = S.Theme.Colors
@@ -71,7 +72,6 @@ local function createPage(name)
     page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
-    -- JARAK ANTAR SECTION (4 PIXEL)
     layout.Padding = UDim.new(0, 4)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
@@ -678,7 +678,7 @@ S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(
 end)
 task.defer(function() task.wait(0.1) forceFixSection(evolveSection) end)
 
--- 4. REWARDS SECTION
+-- 4. REWARDS SECTION (Daily Login digabung ke Quest)
 local rewardSection = S.Comp.makeSection(pages["Automation"], "Rewards", false)
 S.Comp.makeToggle(rewardSection, "Auto Quest & Daily", AA.AutoReward == true, function(v) 
     AA.AutoReward = v 
@@ -689,6 +689,7 @@ task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
 -- 5. CLAIM CODE SECTION
 local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
 
+-- Input Code
 local codeInputContainer = Instance.new("Frame")
 codeInputContainer.Name = "CodeInputContainer"
 codeInputContainer.Size = UDim2.new(1, 0, 0, 34)
@@ -710,14 +711,16 @@ codeBox.ClearTextOnFocus = false
 codeBox.Parent = codeInputContainer
 Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
 
+-- Dropdown Available Codes (Otomatis Fetch)
 local codeDropdown = makeDynamicDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
     if val ~= "Fetching..." and val ~= "None" then
         codeBox.Text = val
     end
 end)
 
+-- Auto Fetch pas halaman dibuka
 task.spawn(function()
-    task.wait(2)
+    task.wait(2) -- Tunggu UI ready
     if _G.STHAIN.FetchCodesSmart then
         local codes = _G.STHAIN.FetchCodesSmart()
         if codes and #codes > 0 then
@@ -728,6 +731,7 @@ task.spawn(function()
     end
 end)
 
+-- Button Claim
 S.Comp.makeButton(codeSection, "Claim Code", function()
     local code = codeBox.Text
     if code ~= "" and code ~= "Fetching..." and code ~= "None" then
@@ -821,11 +825,10 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG (PAKE CUSTOM CARD)
+-- TAB CONFIG (Benerin Manual)
 -- ============================================================
 local cfg = S.Config.Config
 
--- 1. SECTION AUTO SAVE (Pake Section Bawaan)
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
     cfg.AutoSave = v
@@ -833,18 +836,16 @@ S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, fun
 end)
 task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
--- 2. SECTION CONFIG MANAGEMENT (Pake Custom Card)
-local configMgmtSection = S.Comp.makeSection(pages["Config"], "Config Management", true)
-local configContent = S.Comp.makeCustomCard(configMgmtSection, "Config Content")
+local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", true)
 
-S.Comp.makeCustomBtn(configContent, "Save Config Now", function()
+S.Comp.makeButton(configMgmt, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
 
-local resetBtn = S.Comp.makeCustomBtn(configContent, "Reset to Default", function()
+local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 136, 0)
+        resetBtn.BackgroundColor3 = C.yellow
         task.delay(3, function()
             if resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
@@ -860,15 +861,15 @@ local resetBtn = S.Comp.makeCustomBtn(configContent, "Reset to Default", functio
     end
 end)
 
-S.Comp.makeCustomWarn(configContent, "⚠️ Perhatian\n\nSetelah melakukan Reset to Default, beberapa setingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk setingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya.")
+S.Comp.makeInfoText(configMgmt, "⚠️ Note:\nReset applies UI changes immediately. You must Rejoin or Respawn for character stats and in-game features to take effect.\n\nConfig is auto-saved every 2 seconds. Ensure Auto Save is ON before leaving.")
 
-S.Comp.makeCustomBtn(configContent, "Delete Config File", function()
+S.Comp.makeButton(configMgmt, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
     end
 end)
 
-task.defer(function() task.wait(0.1) forceFixSection(configMgmtSection) end)
+-- HAPUS forceFixSection DI SINI BIAR TOMBOL BISA DIKLIK
 
 -- ============================================================
 -- DRAG MAIN FRAME
@@ -901,7 +902,6 @@ end)
 -- ============================================================
 switchPage("Combat")
 
--- Highlight tab Combat
 for _, t in pairs(tabs) do
     if t.text.Text == "Combat" then
         t.btn.BackgroundColor3 = C.bg3
@@ -936,10 +936,10 @@ if S.GUI.SearchBox then
 
         for pageName, page in pairs(pages) do
             for _, section in pairs(page:GetChildren()) do
-                if section.Name:find("Section_") or section.Name:find("CustomCard_") then
+                if section.Name:find("Section_") then
                     local matchFound = false
                     
-                    local sectionName = string.lower(section.Name:gsub("Section_", ""):gsub("CustomCard_", ""))
+                    local sectionName = string.lower(section.Name:gsub("Section_", ""))
                     if string.find(sectionName, query) then
                         matchFound = true
                     end
