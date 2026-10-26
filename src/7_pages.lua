@@ -824,32 +824,63 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG
+-- TAB CONFIG (FINAL - LYNK STYLE)
 -- ============================================================
 local cfg = S.Config.Config
 
 -- 1. SECTION AUTO SAVE
-local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", true) -- Default open
+local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", true)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
     cfg.AutoSave = v
     save()
 end)
 task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
--- 2. SECTION SAVE CONFIG
-local saveSection = S.Comp.makeSection(pages["Config"], "Save Config", true)
-S.Comp.makeButton(saveSection, "Save Config Now", function()
+-- 2. SECTION CONFIG MANAGEMENT
+local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", true)
+
+-- [HELPER] Bikin Spacer (Jarak Kosong)
+local function addSpacer(parent, height)
+    local spacer = Instance.new("Frame")
+    spacer.Size = UDim2.new(1, 0, 0, height or 10)
+    spacer.BackgroundTransparency = 1
+    spacer.Parent = parent
+end
+
+-- [HELPER] Bikin Tombol Kotak (Mirip Lynx)
+local function makeLynxButton(parent, text, color, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -24, 0, 34) -- Full width minus padding
+    btn.Position = UDim2.new(0, 12, 0, 0)
+    btn.BackgroundColor3 = color or C.bg4
+    btn.BackgroundTransparency = 0.3
+    btn.BorderSizePixel = 0
+    btn.Text = text
+    btn.TextColor3 = C.text
+    btn.TextSize = 11
+    btn.Font = F.norm
+    btn.AutoButtonColor = false
+    btn.Parent = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+    
+    btn.MouseButton1Click:Connect(function()
+        pcall(callback)
+    end)
+    return btn
+end
+
+-- A. Tombol Save Config
+makeLynxButton(configMgmt, "Save Config Now", C.bg4, function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
-task.defer(function() task.wait(0.1) forceFixSection(saveSection) end)
 
--- 3. SECTION RESET CONFIG
-local resetSection = S.Comp.makeSection(pages["Config"], "Reset Config", true)
-local resetBtn = S.Comp.makeButton(resetSection, "Reset to Default", function()
+addSpacer(configMgmt, 8) -- Jarak antar tombol
+
+-- B. Tombol Reset
+local resetBtn = makeLynxButton(configMgmt, "Reset to Default", C.bg4, function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
         resetBtn.BackgroundColor3 = C.yellow 
-        
         task.delay(3, function()
             if resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
@@ -864,44 +895,64 @@ local resetBtn = S.Comp.makeButton(resetSection, "Reset to Default", function()
         resetBtn.BackgroundColor3 = C.bg4
     end
 end)
-task.defer(function() task.wait(0.1) forceFixSection(resetSection) end)
 
--- 4. SECTION INFO / DESCRIPTION
-local infoSection = S.Comp.makeSection(pages["Config"], "Info", true)
+addSpacer(configMgmt, 8) -- Jarak antar tombol
 
--- Teks Deskripsi (tanpa garis kuning aneh)
+-- C. Tombol Delete
+makeLynxButton(configMgmt, "Delete Config File", C.bg4, function()
+    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
+        _G.STHAIN.Utils.DeleteConfig()
+    end
+end)
+
+task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
+
+-- 3. SECTION INFO (Kotak Warning)
+local infoSection = S.Comp.makeSection(pages["Config"], "Information", true)
+
+-- Container untuk Info Box
+local infoBox = Instance.new("Frame")
+infoBox.Size = UDim2.new(1, -24, 0, 0)
+infoBox.Position = UDim2.new(0, 12, 0, 4)
+infoBox.BackgroundColor3 = C.bg4
+infoBox.BackgroundTransparency = 0.5
+infoBox.BorderSizePixel = 0
+infoBox.AutomaticSize = Enum.AutomaticSize.Y
+infoBox.Parent = infoSection
+Instance.new("UICorner", infoBox).CornerRadius = UDim.new(0, 5)
+
+-- Garis Accent Kiri
+local accentBar = Instance.new("Frame")
+accentBar.Size = UDim2.new(0, 3, 1, 0)
+accentBar.BackgroundColor3 = C.accent
+accentBar.BorderSizePixel = 0
+accentBar.Parent = infoBox
+Instance.new("UICorner", accentBar).CornerRadius = UDim.new(0, 5)
+
+-- Padding Dalam
+local pad = Instance.new("UIPadding")
+pad.PaddingTop = UDim.new(0, 10)
+pad.PaddingBottom = UDim.new(0, 10)
+pad.PaddingLeft = UDim.new(0, 14)
+pad.PaddingRight = UDim.new(0, 12)
+pad.Parent = infoBox
+
+-- Teks Info
 local descText = Instance.new("TextLabel")
-descText.Size = UDim2.new(1, -24, 0, 0)
-descText.Position = UDim2.new(0, 12, 0, 8) -- Padding atas
+descText.Size = UDim2.new(1, 0, 0, 0)
 descText.BackgroundTransparency = 1
 descText.Text = "Setelah melakukan Reset to Default, beberapa settingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk settingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya.\n\nFile config disimpan otomatis setiap 2 detik jika Auto Save aktif. Pastikan Auto Save ON sebelum keluar dari game."
 descText.TextColor3 = C.textDim
-descText.TextSize = 10
+descText.TextSize = 9.5
 descText.Font = F.norm
 descText.TextWrapped = true
 descText.TextXAlignment = Enum.TextXAlignment.Left
 descText.TextYAlignment = Enum.TextYAlignment.Top
 descText.AutomaticSize = Enum.AutomaticSize.Y
-descText.Parent = infoSection
-
--- Padding manual biar teksnya ga mentok
-local descPad = Instance.new("UIPadding")
-descPad.PaddingTop = UDim.new(0, 8)
-descPad.PaddingBottom = UDim.new(0, 8)
-descPad.Parent = infoSection
+descText.Parent = infoBox
 
 task.defer(function() task.wait(0.1) forceFixSection(infoSection) end)
-
--- 5. SECTION DELETE FILE
-local deleteSection = S.Comp.makeSection(pages["Config"], "Delete Config File", true)
-S.Comp.makeButton(deleteSection, "Delete File", function()
-    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
-        _G.STHAIN.Utils.DeleteConfig()
-    end
-end)
-task.defer(function() task.wait(0.1) forceFixSection(deleteSection) end)
-
-
+            
 -- ============================================================
 -- DRAG MAIN FRAME (Pakai Header)
 -- ============================================================
