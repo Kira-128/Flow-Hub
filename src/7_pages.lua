@@ -1,12 +1,12 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v2.9 Lynx Style)
+  [7] PAGES — Command An Army (v3.0)
+  - Full Copy Lynx Config Management (Manual Frame)
 ============================================================
 ]]
 
 local S = _G.STHAIN
 
--- ✅ SATPAM ANTI-CRASH (Tunggu Config dari repo Logic siap)
 repeat task.wait() until S.Config and S.Config.Combat 
 
 local C = S.Theme.Colors
@@ -824,7 +824,7 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG (LYNX STYLE - PAKE FUNGSI BARU)
+-- TAB CONFIG (LYNX STYLE MANUAL FRAME)
 -- ============================================================
 local cfg = S.Config.Config
 
@@ -835,15 +835,66 @@ S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, fun
 end)
 task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
-local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
+-- BIKIN CONFIG MANAGEMENT (MANUAL FRAME SEPERTI LYNX)
+local configMgmtSection = Instance.new("Frame")
+configMgmtSection.Name = "Section_ConfigManagement"
+configMgmtSection.Size = UDim2.new(1, 0, 0, 160) -- Tinggi fixed
+configMgmtSection.BackgroundColor3 = C.bg3
+configMgmtSection.BackgroundTransparency = 0.15
+configMgmtSection.BorderSizePixel = 0
+configMgmtSection.Parent = pages["Config"]
+Instance.new("UICorner", configMgmtSection).CornerRadius = UDim.new(0, 6)
+
+-- Header Section
+local mgmtHeader = Instance.new("Frame")
+mgmtHeader.Size = UDim2.new(1, 0, 0, 32)
+mgmtHeader.BackgroundTransparency = 1
+mgmtHeader.Parent = configMgmtSection
+
+local mgmtTitle = Instance.new("TextLabel")
+mgmtTitle.Size = UDim2.new(1, -50, 1, 0)
+mgmtTitle.Position = UDim2.new(0, 12, 0, 0)
+mgmtTitle.Text = "Config Management"
+mgmtTitle.TextColor3 = C.text
+mgmtTitle.TextSize = 11
+mgmtTitle.Font = F.bold
+mgmtTitle.TextXAlignment = Enum.TextXAlignment.Left
+mgmtTitle.BackgroundTransparency = 1
+mgmtTitle.Parent = mgmtHeader
+
+-- Container isi (manual, tanpa UIListLayout biar bisa diatur posisi)
+local mgmtContent = Instance.new("Frame")
+mgmtContent.Size = UDim2.new(1, 0, 0, 128)
+mgmtContent.Position = UDim2.new(0, 0, 0, 32)
+mgmtContent.BackgroundTransparency = 1
+mgmtContent.Parent = configMgmtSection
+
+-- Helper Bikin Tombol Manual
+local function createBtn(posY, text, callback)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, -24, 0, 30)
+    b.Position = UDim2.new(0, 12, 0, posY)
+    b.BackgroundColor3 = C.bg4
+    b.BorderSizePixel = 0
+    b.Text = text
+    b.TextColor3 = C.text
+    b.TextSize = 11
+    b.Font = F.norm
+    b.AutoButtonColor = false
+    b.Parent = mgmtContent
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
+    
+    b.MouseButton1Click:Connect(function() pcall(callback) end)
+    return b
+end
 
 -- 1. Tombol Save
-S.Comp.makeSolidButton(configMgmt, "Save Config Now", function()
+createBtn(0, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
 
 -- 2. Tombol Reset
-local resetBtn = S.Comp.makeSolidButton(configMgmt, "Reset to Default", function()
+local resetBtn = createBtn(36, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
         resetBtn.BackgroundColor3 = C.yellow
@@ -862,20 +913,27 @@ local resetBtn = S.Comp.makeSolidButton(configMgmt, "Reset to Default", function
     end
 end)
 
--- 3. Teks Info (Peringatan) di bawah Reset
-S.Comp.makeInfoText(configMgmt, "⚠️ Note: After reset, some UI elements will update immediately. Character stats may require Rejoin/Respawn.")
+-- 3. Teks Info
+local infoText = Instance.new("TextLabel")
+infoText.Size = UDim2.new(1, -24, 0, 0)
+infoText.Position = UDim2.new(0, 12, 0, 72)
+infoText.BackgroundTransparency = 1
+infoText.Text = "After reset, some UI elements will update immediately. Character stats may require Rejoin."
+infoText.TextColor3 = C.textDim2
+infoText.TextSize = 9
+infoText.Font = F.norm
+infoText.TextWrapped = true
+infoText.TextXAlignment = Enum.TextXAlignment.Left
+infoText.TextYAlignment = Enum.TextYAlignment.Top
+infoText.AutomaticSize = Enum.AutomaticSize.Y
+infoText.Parent = mgmtContent
 
--- 4. Garis Pemisah
-S.Comp.makeThinLine(configMgmt)
-
--- 5. Tombol Delete
-S.Comp.makeSolidButton(configMgmt, "Delete Config File", function()
+-- 4. Tombol Delete (di bawah teks, posisi fix)
+local deleteBtn = createBtn(106, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
     end
 end)
-
-task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
 -- ============================================================
 -- DRAG MAIN FRAME (Pakai Header)
