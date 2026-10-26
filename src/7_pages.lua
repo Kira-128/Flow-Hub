@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v2.8 Final UI)
+  [7] PAGES — Command An Army (v2.9 Lynx Style)
 ============================================================
 ]]
 
@@ -824,11 +824,10 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG (LYNX STYLE - MANUAL FRAME)
+-- TAB CONFIG (LYNX STYLE - PAKE FUNGSI BARU)
 -- ============================================================
 local cfg = S.Config.Config
 
--- 1. SECTION AUTO SAVE
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
     cfg.AutoSave = v
@@ -836,44 +835,15 @@ S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, fun
 end)
 task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
--- 2. SECTION CONFIG MANAGEMENT (DESAIN LYNX)
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 
--- Helper untuk bikin tombol ala Lynx (Kotak solid, ada margin)
-local function makeLynxBtn(parent, text, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -24, 0, 34) -- Margin 12px kiri-kanan
-    btn.Position = UDim2.new(0, 12, 0, 0) -- Awal di kiri
-    btn.BackgroundColor3 = C.bg4
-    btn.BorderSizePixel = 0
-    btn.Text = text
-    btn.TextColor3 = C.text
-    btn.TextSize = 11
-    btn.Font = F.norm
-    btn.AutoButtonColor = false
-    btn.Parent = parent
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-    
-    btn.MouseButton1Click:Connect(function()
-        pcall(callback)
-    end)
-    return btn
-end
-
--- Bikin container manual biar posisinya ga ditimpa UIListLayout
-local mgmtContainer = Instance.new("Frame")
-mgmtContainer.Size = UDim2.new(1, 0, 0, 160) -- Tinggi fix 160px
-mgmtContainer.BackgroundTransparency = 1
-mgmtContainer.Parent = configMgmt
-
--- Tombol 1: Save Config
-local saveBtn = makeLynxBtn(mgmtContainer, "Save Config Now", function()
+-- 1. Tombol Save
+S.Comp.makeSolidButton(configMgmt, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
-saveBtn.Position = UDim2.new(0, 12, 0, 6)
 
--- Tombol 2: Reset to Default
-local resetBtn = makeLynxBtn(mgmtContainer, "Reset to Default", function()
+-- 2. Tombol Reset
+local resetBtn = S.Comp.makeSolidButton(configMgmt, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
         resetBtn.BackgroundColor3 = C.yellow
@@ -891,42 +861,22 @@ local resetBtn = makeLynxBtn(mgmtContainer, "Reset to Default", function()
         resetBtn.BackgroundColor3 = C.bg4
     end
 end)
-resetBtn.Position = UDim2.new(0, 12, 0, 46)
 
--- Tombol 3: Delete Config File
-local deleteBtn = makeLynxBtn(mgmtContainer, "Delete Config File", function()
+-- 3. Teks Info (Peringatan) di bawah Reset
+S.Comp.makeInfoText(configMgmt, "⚠️ Note: After reset, some UI elements will update immediately. Character stats may require Rejoin/Respawn.")
+
+-- 4. Garis Pemisah
+S.Comp.makeThinLine(configMgmt)
+
+-- 5. Tombol Delete
+S.Comp.makeSolidButton(configMgmt, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
     end
 end)
-deleteBtn.Position = UDim2.new(0, 12, 0, 86)
-
--- Garis Pemisah (Opsional)
-local sepLine = Instance.new("Frame")
-sepLine.Size = UDim2.new(1, -24, 0, 1)
-sepLine.Position = UDim2.new(0, 12, 0, 126)
-sepLine.BackgroundColor3 = C.stroke
-sepLine.BackgroundTransparency = 0.5
-sepLine.BorderSizePixel = 0
-sepLine.Parent = mgmtContainer
-
--- Teks Deskripsi (Info)
-local infoText = Instance.new("TextLabel")
-infoText.Size = UDim2.new(1, -24, 0, 0)
-infoText.Position = UDim2.new(0, 12, 0, 134)
-infoText.BackgroundTransparency = 1
-infoText.Text = "Note: After reset, some UI elements will update immediately.\nCharacter stats require Rejoin/Respawn."
-infoText.TextColor3 = C.textDim
-infoText.TextSize = 9
-infoText.Font = F.norm
-infoText.TextWrapped = true
-infoText.TextXAlignment = Enum.TextXAlignment.Left
-infoText.TextYAlignment = Enum.TextYAlignment.Top
-infoText.AutomaticSize = Enum.AutomaticSize.Y
-infoText.Parent = mgmtContainer
 
 task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
-            
+
 -- ============================================================
 -- DRAG MAIN FRAME (Pakai Header)
 -- ============================================================
