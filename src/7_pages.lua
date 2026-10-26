@@ -1,7 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v3.0)
-  - Full Copy Lynx Config Management (Manual Frame)
+  [7] PAGES — Command An Army (v4.1 Lynx Real Copy)
 ============================================================
 ]]
 
@@ -29,7 +28,7 @@ local function save()
 end
 
 -- ============================================================
--- FORCE SECTION AUTO-SIZE
+-- FORCE SECTION AUTO-SIZE (Buat Tab Lain)
 -- ============================================================
 local function forceFixSection(sectionFrame)
     if not sectionFrame then return end
@@ -71,6 +70,7 @@ local function createPage(name)
     page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
+    -- JARAK ANTAR SECTION (4 PIXEL KAYAK LYNX)
     layout.Padding = UDim.new(0, 4)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
@@ -824,56 +824,44 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG (LYNX STYLE MANUAL FRAME)
+-- TAB CONFIG (COPY PASTE LYNX STYLE)
 -- ============================================================
 local cfg = S.Config.Config
 
-local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
-S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
-    cfg.AutoSave = v
-    save()
-end)
-task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
+-- Bikin Card Manual (Tanpa makeSection)
+local configCard = Instance.new("Frame")
+configCard.Name = "ConfigCard"
+configCard.Size = UDim2.new(1, 0, 0, 0) -- Biar otomatis tinggi
+configCard.BackgroundColor3 = C.bg3
+configCard.BackgroundTransparency = 0.15
+configCard.BorderSizePixel = 0
+configCard.AutomaticSize = Enum.AutomaticSize.Y
+configCard.Parent = pages["Config"]
+Instance.new("UICorner", configCard).CornerRadius = UDim.new(0, 6)
 
--- BIKIN CONFIG MANAGEMENT (MANUAL FRAME SEPERTI LYNX)
-local configMgmtSection = Instance.new("Frame")
-configMgmtSection.Name = "Section_ConfigManagement"
-configMgmtSection.Size = UDim2.new(1, 0, 0, 160) -- Tinggi fixed
-configMgmtSection.BackgroundColor3 = C.bg3
-configMgmtSection.BackgroundTransparency = 0.15
-configMgmtSection.BorderSizePixel = 0
-configMgmtSection.Parent = pages["Config"]
-Instance.new("UICorner", configMgmtSection).CornerRadius = UDim.new(0, 6)
+-- Bikin Container Isi (Pake UIListLayout)
+local configContent = Instance.new("Frame")
+configContent.Size = UDim2.new(1, 0, 0, 0)
+configContent.Position = UDim2.new(0, 0, 0, 10) -- Jarak atas
+configContent.BackgroundTransparency = 1
+configContent.AutomaticSize = Enum.AutomaticSize.Y
+configContent.Parent = configCard
 
--- Header Section
-local mgmtHeader = Instance.new("Frame")
-mgmtHeader.Size = UDim2.new(1, 0, 0, 32)
-mgmtHeader.BackgroundTransparency = 1
-mgmtHeader.Parent = configMgmtSection
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 4) -- JARAK ANTAR TOMBOL (4 PIXEL)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Parent = configContent
 
-local mgmtTitle = Instance.new("TextLabel")
-mgmtTitle.Size = UDim2.new(1, -50, 1, 0)
-mgmtTitle.Position = UDim2.new(0, 12, 0, 0)
-mgmtTitle.Text = "Config Management"
-mgmtTitle.TextColor3 = C.text
-mgmtTitle.TextSize = 11
-mgmtTitle.Font = F.bold
-mgmtTitle.TextXAlignment = Enum.TextXAlignment.Left
-mgmtTitle.BackgroundTransparency = 1
-mgmtTitle.Parent = mgmtHeader
+local pad = Instance.new("UIPadding")
+pad.PaddingLeft = UDim.new(0, 12)
+pad.PaddingRight = UDim.new(0, 12)
+pad.PaddingBottom = UDim.new(0, 10)
+pad.Parent = configContent
 
--- Container isi (manual, tanpa UIListLayout biar bisa diatur posisi)
-local mgmtContent = Instance.new("Frame")
-mgmtContent.Size = UDim2.new(1, 0, 0, 128)
-mgmtContent.Position = UDim2.new(0, 0, 0, 32)
-mgmtContent.BackgroundTransparency = 1
-mgmtContent.Parent = configMgmtSection
-
--- Helper Bikin Tombol Manual
-local function createBtn(posY, text, callback)
+-- Helper bikin tombol solid
+local function makeConfigBtn(text, callback)
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, -24, 0, 30)
-    b.Position = UDim2.new(0, 12, 0, posY)
+    b.Size = UDim2.new(1, 0, 0, 32)
     b.BackgroundColor3 = C.bg4
     b.BorderSizePixel = 0
     b.Text = text
@@ -881,7 +869,7 @@ local function createBtn(posY, text, callback)
     b.TextSize = 11
     b.Font = F.norm
     b.AutoButtonColor = false
-    b.Parent = mgmtContent
+    b.Parent = configContent
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
     
     b.MouseButton1Click:Connect(function() pcall(callback) end)
@@ -889,12 +877,12 @@ local function createBtn(posY, text, callback)
 end
 
 -- 1. Tombol Save
-createBtn(0, "Save Config Now", function()
+makeConfigBtn("Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
 
 -- 2. Tombol Reset
-local resetBtn = createBtn(36, "Reset to Default", function()
+local resetBtn = makeConfigBtn("Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
         resetBtn.BackgroundColor3 = C.yellow
@@ -913,30 +901,51 @@ local resetBtn = createBtn(36, "Reset to Default", function()
     end
 end)
 
--- 3. Teks Info
-local infoText = Instance.new("TextLabel")
-infoText.Size = UDim2.new(1, -24, 0, 0)
-infoText.Position = UDim2.new(0, 12, 0, 72)
-infoText.BackgroundTransparency = 1
-infoText.Text = "After reset, some UI elements will update immediately. Character stats may require Rejoin."
-infoText.TextColor3 = C.textDim2
-infoText.TextSize = 9
-infoText.Font = F.norm
-infoText.TextWrapped = true
-infoText.TextXAlignment = Enum.TextXAlignment.Left
-infoText.TextYAlignment = Enum.TextYAlignment.Top
-infoText.AutomaticSize = Enum.AutomaticSize.Y
-infoText.Parent = mgmtContent
+-- 3. Kotak Warning (Perhatian)
+local warnBox = Instance.new("Frame")
+warnBox.Size = UDim2.new(1, 0, 0, 0)
+warnBox.BackgroundColor3 = C.bg2
+warnBox.BackgroundTransparency = 0.5
+warnBox.BorderSizePixel = 0
+warnBox.AutomaticSize = Enum.AutomaticSize.Y
+warnBox.Parent = configContent
+Instance.new("UICorner", warnBox).CornerRadius = UDim.new(0, 5)
 
--- 4. Tombol Delete (di bawah teks, posisi fix)
-local deleteBtn = createBtn(106, "Delete Config File", function()
+local stroke = Instance.new("UIStroke")
+stroke.Color = C.stroke
+stroke.Thickness = 1
+stroke.Transparency = 0.5
+stroke.Parent = warnBox
+
+local warnPad = Instance.new("UIPadding")
+warnPad.PaddingTop = UDim.new(0, 10)
+warnPad.PaddingBottom = UDim.new(0, 10)
+warnPad.PaddingLeft = UDim.new(0, 10)
+warnPad.PaddingRight = UDim.new(0, 10)
+warnPad.Parent = warnBox
+
+local warnText = Instance.new("TextLabel")
+warnText.Size = UDim2.new(1, 0, 0, 0)
+warnText.BackgroundTransparency = 1
+warnText.Text = "⚠️ Perhatian\n\nSetelah melakukan Reset to Default, beberapa setingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk setingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya."
+warnText.TextColor3 = C.textDim
+warnText.TextSize = 10
+warnText.Font = F.norm
+warnText.TextWrapped = true
+warnText.TextXAlignment = Enum.TextXAlignment.Left
+warnText.TextYAlignment = Enum.TextYAlignment.Top
+warnText.AutomaticSize = Enum.AutomaticSize.Y
+warnText.Parent = warnBox
+
+-- 4. Tombol Delete
+makeConfigBtn("Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
     end
 end)
 
 -- ============================================================
--- DRAG MAIN FRAME (Pakai Header)
+-- DRAG MAIN FRAME
 -- ============================================================
 local mainDrag, mainStart, mainPos
 S.GUI.Header.InputBegan:Connect(function(input)
@@ -966,7 +975,7 @@ end)
 -- ============================================================
 switchPage("Combat")
 
--- FIX: Langsung highlight tab Combat pas start
+-- Highlight tab Combat
 for _, t in pairs(tabs) do
     if t.text.Text == "Combat" then
         t.btn.BackgroundColor3 = C.bg3
@@ -992,7 +1001,7 @@ S.GUI.MainFrame.Visible = true
 S.GUI.FloatBtn.Visible = false
 
 -- ============================================================
--- SEARCH FEATURE (FIXED: NO LAG)
+-- SEARCH FEATURE
 -- ============================================================
 if S.GUI.SearchBox then
     S.GUI.SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -1001,26 +1010,17 @@ if S.GUI.SearchBox then
 
         for pageName, page in pairs(pages) do
             for _, section in pairs(page:GetChildren()) do
-                if section.Name:find("Section_") then
-                    local sectionName = string.lower(section.Name:gsub("Section_", ""))
+                if section.Name:find("Section_") or section.Name == "ConfigCard" then
                     local matchFound = false
-
-                    if string.find(sectionName, query) then
-                        matchFound = true
-                    end
-
-                    local content = section:FindFirstChild("Content")
-                    if content then
-                        for _, item in pairs(content:GetChildren()) do
-                            local itemName = ""
-                            if item:IsA("Frame") then
-                                local lbl = item:FindFirstChildWhichIsA("TextLabel")
-                                if lbl then itemName = string.lower(lbl.Text) end
-                            end
-                            if string.find(itemName, query) then
-                                matchFound = true
-                                break
-                            end
+                    
+                    -- Cek isi di dalam Section / Card
+                    for _, item in pairs(section:GetDescendants()) do
+                        if item:IsA("TextLabel") and string.find(string.lower(item.Text), query) then
+                            matchFound = true
+                            break
+                        elseif item:IsA("TextButton") and string.find(string.lower(item.Text), query) then
+                            matchFound = true
+                            break
                         end
                     end
 
