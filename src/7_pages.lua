@@ -1,11 +1,12 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v4.1 Lynx Real Copy)
+  [7] PAGES — Command An Army (v4.2 Final)
 ============================================================
 ]]
 
 local S = _G.STHAIN
 
+-- ✅ SATPAM ANTI-CRASH (Tunggu Config dari repo Logic siap)
 repeat task.wait() until S.Config and S.Config.Combat 
 
 local C = S.Theme.Colors
@@ -70,8 +71,8 @@ local function createPage(name)
     page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
-    -- JARAK ANTAR SECTION (4 PIXEL KAYAK LYNX)
-    layout.Padding = UDim.new(0, 4)
+    -- JARAK ANTAR SECTION (6 PIXEL)
+    layout.Padding = UDim.new(0, 6)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -824,65 +825,28 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG (COPY PASTE LYNX STYLE)
+-- TAB CONFIG (PAKE CUSTOM CARD)
 -- ============================================================
 local cfg = S.Config.Config
 
--- Bikin Card Manual (Tanpa makeSection)
-local configCard = Instance.new("Frame")
-configCard.Name = "ConfigCard"
-configCard.Size = UDim2.new(1, 0, 0, 0) -- Biar otomatis tinggi
-configCard.BackgroundColor3 = C.bg3
-configCard.BackgroundTransparency = 0.15
-configCard.BorderSizePixel = 0
-configCard.AutomaticSize = Enum.AutomaticSize.Y
-configCard.Parent = pages["Config"]
-Instance.new("UICorner", configCard).CornerRadius = UDim.new(0, 6)
+-- 1. SECTION AUTO SAVE (Pake Section Bawaan)
+local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
+S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
+    cfg.AutoSave = v
+    save()
+end)
+task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
--- Bikin Container Isi (Pake UIListLayout)
-local configContent = Instance.new("Frame")
-configContent.Size = UDim2.new(1, 0, 0, 0)
-configContent.Position = UDim2.new(0, 0, 0, 10) -- Jarak atas
-configContent.BackgroundTransparency = 1
-configContent.AutomaticSize = Enum.AutomaticSize.Y
-configContent.Parent = configCard
+-- 2. SECTION CONFIG MANAGEMENT (Pake Custom Card)
+local configContent = S.Comp.makeCustomCard(pages["Config"], "Config Management")
 
-local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 4) -- JARAK ANTAR TOMBOL (4 PIXEL)
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.Parent = configContent
-
-local pad = Instance.new("UIPadding")
-pad.PaddingLeft = UDim.new(0, 12)
-pad.PaddingRight = UDim.new(0, 12)
-pad.PaddingBottom = UDim.new(0, 10)
-pad.Parent = configContent
-
--- Helper bikin tombol solid
-local function makeConfigBtn(text, callback)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 0, 32)
-    b.BackgroundColor3 = C.bg4
-    b.BorderSizePixel = 0
-    b.Text = text
-    b.TextColor3 = C.text
-    b.TextSize = 11
-    b.Font = F.norm
-    b.AutoButtonColor = false
-    b.Parent = configContent
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
-    
-    b.MouseButton1Click:Connect(function() pcall(callback) end)
-    return b
-end
-
--- 1. Tombol Save
-makeConfigBtn("Save Config Now", function()
+-- A. Tombol Save
+S.Comp.makeCustomBtn(configContent, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
 
--- 2. Tombol Reset
-local resetBtn = makeConfigBtn("Reset to Default", function()
+-- B. Tombol Reset
+local resetBtn = S.Comp.makeCustomBtn(configContent, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
         resetBtn.BackgroundColor3 = C.yellow
@@ -901,44 +865,11 @@ local resetBtn = makeConfigBtn("Reset to Default", function()
     end
 end)
 
--- 3. Kotak Warning (Perhatian)
-local warnBox = Instance.new("Frame")
-warnBox.Size = UDim2.new(1, 0, 0, 0)
-warnBox.BackgroundColor3 = C.bg2
-warnBox.BackgroundTransparency = 0.5
-warnBox.BorderSizePixel = 0
-warnBox.AutomaticSize = Enum.AutomaticSize.Y
-warnBox.Parent = configContent
-Instance.new("UICorner", warnBox).CornerRadius = UDim.new(0, 5)
+-- C. Kotak Warning
+S.Comp.makeCustomWarn(configContent, "⚠️ Perhatian\n\nSetelah melakukan Reset to Default, beberapa setingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk setingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya.")
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = C.stroke
-stroke.Thickness = 1
-stroke.Transparency = 0.5
-stroke.Parent = warnBox
-
-local warnPad = Instance.new("UIPadding")
-warnPad.PaddingTop = UDim.new(0, 10)
-warnPad.PaddingBottom = UDim.new(0, 10)
-warnPad.PaddingLeft = UDim.new(0, 10)
-warnPad.PaddingRight = UDim.new(0, 10)
-warnPad.Parent = warnBox
-
-local warnText = Instance.new("TextLabel")
-warnText.Size = UDim2.new(1, 0, 0, 0)
-warnText.BackgroundTransparency = 1
-warnText.Text = "⚠️ Perhatian\n\nSetelah melakukan Reset to Default, beberapa setingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk setingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya."
-warnText.TextColor3 = C.textDim
-warnText.TextSize = 10
-warnText.Font = F.norm
-warnText.TextWrapped = true
-warnText.TextXAlignment = Enum.TextXAlignment.Left
-warnText.TextYAlignment = Enum.TextYAlignment.Top
-warnText.AutomaticSize = Enum.AutomaticSize.Y
-warnText.Parent = warnBox
-
--- 4. Tombol Delete
-makeConfigBtn("Delete Config File", function()
+-- D. Tombol Delete
+S.Comp.makeCustomBtn(configContent, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
     end
@@ -1010,17 +941,25 @@ if S.GUI.SearchBox then
 
         for pageName, page in pairs(pages) do
             for _, section in pairs(page:GetChildren()) do
-                if section.Name:find("Section_") or section.Name == "ConfigCard" then
+                if section.Name:find("Section_") or section.Name:find("CustomCard_") then
                     local matchFound = false
                     
-                    -- Cek isi di dalam Section / Card
-                    for _, item in pairs(section:GetDescendants()) do
-                        if item:IsA("TextLabel") and string.find(string.lower(item.Text), query) then
-                            matchFound = true
-                            break
-                        elseif item:IsA("TextButton") and string.find(string.lower(item.Text), query) then
-                            matchFound = true
-                            break
+                    -- Cek nama section/card
+                    local sectionName = string.lower(section.Name:gsub("Section_", ""):gsub("CustomCard_", ""))
+                    if string.find(sectionName, query) then
+                        matchFound = true
+                    end
+                    
+                    -- Cek isi di dalamnya
+                    if not matchFound then
+                        for _, item in pairs(section:GetDescendants()) do
+                            if item:IsA("TextLabel") and string.find(string.lower(item.Text), query) then
+                                matchFound = true
+                                break
+                            elseif item:IsA("TextButton") and string.find(string.lower(item.Text), query) then
+                                matchFound = true
+                                break
+                            end
                         end
                     end
 
