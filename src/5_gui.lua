@@ -1,10 +1,9 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v2.2)
-  - Size: 460x320
-  - Fix gethui crash on mobile
-  - Anti-Double GUI
-  - Separate Header for drag handle
+  [5] GUI (Flow Hub v3.0)
+  - PC & Mobile Detection
+  - Resize Handle (PC Only)
+  - Rounded Float Button
 ============================================================
 ]]
 
@@ -12,15 +11,27 @@ local S = _G.STHAIN
 local C = S.Theme.Colors
 local I = S.Theme.Icons
 local F = S.Theme.Font
+local UIS = game:GetService("UserInputService")
 
--- FIX 1: Anti-Double GUI & Anti-Crash gethui
+-- Deteksi Platform
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+
+-- Setup Ukuran
+local DEFAULT_SIZE, MIN_SIZE, MAX_SIZE
+if isMobile then
+    DEFAULT_SIZE = UDim2.new(0, 420, 0, 280)
+    MIN_SIZE = Vector2.new(380, 250)
+    MAX_SIZE = Vector2.new(600, 450)
+else
+    DEFAULT_SIZE = UDim2.new(0, 560, 0, 360)
+    MIN_SIZE = Vector2.new(480, 320)
+    MAX_SIZE = Vector2.new(1000, 700)
+end
+
+-- Anti-Crash gethui
 local parentGui
 local ok, hui = pcall(function() return gethui and gethui() end)
-if ok and hui then
-    parentGui = hui
-else
-    parentGui = game:GetService("CoreGui")
-end
+if ok and hui then parentGui = hui else parentGui = game:GetService("CoreGui") end
 
 local oldGui = parentGui:FindFirstChild("FlowHub")
 if oldGui then oldGui:Destroy() end
@@ -32,7 +43,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parentGui
 
 -- ============================================================
--- FLOAT BUTTON
+-- FLOAT BUTTON (Dibikin Bulat / Rounded)
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Size = UDim2.new(0, 48, 0, 48)
@@ -43,9 +54,18 @@ floatBtn.BorderSizePixel = 0
 floatBtn.AutoButtonColor = false
 floatBtn.Parent = gui
 
+local fBg = Instance.new("Frame")
+fBg.Size = UDim2.new(1, 0, 1, 0)
+fBg.BackgroundColor3 = C.bg2
+fBg.BackgroundTransparency = 0.2
+fBg.BorderSizePixel = 0
+fBg.Parent = floatBtn
+Instance.new("UICorner", fBg).CornerRadius = UDim.new(1, 0) -- Bikin bulat sempurna
+
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
-fIcon.Size = UDim2.new(1, 0, 1, 0)
+fIcon.Size = UDim2.new(0.6, 0, 0.6, 0)
+fIcon.Position = UDim2.new(0.2, 0, 0.2, 0)
 fIcon.BackgroundTransparency = 1
 fIcon.BorderSizePixel = 0
 fIcon.Image = I.logo
@@ -56,38 +76,31 @@ fIcon.Parent = floatBtn
 -- DRAG FLOAT BUTTON
 local dragging, dragStart, startPos
 floatBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = floatBtn.Position
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
     end
 end)
 floatBtn.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         if dragging then
             local delta = input.Position - dragStart
-            floatBtn.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
+            floatBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end
 end)
 
 -- ============================================================
--- MAIN FRAME (Size: 460x320)
+-- MAIN FRAME
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 460, 0, 320)
-mainFrame.Position = UDim2.new(0.5, -230, 0.5, -160)
+mainFrame.Size = DEFAULT_SIZE
+mainFrame.Position = UDim2.new(0.5, -DEFAULT_SIZE.X.Offset / 2, 0.5, -DEFAULT_SIZE.Y.Offset / 2)
 mainFrame.BackgroundColor3 = C.panel
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
@@ -101,6 +114,46 @@ mStroke.Color = C.stroke
 mStroke.Thickness = 1
 mStroke.Transparency = 0.3
 mStroke.Parent = mainFrame
+
+-- ============================================================
+-- RESIZE HANDLE (Khusus PC)
+-- ============================================================
+if not isMobile then
+    local resizeHandle = Instance.new("TextButton")
+    resizeHandle.Name = "ResizeHandle"
+    resizeHandle.Size = UDim2.new(0, 18, 0, 18)
+    resizeHandle.Position = UDim2.new(1, 0, 1, 0)
+    resizeHandle.AnchorPoint = Vector2.new(1, 1)
+    resizeHandle.BackgroundTransparency = 1
+    resizeHandle.Text = "◢"
+    resizeHandle.TextColor3 = C.textDim
+    resizeHandle.TextSize = 14
+    resizeHandle.ZIndex = 100
+    resizeHandle.Parent = mainFrame
+    
+    local resizing = false
+    local resizeStart, startSize
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = true
+            resizeStart = input.Position
+            startSize = mainFrame.Size
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - resizeStart
+            local newW = math.clamp(startSize.X.Offset + delta.X, MIN_SIZE.X, MAX_SIZE.X)
+            local newH = math.clamp(startSize.Y.Offset + delta.Y, MIN_SIZE.Y, MAX_SIZE.Y)
+            mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = false
+        end
+    end)
+end
 
 -- ============================================================
 -- HEADER (Drag Handle)
@@ -193,7 +246,7 @@ line1.Parent = mainFrame
 -- ============================================================
 -- SEARCH + TITLE + ACCENT LINE + GARIS 2
 -- ============================================================
-local ROW_Y = HEADER_H + 8  -- 44
+local ROW_Y = HEADER_H + 8
 
 local searchFrame = Instance.new("Frame")
 searchFrame.Size = UDim2.new(0, 160, 0, 26)
@@ -258,7 +311,7 @@ line2.Parent = mainFrame
 -- ============================================================
 -- SIDEBAR (TRANSPARAN)
 -- ============================================================
-local SIDEBAR_Y = ROW_Y + 38  -- 82
+local SIDEBAR_Y = ROW_Y + 38
 
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
@@ -317,4 +370,5 @@ S.GUI = {
     SearchBox = searchBox,
     MinBtn = minBtn,
     CloseBtn = nil,
+    IsMobile = isMobile,
 }
