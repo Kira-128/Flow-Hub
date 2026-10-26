@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v2.3 Automation Update)
+  [7] PAGES — Command An Army (v2.4 Final UI)
 ============================================================
 ]]
 
@@ -677,14 +677,10 @@ S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(
 end)
 task.defer(function() task.wait(0.1) forceFixSection(evolveSection) end)
 
--- 4. REWARDS SECTION
+-- 4. REWARDS SECTION (Daily Login digabung ke Quest)
 local rewardSection = S.Comp.makeSection(pages["Automation"], "Rewards", false)
-S.Comp.makeToggle(rewardSection, "Auto Quest Reward", AA.AutoReward == true, function(v) 
+S.Comp.makeToggle(rewardSection, "Auto Quest & Daily", AA.AutoReward == true, function(v) 
     AA.AutoReward = v 
-    save() 
-end)
-S.Comp.makeToggle(rewardSection, "Auto Daily Login", AA.AutoDailyReward == true, function(v) 
-    AA.AutoDailyReward = v 
     save() 
 end)
 task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
@@ -714,38 +710,36 @@ codeBox.ClearTextOnFocus = false
 codeBox.Parent = codeInputContainer
 Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
 
--- Dropdown Available Codes
-local codeDropdown = makeDynamicDropdown(codeSection, "Available Codes", {"None"}, function(val)
-    if val ~= "None" and val ~= "Failed to fetch" then
+-- Dropdown Available Codes (Otomatis Fetch)
+local codeDropdown = makeDynamicDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
+    if val ~= "Fetching..." and val ~= "None" then
         codeBox.Text = val
+    end
+end)
+
+-- Auto Fetch pas halaman dibuka
+task.spawn(function()
+    task.wait(2) -- Tunggu UI ready
+    if _G.STHAIN.FetchCodesSmart then
+        local codes = _G.STHAIN.FetchCodesSmart()
+        if codes and #codes > 0 then
+            codeDropdown.UpdateOptions(codes)
+        else
+            codeDropdown.UpdateOptions({"No Codes"})
+        end
     end
 end)
 
 -- Button Claim
 S.Comp.makeButton(codeSection, "Claim Code", function()
     local code = codeBox.Text
-    if code ~= "" and code ~= "None" then
+    if code ~= "" and code ~= "Fetching..." and code ~= "None" then
         local Remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Shared") and game:GetService("ReplicatedStorage").Shared:FindFirstChild("Remotes")
         local RedeemCode = Remotes and Remotes:FindFirstChild("RedeemCode")
         if RedeemCode then
             pcall(function() RedeemCode:InvokeServer(code) end)
         end
     end
-end)
-
--- Button Fetch
-S.Comp.makeButton(codeSection, "Fetch Latest Codes", function()
-    codeDropdown.UpdateOptions({"Loading..."})
-    task.spawn(function()
-        if _G.STHAIN.FetchCodesSmart then
-            local codes = _G.STHAIN.FetchCodesSmart()
-            if codes and #codes > 0 then
-                codeDropdown.UpdateOptions(codes)
-            else
-                codeDropdown.UpdateOptions({"Failed to fetch"})
-            end
-        end
-    end)
 end)
 task.defer(function() task.wait(0.1) forceFixSection(codeSection) end)
 
@@ -845,8 +839,25 @@ local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", fals
 S.Comp.makeButton(configMgmt, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
-S.Comp.makeButton(configMgmt, "Delete Config", function()
-    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then _G.STHAIN.Utils.DeleteConfig() end
+S.Comp.makeButton(configMgmt, "Reset to Default", function()
+    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
+        _G.STHAIN.Utils.DeleteConfig()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Config",
+            Text = "Config berhasil di-reset. Silakan rejoin game.",
+            Duration = 5
+        })
+    end
+end)
+S.Comp.makeButton(configMgmt, "Delete Config File", function()
+    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
+        _G.STHAIN.Utils.DeleteConfig()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Config",
+            Text = "File config dihapus. Silakan rejoin game.",
+            Duration = 5
+        })
+    end
 end)
 task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
