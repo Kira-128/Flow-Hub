@@ -1,12 +1,20 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v4.8 Final Full)
+  [7] PAGES — Command An Army (v4.8 FIXED)
+  - Pake Dropdown Panah baru + UpdateOptions
+  - Config Management Rapi
+  - Efek Klik Tombol
+  - FIX: resetBtn nil (makeButton return)
+  - FIX: C.yellow nil fallback
+  - FIX: config or {} guard
+  - FIX: Supply dropdown auto-refresh
+  - FIX: pakai recalc return dari makeSection
 ============================================================
 ]]
 
 local S = _G.STHAIN
 
-repeat task.wait() until S.Config and S.Config.Combat 
+repeat task.wait() until S.Config and S.Config.Combat
 
 local C = S.Theme.Colors
 local I = S.Theme.Icons
@@ -15,6 +23,9 @@ local F = S.Theme.Font
 local UIS = S.Services.UIS or game:GetService("UserInputService")
 local Run = S.Services.Run or game:GetService("RunService")
 local TS = S.Services.TS or game:GetService("TweenService")
+
+-- FIX: fallback warna kuning (kalau C.yellow gak ada)
+local YELLOW = C.yellow or (S.Comp and S.Comp.FallbackYellow) or Color3.fromRGB(255, 170, 0)
 
 local pages = {}
 local tabs = {}
@@ -28,7 +39,7 @@ local function save()
 end
 
 -- ============================================================
--- FORCE SECTION AUTO-SIZE
+-- FORCE SECTION AUTO-SIZE (Legacy fallback, sekarang pakai recalc)
 -- ============================================================
 local function forceFixSection(sectionFrame)
     if not sectionFrame then return end
@@ -70,7 +81,7 @@ local function createPage(name)
     page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 4) -- Jarak 4px
+    layout.Padding = UDim.new(0, 4)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -186,11 +197,20 @@ makeTab(I.settings, "Settings")
 makeTab(I.config, "Config")
 
 -- ============================================================
+-- FIX: Config guards (semua pakai or {})
+-- ============================================================
+local CC = S.Config.Combat or {}
+local SS = S.Config.Spawn or {}
+local VV = S.Config.Visual or {}
+local TT = S.Config.Teleport or {}
+local AA = S.Config.Automation or {}
+local MM = S.Config.Movement or {}
+local XX = S.Config.Misc or {}
+local cfg = S.Config.Config or {}
+
+-- ============================================================
 -- TAB COMBAT
 -- ============================================================
-local CC = S.Config.Combat
-local SS = S.Config.Spawn
-
 local autoCombat = S.Comp.makeSection(pages["Combat"], "Auto Combat", false)
 S.Comp.makeToggle(autoCombat, "Auto Attack (V)", CC.AutoAttack == true, function(v) CC.AutoAttack = v save() end)
 S.Comp.makeToggle(autoCombat, "Auto Rush (B)", CC.AutoRush == true, function(v) CC.AutoRush = v save() end)
@@ -202,12 +222,14 @@ S.Comp.makeDropdown(spawnSection, "Unit Slot", {"1", "2", "3", "4"}, function(v)
     SS.UnitSlot = tonumber(v) or 1
     save()
 end)
+
 makeSectionButton(spawnSection, "Spawn Unit", function()
     if _G.STHAIN.SpawnUnit then _G.STHAIN.SpawnUnit(SS.UnitSlot) end
 end)
-S.Comp.makeToggle(spawnSection, "Auto Respawn [BETA]", SS.AutoSpawn == true, function(v) 
-    SS.AutoSpawn = v 
-    save() 
+
+S.Comp.makeToggle(spawnSection, "Auto Respawn [BETA]", SS.AutoSpawn == true, function(v)
+    SS.AutoSpawn = v
+    save()
 end)
 task.defer(function() task.wait(0.1) forceFixSection(spawnSection) end)
 
@@ -227,8 +249,6 @@ task.defer(function() task.wait(0.1) forceFixSection(combatDelay) end)
 -- ============================================================
 -- TAB ESP
 -- ============================================================
-local VV = S.Config.Visual
-
 local enableEsp = S.Comp.makeSection(pages["Esp"], "Enable Esp", false)
 S.Comp.makeToggle(enableEsp, "Enable Esp", VV.Chams == true, function(v) VV.Chams = v save() end)
 task.defer(function() task.wait(0.1) forceFixSection(enableEsp) end)
@@ -247,8 +267,6 @@ task.defer(function() task.wait(0.1) forceFixSection(espObject) end)
 -- ============================================================
 -- TAB TELEPORT
 -- ============================================================
-local TT = S.Config.Teleport
-
 local tpCapture = S.Comp.makeSection(pages["Teleport"], "Capture Point", false)
 S.Comp.makeButton(tpCapture, "TP to Nearest Capture", function()
     if _G.STHAIN.TeleportToNearestCapture then _G.STHAIN.TeleportToNearestCapture() end
@@ -273,40 +291,89 @@ S.Comp.makeButton(tpPlayer, "TP to Teammate", function()
 end)
 task.defer(function() task.wait(0.1) forceFixSection(tpPlayer) end)
 
+-- ============================================================
+-- FIX: Supply Enemy + Owner (dynamic dropdown + auto-refresh)
+-- ============================================================
 local supplyEnemySection = S.Comp.makeSection(pages["Teleport"], "Supply Enemy", false)
-S.Comp.makeDropdown(supplyEnemySection, "Supply Target", {"None"}, function(v)
+
+local updateSupplyEnemy = S.Comp.makeDropdown(supplyEnemySection, "Supply Target", {"None"}, function(v)
     TT.EnemySupplyTarget = v
     save()
 end)
+
 makeSectionButton(supplyEnemySection, "TP Supply Enemy", function()
-    if _G.STHAIN.TeleportToSupplyEnemy then _G.STHAIN.TeleportToSupplyEnemy(TT.EnemySupplyTarget or "") end
+    if _G.STHAIN.TeleportToSupplyEnemy then
+        _G.STHAIN.TeleportToSupplyEnemy(TT.EnemySupplyTarget or "")
+    end
 end)
 task.defer(function() task.wait(0.1) forceFixSection(supplyEnemySection) end)
 
 local supplyOwnerSection = S.Comp.makeSection(pages["Teleport"], "Supply Owner", false)
-S.Comp.makeDropdown(supplyOwnerSection, "Supply Target", {"None"}, function(v)
+
+local updateSupplyOwner = S.Comp.makeDropdown(supplyOwnerSection, "Supply Target", {"None"}, function(v)
     TT.OwnerSupplyTarget = v
     save()
 end)
+
 makeSectionButton(supplyOwnerSection, "TP Supply Owner", function()
-    if _G.STHAIN.TeleportToSupplyOwner then _G.STHAIN.TeleportToSupplyOwner(TT.OwnerSupplyTarget or "") end
+    if _G.STHAIN.TeleportToSupplyOwner then
+        _G.STHAIN.TeleportToSupplyOwner(TT.OwnerSupplyTarget or "")
+    end
 end)
 task.defer(function() task.wait(0.1) forceFixSection(supplyOwnerSection) end)
 
 -- ============================================================
+-- DYNAMIC SUPPLY REFRESH LOOP
+-- ============================================================
+-- Cari supply di workspace. Filter bisa disesuaikan sama struktur game.
+local function collectSupplyNames()
+    local names = {}
+    local seen = {}
+    pcall(function()
+        for _, obj in pairs(workspace:GetDescendants()) do
+            local n = obj.Name
+            if n and (n:find("Supply") or n:find("Crate") or n:find("Drop")) then
+                if not seen[n] then
+                    seen[n] = true
+                    table.insert(names, n)
+                end
+            end
+        end
+    end)
+    table.sort(names)
+    local list = {"None"}
+    for _, n in ipairs(names) do table.insert(list, n) end
+    return list
+end
+
+local lastSupplyHash = ""
+
+task.spawn(function()
+    while task.wait(2) do
+        local list = collectSupplyNames()
+        local hash = table.concat(list, "|")
+        if hash ~= lastSupplyHash then
+            lastSupplyHash = hash
+            pcall(updateSupplyEnemy, list, true)
+            pcall(updateSupplyOwner, list, true)
+        end
+    end
+end)
+
+-- ============================================================
 -- TAB AUTOMATION
 -- ============================================================
-local AA = S.Config.Automation or {}
-
 local summonSection = S.Comp.makeSection(pages["Automation"], "Summon", false)
-S.Comp.makeToggle(summonSection, "Auto Summon (Direct)", AA.AutoSummon == true, function(v) 
-    AA.AutoSummon = v 
-    save() 
+S.Comp.makeToggle(summonSection, "Auto Summon (Direct)", AA.AutoSummon == true, function(v)
+    AA.AutoSummon = v
+    save()
 end)
+
 S.Comp.makeDropdown(summonSection, "Summon Amount", {"1x", "10x"}, function(val)
     AA.SummonAmount = val
     save()
 end)
+
 S.Comp.makeInput(summonSection, "Keep Gems", AA.KeepGems or 0, function(v)
     AA.KeepGems = v
     save()
@@ -314,46 +381,67 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(summonSection) end)
 
 local ascendSection = S.Comp.makeSection(pages["Automation"], "Ascend", false)
-S.Comp.makeToggle(ascendSection, "Auto Ascend", AA.AutoAscend == true, function(v) 
-    AA.AutoAscend = v 
-    save() 
+S.Comp.makeToggle(ascendSection, "Auto Ascend", AA.AutoAscend == true, function(v)
+    AA.AutoAscend = v
+    save()
 end)
 task.defer(function() task.wait(0.1) forceFixSection(ascendSection) end)
 
 local evolveSection = S.Comp.makeSection(pages["Automation"], "Evolve", false)
-S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(v) 
-    AA.AutoEvolve = v 
-    save() 
+S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(v)
+    AA.AutoEvolve = v
+    save()
 end)
 task.defer(function() task.wait(0.1) forceFixSection(evolveSection) end)
 
 local rewardSection = S.Comp.makeSection(pages["Automation"], "Rewards", false)
-S.Comp.makeToggle(rewardSection, "Auto Quest & Daily", AA.AutoReward == true, function(v) 
-    AA.AutoReward = v 
-    save() 
+S.Comp.makeToggle(rewardSection, "Auto Quest & Daily", AA.AutoReward == true, function(v)
+    AA.AutoReward = v
+    save()
 end)
 task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
 
 local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
-S.Comp.makeInput(codeSection, "Code", "", function(v)
-    -- Nanti logika save code-nya
-end)
-S.Comp.makeButton(codeSection, "Claim Code", function()
-    -- Nanti logika redeem-nya
-end)
+
+local codeBox = Instance.new("TextBox")
+codeBox.Size = UDim2.new(1, -24, 0, 24)
+codeBox.BackgroundColor3 = C.bg4
+codeBox.BorderSizePixel = 0
+codeBox.Text = ""
+codeBox.PlaceholderText = "Enter A Code..."
+codeBox.TextColor3 = C.text
+codeBox.PlaceholderColor3 = C.textDim2
+codeBox.TextSize = 11
+codeBox.Font = F.norm
+codeBox.ClearTextOnFocus = false
+codeBox.Parent = codeSection
+Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
+codeBox.Position = UDim2.new(0, 12, 0, 0)
 task.defer(function() task.wait(0.1) forceFixSection(codeSection) end)
+
+S.Comp.makeButton(codeSection, "Claim Code", function()
+    local code = codeBox.Text
+    if code ~= "" then
+        local RS = game:GetService("ReplicatedStorage")
+        local Shared = RS:FindFirstChild("Shared")
+        local Remotes = Shared and Shared:FindFirstChild("Remotes")
+        local RedeemCode = Remotes and Remotes:FindFirstChild("RedeemCode")
+        if RedeemCode then
+            pcall(function() RedeemCode:InvokeServer(code) end)
+        else
+            warn("[STHAIN] RedeemCode remote tidak ditemukan")
+        end
+    end
+end)
 
 -- ============================================================
 -- TAB SETTINGS
 -- ============================================================
-local MM = S.Config.Movement
-local XX = S.Config.Misc
-
 local utilityContent = S.Comp.makeSection(pages["Settings"], "Player Utility", false)
 S.Comp.makeInput(utilityContent, "Speed Value", MM.WalkSpeed, function(v) MM.WalkSpeed = v save() end)
-S.Comp.makeToggle(utilityContent, "Enable Run Speed", MM.EnableRunSpeed == true, function(v) 
-    MM.EnableRunSpeed = v 
-    save() 
+S.Comp.makeToggle(utilityContent, "Enable Run Speed", MM.EnableRunSpeed == true, function(v)
+    MM.EnableRunSpeed = v
+    save()
 end)
 S.Comp.makeToggle(utilityContent, "No Clip", MM.Noclip == true, function(v) MM.Noclip = v save() end)
 S.Comp.makeToggle(utilityContent, "Fly", MM.Fly == true, function(v) MM.Fly = v save() end)
@@ -426,8 +514,6 @@ task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 -- ============================================================
 -- TAB CONFIG
 -- ============================================================
-local cfg = S.Config.Config
-
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
     cfg.AutoSave = v
@@ -441,29 +527,34 @@ S.Comp.makeButton(configMgmt, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
 
+-- FIX: resetBtn sekarang valid karena makeButton return btn
 local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
+    if not resetBtn then return end
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = C.yellow -- Efek Oranye/Kuning
+        resetBtn.BackgroundColor3 = YELLOW
+        resetBtn.BackgroundTransparency = 0.4
         task.delay(3, function()
-            if resetBtn.Text == "Click Again to Confirm" then
+            if resetBtn and resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
                 resetBtn.BackgroundColor3 = C.bg4
+                resetBtn.BackgroundTransparency = 1
             end
         end)
     elseif resetBtn.Text == "Click Again to Confirm" then
-        if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
+        if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then
             _G.STHAIN.Utils.DeleteConfig()
         end
         resetBtn.Text = "Reset to Default"
         resetBtn.BackgroundColor3 = C.bg4
+        resetBtn.BackgroundTransparency = 1
     end
 end)
 
 S.Comp.makeText(configMgmt, "⚠️ Note:\nReset applies UI changes immediately. You must Rejoin or Respawn for character stats and in-game features to take effect.")
 
 S.Comp.makeButton(configMgmt, "Delete Config File", function()
-    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
+    if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then
         _G.STHAIN.Utils.DeleteConfig()
     end
 end)
@@ -535,18 +626,18 @@ if S.GUI.SearchBox then
             for _, section in pairs(page:GetChildren()) do
                 if section.Name:find("Section_") then
                     local matchFound = false
-                    
+
                     local sectionName = string.lower(section.Name:gsub("Section_", ""))
-                    if string.find(sectionName, query) then
+                    if string.find(sectionName, query, 1, true) then
                         matchFound = true
                     end
-                    
+
                     if not matchFound then
                         for _, item in pairs(section:GetDescendants()) do
-                            if item:IsA("TextLabel") and string.find(string.lower(item.Text), query) then
+                            if item:IsA("TextLabel") and string.find(string.lower(item.Text), query, 1, true) then
                                 matchFound = true
                                 break
-                            elseif item:IsA("TextButton") and string.find(string.lower(item.Text), query) then
+                            elseif item:IsA("TextButton") and string.find(string.lower(item.Text), query, 1, true) then
                                 matchFound = true
                                 break
                             end
@@ -555,10 +646,10 @@ if S.GUI.SearchBox then
 
                     if matchFound then
                         switchPage(pageName)
-                        if S.GUI.ContentTitle then 
-                            S.GUI.ContentTitle.Text = pageName 
+                        if S.GUI.ContentTitle then
+                            S.GUI.ContentTitle.Text = pageName
                         end
-                        
+
                         for _, t in pairs(tabs) do
                             if t.text.Text == pageName then
                                 t.btn.BackgroundColor3 = S.Theme.Colors.bg3
