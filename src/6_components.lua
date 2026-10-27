@@ -1,9 +1,9 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub v2.3 - Final Layout)
+  [6] COMPONENTS (Flow Hub v2.4 - Final Layout)
   - Jarak Item 3px
   - Button Solid + Flash Putih
-  - Dropdown Panah ▼
+  - Dropdown Panah Mint + Auto Update
 ============================================================
 ]]
 
@@ -234,7 +234,7 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (Dengan Panah ▼)
+-- DROPDOWN (Panah Mint + UpdateOptions)
 -- ============================================================
 function Comp.makeDropdown(parent, name, options, callback)
     local f = Instance.new("Frame")
@@ -277,11 +277,12 @@ function Comp.makeDropdown(parent, name, options, callback)
     selectedText.BackgroundTransparency = 1
     selectedText.Parent = selected
 
+    -- Panah Mint ▼
     local arrow = Instance.new("TextLabel")
     arrow.Size = UDim2.new(0, 20, 1, 0)
     arrow.Position = UDim2.new(1, -24, 0, 0)
     arrow.Text = "▼"
-    arrow.TextColor3 = C.textDim
+    arrow.TextColor3 = C.accent -- Warna Mint
     arrow.TextSize = 10
     arrow.Font = F.bold
     arrow.BackgroundTransparency = 1
@@ -301,32 +302,52 @@ function Comp.makeDropdown(parent, name, options, callback)
     popLayout.Padding = UDim.new(0, 2)
     popLayout.Parent = popup
 
-    for i, opt in ipairs(options) do
-        local optBtn = Instance.new("TextButton")
-        optBtn.Size = UDim2.new(1, -8, 0, 26)
-        optBtn.Text = opt
-        optBtn.TextColor3 = C.text
-        optBtn.TextSize = 11
-        optBtn.Font = F.norm
-        optBtn.BackgroundColor3 = C.bg4
-        optBtn.BorderSizePixel = 0
-        optBtn.ZIndex = 51
-        optBtn.Parent = popup
-        Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
+    local currentValue = options[1] or "None"
 
-        optBtn.MouseButton1Click:Connect(function()
-            selectedText.Text = opt
-            popup.Visible = false
-            pcall(callback, opt)
-        end)
+    local function rebuildOptions(opts)
+        for _, child in pairs(popup:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+        for i, opt in ipairs(opts) do
+            local optBtn = Instance.new("TextButton")
+            optBtn.Size = UDim2.new(1, -8, 0, 26)
+            optBtn.Text = opt
+            optBtn.TextColor3 = C.text
+            optBtn.TextSize = 11
+            optBtn.Font = F.norm
+            optBtn.BackgroundColor3 = C.bg4
+            optBtn.BorderSizePixel = 0
+            optBtn.ZIndex = 51
+            optBtn.Parent = popup
+            Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
+
+            optBtn.MouseButton1Click:Connect(function()
+                selectedText.Text = opt
+                currentValue = opt
+                popup.Visible = false
+                pcall(callback, opt)
+            end)
+        end
+        popup.Size = UDim2.new(1, -8, 0, #opts * 28 + 4)
     end
-    popup.Size = UDim2.new(1, -8, 0, #options * 28 + 4)
+
+    rebuildOptions(options)
 
     local isOpen = false
     selected.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         popup.Visible = isOpen
     end)
+
+    -- Return tabel dengan fungsi UpdateOptions
+    return {
+        UpdateOptions = function(newOptions)
+            currentValue = newOptions[1] or "None"
+            selectedText.Text = currentValue
+            rebuildOptions(newOptions)
+        end,
+        GetValue = function() return currentValue end
+    }
 end
 
 -- ============================================================
@@ -389,7 +410,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     content.Parent = card
 
     local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 3) -- JARAK 3 PIXEL
+    contentLayout.Padding = UDim.new(0, 3) -- Jarak 3px
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = content
 
