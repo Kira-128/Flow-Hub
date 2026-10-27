@@ -1,10 +1,8 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub v2.3)
+  [6] COMPONENTS (Flow Hub v2.4)
   - Arrow di kanan
-  - Accent bar dihapus
-  - Animasi instan (tanpa Tween)
-  - Tambah Custom Card, Btn, Warn
+  - Tambah makeText buat deskripsi
 ============================================================
 ]]
 
@@ -379,7 +377,7 @@ function Comp.makeSection(parent, title, defaultOpen)
 end
 
 -- ============================================================
--- CUSTOM CARD (Buat Config Management Manual)
+-- CUSTOM CARD
 -- ============================================================
 function Comp.makeCustomCard(parent, title)
     local card = Instance.new("Frame")
@@ -401,7 +399,7 @@ function Comp.makeCustomCard(parent, title)
     content.Parent = card
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 6) -- Jarak antar elemen (6px)
+    layout.Padding = UDim.new(0, 4) -- 4px sesuai request
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = content
 
@@ -415,7 +413,7 @@ function Comp.makeCustomCard(parent, title)
 end
 
 -- ============================================================
--- CUSTOM BUTTON (Buat di dalem Custom Card)
+-- CUSTOM BUTTON
 -- ============================================================
 function Comp.makeCustomBtn(parent, text, callback)
     local b = Instance.new("TextButton")
@@ -435,7 +433,7 @@ function Comp.makeCustomBtn(parent, text, callback)
 end
 
 -- ============================================================
--- CUSTOM WARNING BOX (Buat di dalem Custom Card)
+-- CUSTOM WARNING BOX
 -- ============================================================
 function Comp.makeCustomWarn(parent, text)
     local box = Instance.new("Frame")
@@ -474,6 +472,33 @@ function Comp.makeCustomWarn(parent, text)
     lbl.Parent = box
 
     return box
+end
+
+-- ============================================================
+-- MAKE TEXT (BARU DITAMBAHIN)
+-- ============================================================
+function Comp.makeText(parent, text, color)
+    local lbl = Instance.new("TextLabel")
+    lbl.Name = "TextDesc"
+    lbl.Size = UDim2.new(1, -24, 0, 0)
+    lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = color or C.textDim2
+    lbl.TextSize = 9
+    lbl.Font = F.norm
+    lbl.TextWrapped = true
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Top
+    lbl.AutomaticSize = Enum.AutomaticSize.Y
+    lbl.Parent = parent
+    
+    local pad = Instance.new("UIPadding")
+    pad.PaddingTop = UDim.new(0, 6)
+    pad.PaddingBottom = UDim.new(0, 6)
+    pad.Parent = lbl
+    
+    return lbl
 end
 
 S.Comp = Comp
