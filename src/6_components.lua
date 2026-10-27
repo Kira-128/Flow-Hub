@@ -1,8 +1,6 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub v2.7 - Clean & Final)
-  - Arrow Dropdown (▼/▶) sama persis kayak Section
-  - Kode dibersihin dari command berlebihan
+  [6] COMPONENTS (Flow Hub v2.7) 
 ============================================================
 ]]
 
@@ -214,7 +212,7 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (Panah Berubah ▼/▶ kayak Section)
+-- DROPDOWN
 -- ============================================================
 function Comp.makeDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -266,7 +264,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     arrow.Size = UDim2.new(0, 20, 1, 0)
     arrow.Position = UDim2.new(1, -24, 0, 0)
     arrow.Text = "▼"
-    arrow.TextColor3 = C.textDim
+    arrow.TextColor3 = C.accent
     arrow.TextSize = 10
     arrow.Font = F.bold
     arrow.BackgroundTransparency = 1
