@@ -1,9 +1,9 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub v2.4 - Final Layout)
-  - Jarak Item 3px
-  - Button Solid + Flash Putih
-  - Dropdown Panah Mint + Auto Update
+  [6] COMPONENTS (Flow Hub v2.5 - Final Layout)
+  - Panah Mint
+  - Dropdown Rapi (Ga Nabrak Input)
+  - Tombol Kotak & Flash
 ============================================================
 ]]
 
@@ -37,9 +37,6 @@ local function recalcSection(card, content)
     card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
 end
 
--- ============================================================
--- HELPER: Auto recalc
--- ============================================================
 local function hookAutoRecalc(card, content)
     content.ChildAdded:Connect(function()
         task.defer(function()
@@ -51,9 +48,6 @@ local function hookAutoRecalc(card, content)
     end)
 end
 
--- ============================================================
--- HELPER: Divider
--- ============================================================
 local function makeDivider(parent)
     local d = Instance.new("Frame")
     d.Name = "Divider"
@@ -182,7 +176,7 @@ function Comp.makeButton(parent, name, callback)
 
     local b = Instance.new("TextButton")
     b.Name = "Button_" .. name
-    b.Size = UDim2.new(1, -12, 0, ITEM_H - 6) -- Margin 6px kiri kanan
+    b.Size = UDim2.new(1, -12, 0, ITEM_H - 6)
     b.Position = UDim2.new(0, 6, 0.5, -(ITEM_H-6)/2)
     b.Text = name
     b.TextColor3 = C.text
@@ -195,7 +189,6 @@ function Comp.makeButton(parent, name, callback)
     b.Parent = wrapper
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
 
-    -- Efek Flash Putih
     local flash = Instance.new("Frame")
     flash.Size = UDim2.new(1, 0, 1, 0)
     flash.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -231,10 +224,12 @@ function Comp.makeButton(parent, name, callback)
             BackgroundTransparency = 0.3
         }):Play()
     end)
+    
+    return b
 end
 
 -- ============================================================
--- DROPDOWN (Panah Mint + UpdateOptions)
+-- DROPDOWN (Persis Pages lama, + Panah Mint)
 -- ============================================================
 function Comp.makeDropdown(parent, name, options, callback)
     local f = Instance.new("Frame")
@@ -256,9 +251,10 @@ function Comp.makeDropdown(parent, name, options, callback)
     l.BackgroundTransparency = 1
     l.Parent = f
 
+    -- Kotak Dropdown (lebar 130px)
     local selected = Instance.new("TextButton")
-    selected.Size = UDim2.new(0.45, -12, 0, 22)
-    selected.Position = UDim2.new(0.52, 0, 0.5, -11)
+    selected.Size = UDim2.new(0, 130, 0, 22)
+    selected.Position = UDim2.new(1, -142, 0.5, -11)
     selected.Text = ""
     selected.BackgroundColor3 = C.bg4
     selected.BorderSizePixel = 0
@@ -266,6 +262,7 @@ function Comp.makeDropdown(parent, name, options, callback)
     selected.Parent = f
     Instance.new("UICorner", selected).CornerRadius = UDim.new(0, 4)
 
+    -- Teks di dalam dropdown (posisi agak ke kiri biar ga nabrak panah)
     local selectedText = Instance.new("TextLabel")
     selectedText.Size = UDim2.new(1, -24, 1, 0)
     selectedText.Position = UDim2.new(0, 8, 0, 0)
@@ -277,20 +274,20 @@ function Comp.makeDropdown(parent, name, options, callback)
     selectedText.BackgroundTransparency = 1
     selectedText.Parent = selected
 
-    -- Panah Mint ▼
+    -- Panah Mint
     local arrow = Instance.new("TextLabel")
     arrow.Size = UDim2.new(0, 20, 1, 0)
     arrow.Position = UDim2.new(1, -24, 0, 0)
     arrow.Text = "▼"
-    arrow.TextColor3 = C.accent -- Warna Mint
+    arrow.TextColor3 = C.accent
     arrow.TextSize = 10
     arrow.Font = F.bold
     arrow.BackgroundTransparency = 1
     arrow.Parent = selected
 
     local popup = Instance.new("Frame")
-    popup.Size = UDim2.new(1, -8, 0, 0)
-    popup.Position = UDim2.new(0, 4, 1, 4)
+    popup.Size = UDim2.new(0, 130, 0, 0)
+    popup.Position = UDim2.new(1, -142, 1, 4)
     popup.BackgroundColor3 = C.bg4
     popup.BorderSizePixel = 0
     popup.Visible = false
@@ -328,7 +325,7 @@ function Comp.makeDropdown(parent, name, options, callback)
                 pcall(callback, opt)
             end)
         end
-        popup.Size = UDim2.new(1, -8, 0, #opts * 28 + 4)
+        popup.Size = UDim2.new(0, 130, 0, #opts * 28 + 4)
     end
 
     rebuildOptions(options)
@@ -339,7 +336,6 @@ function Comp.makeDropdown(parent, name, options, callback)
         popup.Visible = isOpen
     end)
 
-    -- Return tabel dengan fungsi UpdateOptions
     return {
         UpdateOptions = function(newOptions)
             currentValue = newOptions[1] or "None"
@@ -410,7 +406,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     content.Parent = card
 
     local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 3) -- Jarak 3px
+    contentLayout.Padding = UDim.new(0, 3)
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = content
 
