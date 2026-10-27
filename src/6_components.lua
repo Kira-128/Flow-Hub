@@ -1,9 +1,9 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub v2.2)
-  - Jarak 4px antar item
-  - Button pake kotak background
-  - Efek Flash Putih Infinity
+  [6] COMPONENTS (Flow Hub v2.3 - Final Layout)
+  - Jarak Item 3px
+  - Button Solid + Flash Putih
+  - Dropdown Panah ▼
 ============================================================
 ]]
 
@@ -171,7 +171,7 @@ function Comp.makeInput(parent, name, default, callback)
 end
 
 -- ============================================================
--- BUTTON (Dengan Kotak Background & Efek Klik Putih Infinity)
+-- BUTTON (Solid Box + Flash Putih Infinity)
 -- ============================================================
 function Comp.makeButton(parent, name, callback)
     local wrapper = Instance.new("Frame")
@@ -182,8 +182,8 @@ function Comp.makeButton(parent, name, callback)
 
     local b = Instance.new("TextButton")
     b.Name = "Button_" .. name
-    b.Size = UDim2.new(1, -24, 0, ITEM_H - 6) 
-    b.Position = UDim2.new(0, 12, 0.5, -(ITEM_H-6)/2)
+    b.Size = UDim2.new(1, -12, 0, ITEM_H - 6) -- Margin 6px kiri kanan
+    b.Position = UDim2.new(0, 6, 0.5, -(ITEM_H-6)/2)
     b.Text = name
     b.TextColor3 = C.text
     b.TextSize = 11
@@ -234,7 +234,7 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN
+-- DROPDOWN (Dengan Panah ▼)
 -- ============================================================
 function Comp.makeDropdown(parent, name, options, callback)
     local f = Instance.new("Frame")
@@ -256,22 +256,36 @@ function Comp.makeDropdown(parent, name, options, callback)
     l.BackgroundTransparency = 1
     l.Parent = f
 
-    local selected = Instance.new("TextLabel")
-    selected.Size = UDim2.new(0.45, -12, 1, 0)
-    selected.Position = UDim2.new(0.52, 0, 0, 0)
-    selected.Text = options[1] or "None"
-    selected.TextColor3 = C.accent
-    selected.TextSize = 11
-    selected.Font = F.norm
-    selected.TextXAlignment = Enum.TextXAlignment.Right
-    selected.BackgroundTransparency = 1
+    local selected = Instance.new("TextButton")
+    selected.Size = UDim2.new(0.45, -12, 0, 22)
+    selected.Position = UDim2.new(0.52, 0, 0.5, -11)
+    selected.Text = ""
+    selected.BackgroundColor3 = C.bg4
+    selected.BorderSizePixel = 0
+    selected.AutoButtonColor = false
     selected.Parent = f
+    Instance.new("UICorner", selected).CornerRadius = UDim.new(0, 4)
 
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 1, 0)
-    b.Text = ""
-    b.BackgroundTransparency = 1
-    b.Parent = f
+    local selectedText = Instance.new("TextLabel")
+    selectedText.Size = UDim2.new(1, -24, 1, 0)
+    selectedText.Position = UDim2.new(0, 8, 0, 0)
+    selectedText.Text = options[1] or "None"
+    selectedText.TextColor3 = C.text
+    selectedText.TextSize = 11
+    selectedText.Font = F.norm
+    selectedText.TextXAlignment = Enum.TextXAlignment.Left
+    selectedText.BackgroundTransparency = 1
+    selectedText.Parent = selected
+
+    local arrow = Instance.new("TextLabel")
+    arrow.Size = UDim2.new(0, 20, 1, 0)
+    arrow.Position = UDim2.new(1, -24, 0, 0)
+    arrow.Text = "▼"
+    arrow.TextColor3 = C.textDim
+    arrow.TextSize = 10
+    arrow.Font = F.bold
+    arrow.BackgroundTransparency = 1
+    arrow.Parent = selected
 
     local popup = Instance.new("Frame")
     popup.Size = UDim2.new(1, -8, 0, 0)
@@ -301,7 +315,7 @@ function Comp.makeDropdown(parent, name, options, callback)
         Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
 
         optBtn.MouseButton1Click:Connect(function()
-            selected.Text = opt
+            selectedText.Text = opt
             popup.Visible = false
             pcall(callback, opt)
         end)
@@ -309,7 +323,7 @@ function Comp.makeDropdown(parent, name, options, callback)
     popup.Size = UDim2.new(1, -8, 0, #options * 28 + 4)
 
     local isOpen = false
-    b.MouseButton1Click:Connect(function()
+    selected.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         popup.Visible = isOpen
     end)
@@ -375,7 +389,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     content.Parent = card
 
     local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 4) -- Jarak 4 PIXEL
+    contentLayout.Padding = UDim.new(0, 3) -- JARAK 3 PIXEL
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = content
 
