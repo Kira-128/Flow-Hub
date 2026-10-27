@@ -1,12 +1,11 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v4.2 Final)
+  [7] PAGES — Command An Army (v4.8 Final Full)
 ============================================================
 ]]
 
 local S = _G.STHAIN
 
--- ✅ SATPAM ANTI-CRASH (Tunggu Config dari repo Logic siap)
 repeat task.wait() until S.Config and S.Config.Combat 
 
 local C = S.Theme.Colors
@@ -29,7 +28,7 @@ local function save()
 end
 
 -- ============================================================
--- FORCE SECTION AUTO-SIZE (Buat Tab Lain)
+-- FORCE SECTION AUTO-SIZE
 -- ============================================================
 local function forceFixSection(sectionFrame)
     if not sectionFrame then return end
@@ -71,8 +70,7 @@ local function createPage(name)
     page.Parent = S.GUI.ContentScroll
 
     local layout = Instance.new("UIListLayout")
-    -- JARAK ANTAR SECTION (4 PIXEL)
-    layout.Padding = UDim.new(0, 4)
+    layout.Padding = UDim.new(0, 4) -- Jarak 4px
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.VerticalAlignment = Enum.VerticalAlignment.Top
@@ -164,284 +162,6 @@ local function makeTab(iconId, name)
 end
 
 -- ============================================================
--- CUSTOM DYNAMIC DROPDOWN
--- ============================================================
-local function makeDynamicDropdown(parent, name, initialOptions, callback)
-    local f = Instance.new("Frame")
-    f.Name = "Dropdown_" .. name
-    f.Size = UDim2.new(1, 0, 0, 34)
-    f.BackgroundTransparency = 1
-    f.BorderSizePixel = 0
-    f.ClipsDescendants = false
-    f.Parent = parent
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0.5, -12, 1, 0)
-    lbl.Position = UDim2.new(0, 12, 0, 0)
-    lbl.Text = name
-    lbl.TextColor3 = C.text
-    lbl.TextSize = 11
-    lbl.Font = F.norm
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.BackgroundTransparency = 1
-    lbl.TextStrokeTransparency = 1
-    lbl.Parent = f
-
-    local DROPDOWN_W = 130
-
-    local selected = Instance.new("TextButton")
-    selected.Size = UDim2.new(0, DROPDOWN_W, 0, 22)
-    selected.Position = UDim2.new(1, -(DROPDOWN_W + 12), 0.5, -11)
-    selected.Text = initialOptions[1] or "None"
-    selected.TextColor3 = C.text
-    selected.TextSize = 11
-    selected.Font = F.norm
-    selected.BackgroundColor3 = C.bg4
-    selected.BackgroundTransparency = 0
-    selected.BorderSizePixel = 0
-    selected.AutoButtonColor = false
-    selected.TextStrokeTransparency = 1
-    selected.ZIndex = 10
-    selected.Parent = f
-    Instance.new("UICorner", selected).CornerRadius = UDim.new(0, 4)
-
-    local selOverlay = Instance.new("Frame")
-    selOverlay.Name = "ClickOverlay"
-    selOverlay.Size = UDim2.new(1, 0, 1, 0)
-    selOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    selOverlay.BackgroundTransparency = 1
-    selOverlay.BorderSizePixel = 0
-    selOverlay.ZIndex = 11
-    selOverlay.Parent = selected
-    Instance.new("UICorner", selOverlay).CornerRadius = UDim.new(0, 4)
-
-    selected.MouseButton1Down:Connect(function() selOverlay.BackgroundTransparency = 0.85 end)
-    selected.MouseButton1Up:Connect(function()
-        TS:Create(selOverlay, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
-    end)
-    selected.MouseLeave:Connect(function()
-        TS:Create(selOverlay, TweenInfo.new(0.15), { BackgroundTransparency = 1 }):Play()
-    end)
-
-    local popup = Instance.new("ScrollingFrame")
-    popup.Name = "DropdownPopup_" .. name
-    popup.Size = UDim2.new(0, DROPDOWN_W, 0, 150)
-    popup.BackgroundColor3 = C.bg4
-    popup.BackgroundTransparency = 0
-    popup.BorderSizePixel = 0
-    popup.Visible = false
-    popup.ZIndex = 200
-    popup.ScrollBarThickness = 3
-    popup.ScrollBarImageColor3 = C.accent
-    popup.ScrollBarImageTransparency = 0.4
-    popup.CanvasSize = UDim2.new(0, 0, 0, 0)
-    popup.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    popup.ScrollingDirection = Enum.ScrollingDirection.Y
-    popup.ElasticBehavior = Enum.ElasticBehavior.Never
-    popup.ClipsDescendants = true
-    popup.Parent = S.GUI.MainFrame
-    Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 5)
-
-    local popLayout = Instance.new("UIListLayout")
-    popLayout.Padding = UDim.new(0, 2)
-    popLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    popLayout.Parent = popup
-
-    local popPad = Instance.new("UIPadding")
-    popPad.PaddingTop = UDim.new(0, 4)
-    popPad.PaddingBottom = UDim.new(0, 4)
-    popPad.PaddingLeft = UDim.new(0, 4)
-    popPad.PaddingRight = UDim.new(0, 4)
-    popPad.Parent = popup
-
-    local currentValue = initialOptions[1] or "None"
-    local isOpen = false
-    local isAnimating = false
-
-    local function updatePopupPosition()
-        local pos = selected.AbsolutePosition
-        local size = selected.AbsoluteSize
-        local popupH = popup.AbsoluteSize.Y
-        local mfPos = S.GUI.MainFrame.AbsolutePosition
-
-        if size.X == 0 or size.Y == 0 then return false end
-
-        local localX = pos.X - mfPos.X
-        local localY = pos.Y - mfPos.Y - popupH - 4
-
-        if pos.Y - popupH - 4 < 0 then
-            localY = pos.Y - mfPos.Y + size.Y + 4
-        end
-
-        if localX < 0 then localX = 0 end
-        if localX + DROPDOWN_W > S.GUI.MainFrame.AbsoluteSize.X then
-            localX = S.GUI.MainFrame.AbsoluteSize.X - DROPDOWN_W
-        end
-
-        popup.Position = UDim2.new(0, localX, 0, localY)
-        return true
-    end
-
-    local function rebuildOptions(options)
-        for _, child in pairs(popup:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
-        for i, opt in ipairs(options) do
-            local optBtn = Instance.new("TextButton")
-            optBtn.Size = UDim2.new(1, -8, 0, 26)
-            optBtn.LayoutOrder = i
-            optBtn.Text = opt
-            optBtn.TextColor3 = C.text
-            optBtn.TextSize = 11
-            optBtn.Font = F.norm
-            optBtn.TextStrokeTransparency = 1
-            optBtn.BackgroundColor3 = C.bg4
-            optBtn.BorderSizePixel = 0
-            optBtn.ZIndex = 201
-            optBtn.AutoButtonColor = false
-            optBtn.Parent = popup
-            Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
-
-            local optOverlay = Instance.new("Frame")
-            optOverlay.Name = "ClickOverlay"
-            optOverlay.Size = UDim2.new(1, 0, 1, 0)
-            optOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            optOverlay.BackgroundTransparency = 1
-            optOverlay.BorderSizePixel = 0
-            optOverlay.ZIndex = 202
-            optOverlay.Parent = optBtn
-            Instance.new("UICorner", optOverlay).CornerRadius = UDim.new(0, 4)
-
-            optBtn.MouseButton1Down:Connect(function() optOverlay.BackgroundTransparency = 0.85 end)
-            optBtn.MouseButton1Up:Connect(function()
-                TS:Create(optOverlay, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
-            end)
-            optBtn.MouseLeave:Connect(function()
-                TS:Create(optOverlay, TweenInfo.new(0.15), { BackgroundTransparency = 1 }):Play()
-            end)
-
-            optBtn.MouseButton1Click:Connect(function()
-                selected.Text = opt
-                currentValue = opt
-                isOpen = false
-                popup.Visible = false
-                pcall(callback, opt)
-            end)
-        end
-        local maxH = 150
-        local contentH = #options * 28 + 8
-        popup.Size = UDim2.new(0, DROPDOWN_W, 0, math.min(contentH, maxH))
-    end
-
-    rebuildOptions(initialOptions)
-
-    local function animatePopup(show)
-        if isAnimating then return end
-        isAnimating = true
-
-        if show then
-            if not updatePopupPosition() then
-                isAnimating = false
-                isOpen = false
-                return
-            end
-            popup.BackgroundTransparency = 1
-            popup.Visible = true
-            local startPos = UDim2.new(
-                popup.Position.X.Scale, popup.Position.X.Offset,
-                popup.Position.Y.Scale, popup.Position.Y.Offset + 6
-            )
-            popup.Position = startPos
-            TS:Create(popup, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundTransparency = 0,
-                Position = UDim2.new(
-                    popup.Position.X.Scale, popup.Position.X.Offset,
-                    popup.Position.Y.Scale, popup.Position.Y.Offset - 6
-                )
-            }):Play()
-            task.delay(0.15, function() isAnimating = false end)
-        else
-            TS:Create(popup, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 }):Play()
-            task.delay(0.1, function()
-                popup.Visible = false
-                isAnimating = false
-            end)
-        end
-    end
-
-    local function closePopup(instant)
-        if not isOpen then return end
-        isOpen = false
-        isAnimating = false
-
-        if instant then
-            popup.Visible = false
-            popup.BackgroundTransparency = 0
-        else
-            animatePopup(false)
-        end
-    end
-
-    selected.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        if isOpen then animatePopup(true) else animatePopup(false) end
-    end)
-
-    Run.RenderStepped:Connect(function()
-        if not isOpen then return end
-        local anc = f
-        local stillVisible = true
-        while anc do
-            if anc == S.GUI.MainFrame then break end
-            if anc:IsA("GuiObject") then
-                if not anc.Visible then stillVisible = false break end
-                if anc.AbsoluteSize.X == 0 or anc.AbsoluteSize.Y == 0 then stillVisible = false break end
-            end
-            anc = anc.Parent
-        end
-        if not stillVisible then closePopup(true) return end
-        updatePopupPosition()
-    end)
-
-    UIS.InputBegan:Connect(function(input)
-        if isOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mousePos = input.Position
-            local popPos = popup.AbsolutePosition
-            local popSize = popup.AbsoluteSize
-            local selPos = selected.AbsolutePosition
-            local selSize = selected.AbsoluteSize
-
-            local inPopup = mousePos.X >= popPos.X and mousePos.X <= popPos.X + popSize.X and mousePos.Y >= popPos.Y and mousePos.Y <= popPos.Y + popSize.Y
-            local inSelected = mousePos.X >= selPos.X and mousePos.X <= selPos.X + selSize.X and mousePos.Y >= selPos.Y and mousePos.Y <= selPos.Y + selSize.Y
-
-            if not inPopup and not inSelected then closePopup(false) end
-        end
-    end)
-
-    return {
-        UpdateOptions = function(options)
-            if isOpen then return end
-            local stillValid = false
-            for _, opt in ipairs(options) do
-                if opt == currentValue then stillValid = true break end
-            end
-            if not stillValid and #options > 0 then
-                currentValue = options[1]
-                selected.Text = options[1]
-                pcall(callback, options[1])
-            end
-            rebuildOptions(options)
-        end,
-        SetValue = function(v)
-            currentValue = v
-            selected.Text = v
-        end,
-        GetValue = function() return currentValue end,
-        ClosePopup = function() closePopup(true) end,
-    }
-end
-
--- ============================================================
 -- HELPER BUTTON
 -- ============================================================
 local function makeSectionButton(parent, text, callback)
@@ -478,29 +198,14 @@ S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow == true, function
 task.defer(function() task.wait(0.1) forceFixSection(autoCombat) end)
 
 local spawnSection = S.Comp.makeSection(pages["Combat"], "Spawn Unit", false)
-local spawnContent = Instance.new("Frame")
-spawnContent.Name = "Content"
-spawnContent.Size = UDim2.new(1, 0, 0, 0)
-spawnContent.BackgroundTransparency = 1
-spawnContent.BorderSizePixel = 0
-spawnContent.AutomaticSize = Enum.AutomaticSize.Y
-spawnContent.Parent = spawnSection
-
-local spawnLayout = Instance.new("UIListLayout")
-spawnLayout.Padding = UDim.new(0, 6)
-spawnLayout.SortOrder = Enum.SortOrder.LayoutOrder
-spawnLayout.Parent = spawnContent
-
-local spawnDropdown = makeDynamicDropdown(spawnContent, "Unit Slot", {"1", "2", "3", "4"}, function(v)
+S.Comp.makeDropdown(spawnSection, "Unit Slot", {"1", "2", "3", "4"}, function(v)
     SS.UnitSlot = tonumber(v) or 1
     save()
 end)
-
-makeSectionButton(spawnContent, "Spawn Unit", function()
+makeSectionButton(spawnSection, "Spawn Unit", function()
     if _G.STHAIN.SpawnUnit then _G.STHAIN.SpawnUnit(SS.UnitSlot) end
 end)
-
-S.Comp.makeToggle(spawnContent, "Auto Respawn [BETA]", SS.AutoSpawn == true, function(v) 
+S.Comp.makeToggle(spawnSection, "Auto Respawn [BETA]", SS.AutoSpawn == true, function(v) 
     SS.AutoSpawn = v 
     save() 
 end)
@@ -569,100 +274,45 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(tpPlayer) end)
 
 local supplyEnemySection = S.Comp.makeSection(pages["Teleport"], "Supply Enemy", false)
-local supplyEnemyContent = Instance.new("Frame")
-supplyEnemyContent.Name = "Content"
-supplyEnemyContent.Size = UDim2.new(1, 0, 0, 0)
-supplyEnemyContent.BackgroundTransparency = 1
-supplyEnemyContent.BorderSizePixel = 0
-supplyEnemyContent.AutomaticSize = Enum.AutomaticSize.Y
-supplyEnemyContent.Parent = supplyEnemySection
-
-local supplyEnemyLayout = Instance.new("UIListLayout")
-supplyEnemyLayout.Padding = UDim.new(0, 6)
-supplyEnemyLayout.SortOrder = Enum.SortOrder.LayoutOrder
-supplyEnemyLayout.Parent = supplyEnemyContent
-
-local enemyDropdown = makeDynamicDropdown(supplyEnemyContent, "Supply Target", {TT.EnemySupplyTarget or "None"}, function(v)
+S.Comp.makeDropdown(supplyEnemySection, "Supply Target", {"None"}, function(v)
     TT.EnemySupplyTarget = v
     save()
 end)
-
-makeSectionButton(supplyEnemyContent, "TP Supply Enemy", function()
+makeSectionButton(supplyEnemySection, "TP Supply Enemy", function()
     if _G.STHAIN.TeleportToSupplyEnemy then _G.STHAIN.TeleportToSupplyEnemy(TT.EnemySupplyTarget or "") end
 end)
 task.defer(function() task.wait(0.1) forceFixSection(supplyEnemySection) end)
 
 local supplyOwnerSection = S.Comp.makeSection(pages["Teleport"], "Supply Owner", false)
-local supplyOwnerContent = Instance.new("Frame")
-supplyOwnerContent.Name = "Content"
-supplyOwnerContent.Size = UDim2.new(1, 0, 0, 0)
-supplyOwnerContent.BackgroundTransparency = 1
-supplyOwnerContent.BorderSizePixel = 0
-supplyOwnerContent.AutomaticSize = Enum.AutomaticSize.Y
-supplyOwnerContent.Parent = supplyOwnerSection
-
-local supplyOwnerLayout = Instance.new("UIListLayout")
-supplyOwnerLayout.Padding = UDim.new(0, 6)
-supplyOwnerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-supplyOwnerLayout.Parent = supplyOwnerContent
-
-local ownerDropdown = makeDynamicDropdown(supplyOwnerContent, "Supply Target", {TT.OwnerSupplyTarget or "None"}, function(v)
+S.Comp.makeDropdown(supplyOwnerSection, "Supply Target", {"None"}, function(v)
     TT.OwnerSupplyTarget = v
     save()
 end)
-
-makeSectionButton(supplyOwnerContent, "TP Supply Owner", function()
+makeSectionButton(supplyOwnerSection, "TP Supply Owner", function()
     if _G.STHAIN.TeleportToSupplyOwner then _G.STHAIN.TeleportToSupplyOwner(TT.OwnerSupplyTarget or "") end
 end)
 task.defer(function() task.wait(0.1) forceFixSection(supplyOwnerSection) end)
-
--- ============================================================
--- DYNAMIC DROPDOWN UPDATE LOOP
--- ============================================================
-task.spawn(function()
-    while task.wait(2) do
-        if _G.STHAIN.GetSupplyList then
-            local ok, data = pcall(_G.STHAIN.GetSupplyList)
-            local hasAnySupply = false
-            if ok and data then
-                hasAnySupply = (#(data.enemySupplies or {}) > 0) or (#(data.ownerSupplies or {}) > 0)
-            end
-            
-            if hasAnySupply then
-                if #data.enemySupplies > 0 then enemyDropdown.UpdateOptions(data.enemySupplies) else enemyDropdown.UpdateOptions({"None"}) end
-                if #data.ownerSupplies > 0 then ownerDropdown.UpdateOptions(data.ownerSupplies) else ownerDropdown.UpdateOptions({"None"}) end
-            else
-                enemyDropdown.UpdateOptions({"None"})
-                ownerDropdown.UpdateOptions({"None"})
-            end
-        end
-    end
-end)
 
 -- ============================================================
 -- TAB AUTOMATION
 -- ============================================================
 local AA = S.Config.Automation or {}
 
--- 1. SUMMON SECTION
 local summonSection = S.Comp.makeSection(pages["Automation"], "Summon", false)
 S.Comp.makeToggle(summonSection, "Auto Summon (Direct)", AA.AutoSummon == true, function(v) 
     AA.AutoSummon = v 
     save() 
 end)
-
-local summonAmountDropdown = makeDynamicDropdown(summonSection, "Summon Amount", {"1x", "10x"}, function(val)
+S.Comp.makeDropdown(summonSection, "Summon Amount", {"1x", "10x"}, function(val)
     AA.SummonAmount = val
     save()
 end)
-
 S.Comp.makeInput(summonSection, "Keep Gems", AA.KeepGems or 0, function(v)
     AA.KeepGems = v
     save()
 end)
 task.defer(function() task.wait(0.1) forceFixSection(summonSection) end)
 
--- 2. ASCEND SECTION
 local ascendSection = S.Comp.makeSection(pages["Automation"], "Ascend", false)
 S.Comp.makeToggle(ascendSection, "Auto Ascend", AA.AutoAscend == true, function(v) 
     AA.AutoAscend = v 
@@ -670,7 +320,6 @@ S.Comp.makeToggle(ascendSection, "Auto Ascend", AA.AutoAscend == true, function(
 end)
 task.defer(function() task.wait(0.1) forceFixSection(ascendSection) end)
 
--- 3. EVOLVE SECTION
 local evolveSection = S.Comp.makeSection(pages["Automation"], "Evolve", false)
 S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(v) 
     AA.AutoEvolve = v 
@@ -678,7 +327,6 @@ S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(
 end)
 task.defer(function() task.wait(0.1) forceFixSection(evolveSection) end)
 
--- 4. REWARDS SECTION
 local rewardSection = S.Comp.makeSection(pages["Automation"], "Rewards", false)
 S.Comp.makeToggle(rewardSection, "Auto Quest & Daily", AA.AutoReward == true, function(v) 
     AA.AutoReward = v 
@@ -686,57 +334,12 @@ S.Comp.makeToggle(rewardSection, "Auto Quest & Daily", AA.AutoReward == true, fu
 end)
 task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
 
--- 5. CLAIM CODE SECTION
 local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
-
-local codeInputContainer = Instance.new("Frame")
-codeInputContainer.Name = "CodeInputContainer"
-codeInputContainer.Size = UDim2.new(1, 0, 0, 34)
-codeInputContainer.BackgroundTransparency = 1
-codeInputContainer.Parent = codeSection
-
-local codeBox = Instance.new("TextBox")
-codeBox.Size = UDim2.new(1, -12, 0, 22)
-codeBox.Position = UDim2.new(0, 12, 0.5, -11)
-codeBox.BackgroundColor3 = C.bg4
-codeBox.BorderSizePixel = 0
-codeBox.Text = ""
-codeBox.PlaceholderText = "Enter A Code..."
-codeBox.TextColor3 = C.text
-codeBox.PlaceholderColor3 = C.textDim2
-codeBox.TextSize = 11
-codeBox.Font = F.norm
-codeBox.ClearTextOnFocus = false
-codeBox.Parent = codeInputContainer
-Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
-
-local codeDropdown = makeDynamicDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
-    if val ~= "Fetching..." and val ~= "None" then
-        codeBox.Text = val
-    end
+S.Comp.makeInput(codeSection, "Code", "", function(v)
+    -- Nanti logika save code-nya
 end)
-
-task.spawn(function()
-    task.wait(2)
-    if _G.STHAIN.FetchCodesSmart then
-        local codes = _G.STHAIN.FetchCodesSmart()
-        if codes and #codes > 0 then
-            codeDropdown.UpdateOptions(codes)
-        else
-            codeDropdown.UpdateOptions({"No Codes"})
-        end
-    end
-end)
-
 S.Comp.makeButton(codeSection, "Claim Code", function()
-    local code = codeBox.Text
-    if code ~= "" and code ~= "Fetching..." and code ~= "None" then
-        local Remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Shared") and game:GetService("ReplicatedStorage").Shared:FindFirstChild("Remotes")
-        local RedeemCode = Remotes and Remotes:FindFirstChild("RedeemCode")
-        if RedeemCode then
-            pcall(function() RedeemCode:InvokeServer(code) end)
-        end
-    end
+    -- Nanti logika redeem-nya
 end)
 task.defer(function() task.wait(0.1) forceFixSection(codeSection) end)
 
@@ -821,11 +424,10 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
--- TAB CONFIG (PAKE CUSTOM CARD)
+-- TAB CONFIG
 -- ============================================================
 local cfg = S.Config.Config
 
--- 1. SECTION AUTO SAVE (Pake Section Bawaan)
 local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
 S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
     cfg.AutoSave = v
@@ -833,18 +435,16 @@ S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, fun
 end)
 task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
--- 2. SECTION CONFIG MANAGEMENT (Pake Custom Card)
-local configMgmtSection = S.Comp.makeSection(pages["Config"], "Config Management", true)
-local configContent = S.Comp.makeCustomCard(configMgmtSection, "Config Content")
+local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", true)
 
-S.Comp.makeCustomBtn(configContent, "Save Config Now", function()
+S.Comp.makeButton(configMgmt, "Save Config Now", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.SaveConfig then _G.STHAIN.Utils.SaveConfig() end
 end)
 
-local resetBtn = S.Comp.makeCustomBtn(configContent, "Reset to Default", function()
+local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 136, 0)
+        resetBtn.BackgroundColor3 = C.yellow -- Efek Oranye/Kuning
         task.delay(3, function()
             if resetBtn.Text == "Click Again to Confirm" then
                 resetBtn.Text = "Reset to Default"
@@ -860,15 +460,13 @@ local resetBtn = S.Comp.makeCustomBtn(configContent, "Reset to Default", functio
     end
 end)
 
-S.Comp.makeCustomWarn(configContent, "⚠️ Perhatian\n\nSetelah melakukan Reset to Default, beberapa setingan seperti Toggle dan nilai Input akan langsung ter-update di UI.\n\nNamun untuk setingan yang mempengaruhi karakter, kecepatan, atau fitur aktif lainnya — kamu perlu Rejoin / Respawn agar perubahan berlaku sepenuhnya.")
+S.Comp.makeText(configMgmt, "⚠️ Note:\nReset applies UI changes immediately. You must Rejoin or Respawn for character stats and in-game features to take effect.")
 
-S.Comp.makeCustomBtn(configContent, "Delete Config File", function()
+S.Comp.makeButton(configMgmt, "Delete Config File", function()
     if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
         _G.STHAIN.Utils.DeleteConfig()
     end
 end)
-
-task.defer(function() task.wait(0.1) forceFixSection(configMgmtSection) end)
 
 -- ============================================================
 -- DRAG MAIN FRAME
@@ -901,7 +499,6 @@ end)
 -- ============================================================
 switchPage("Combat")
 
--- Highlight tab Combat
 for _, t in pairs(tabs) do
     if t.text.Text == "Combat" then
         t.btn.BackgroundColor3 = C.bg3
@@ -936,10 +533,10 @@ if S.GUI.SearchBox then
 
         for pageName, page in pairs(pages) do
             for _, section in pairs(page:GetChildren()) do
-                if section.Name:find("Section_") or section.Name:find("CustomCard_") then
+                if section.Name:find("Section_") then
                     local matchFound = false
                     
-                    local sectionName = string.lower(section.Name:gsub("Section_", ""):gsub("CustomCard_", ""))
+                    local sectionName = string.lower(section.Name:gsub("Section_", ""))
                     if string.find(sectionName, query) then
                         matchFound = true
                     end
