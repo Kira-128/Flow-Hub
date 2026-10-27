@@ -1,8 +1,9 @@
 --[[
 ============================================================
-  [6] COMPONENTS (Flow Hub v2.4)
-  - Arrow di kanan
-  - Tambah makeText buat deskripsi
+  [6] COMPONENTS (Flow Hub v2.5)
+  - Dropdown Panah (▼)
+  - makeText
+  - makeSearchDropdown (Floating Panel + Search)
 ============================================================
 ]]
 
@@ -12,50 +13,37 @@ local F = S.Theme.Font
 
 local Comp = {}
 
-local CARD_PADDING = 6         -- gap antar section
-local CARD_BG = C.bg3          -- warna card solid
-local CARD_TRANS = 0.15        -- transparency card
-local DIVIDER_TRANS = 0.8      -- transparency divider antar item
-local ITEM_H = 34              -- tinggi 1 item
-local HEADER_H = 32            -- tinggi header section
+local CARD_PADDING = 6
+local CARD_BG = C.bg3
+local CARD_TRANS = 0.15
+local DIVIDER_TRANS = 0.8
+local ITEM_H = 34
+local HEADER_H = 32
 
 -- ============================================================
--- HELPER: Recalculate section height
+-- HELPER: Recalculate
 -- ============================================================
 local function recalcSection(card, content)
     if not card or not card.Parent then return end
-
     if not content.Visible then
         card.Size = UDim2.new(1, 0, 0, HEADER_H)
         return
     end
-
     local layout = content:FindFirstChildOfClass("UIListLayout")
     local totalH = 0
-    if layout then
-        totalH = layout.AbsoluteContentSize.Y
-    end
-
+    if layout then totalH = layout.AbsoluteContentSize.Y end
     card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
 end
 
--- ============================================================
--- HELPER: Auto recalc saat child ditambahin
--- ============================================================
 local function hookAutoRecalc(card, content)
     content.ChildAdded:Connect(function()
         task.defer(function()
             task.wait(0.02)
-            if content.Visible then
-                recalcSection(card, content)
-            end
+            if content.Visible then recalcSection(card, content) end
         end)
     end)
 end
 
--- ============================================================
--- HELPER: Bikin divider tipis
--- ============================================================
 local function makeDivider(parent)
     local d = Instance.new("Frame")
     d.Name = "Divider"
@@ -119,9 +107,7 @@ function Comp.makeToggle(parent, name, default, callback)
         S.Services.TS:Create(knob, TweenInfo.new(0.2), {
             Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
         }):Play()
-        if not skipCallback then
-            pcall(callback, state)
-        end
+        if not skipCallback then pcall(callback, state) end
     end
 
     b.MouseButton1Click:Connect(function()
@@ -188,24 +174,19 @@ function Comp.makeButton(parent, name, callback)
     b.AutoButtonColor = false
     b.Parent = parent
 
-    b.MouseButton1Click:Connect(function()
-        pcall(callback)
-    end)
+    b.MouseButton1Click:Connect(function() pcall(callback) end)
     b.MouseEnter:Connect(function()
         S.Services.TS:Create(b, TweenInfo.new(0.15), {
-            BackgroundColor3 = C.bg4,
-            BackgroundTransparency = 0.6
+            BackgroundColor3 = C.bg4, BackgroundTransparency = 0.6
         }):Play()
     end)
     b.MouseLeave:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), {
-            BackgroundTransparency = 1
-        }):Play()
+        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundTransparency = 1 }):Play()
     end)
 end
 
 -- ============================================================
--- DROPDOWN
+-- DROPDOWN (PANAH ▼)
 -- ============================================================
 function Comp.makeDropdown(parent, name, options, callback)
     local f = Instance.new("Frame")
@@ -227,22 +208,36 @@ function Comp.makeDropdown(parent, name, options, callback)
     l.BackgroundTransparency = 1
     l.Parent = f
 
-    local selected = Instance.new("TextLabel")
-    selected.Size = UDim2.new(0.45, -12, 1, 0)
-    selected.Position = UDim2.new(0.52, 0, 0, 0)
-    selected.Text = options[1] or "None"
-    selected.TextColor3 = C.accent
-    selected.TextSize = 11
-    selected.Font = F.norm
-    selected.TextXAlignment = Enum.TextXAlignment.Right
-    selected.BackgroundTransparency = 1
+    local selected = Instance.new("TextButton")
+    selected.Size = UDim2.new(0.45, -12, 0, 22)
+    selected.Position = UDim2.new(0.52, 0, 0.5, -11)
+    selected.Text = ""
+    selected.BackgroundColor3 = C.bg4
+    selected.BorderSizePixel = 0
+    selected.AutoButtonColor = false
     selected.Parent = f
+    Instance.new("UICorner", selected).CornerRadius = UDim.new(0, 4)
 
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 1, 0)
-    b.Text = ""
-    b.BackgroundTransparency = 1
-    b.Parent = f
+    local selectedText = Instance.new("TextLabel")
+    selectedText.Size = UDim2.new(1, -24, 1, 0)
+    selectedText.Position = UDim2.new(0, 8, 0, 0)
+    selectedText.Text = options[1] or "None"
+    selectedText.TextColor3 = C.text
+    selectedText.TextSize = 11
+    selectedText.Font = F.norm
+    selectedText.TextXAlignment = Enum.TextXAlignment.Left
+    selectedText.BackgroundTransparency = 1
+    selectedText.Parent = selected
+
+    local arrow = Instance.new("TextLabel")
+    arrow.Size = UDim2.new(0, 20, 1, 0)
+    arrow.Position = UDim2.new(1, -24, 0, 0)
+    arrow.Text = "▼"
+    arrow.TextColor3 = C.textDim
+    arrow.TextSize = 10
+    arrow.Font = F.bold
+    arrow.BackgroundTransparency = 1
+    arrow.Parent = selected
 
     local popup = Instance.new("Frame")
     popup.Size = UDim2.new(1, -8, 0, 0)
@@ -272,7 +267,7 @@ function Comp.makeDropdown(parent, name, options, callback)
         Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
 
         optBtn.MouseButton1Click:Connect(function()
-            selected.Text = opt
+            selectedText.Text = opt
             popup.Visible = false
             pcall(callback, opt)
         end)
@@ -280,7 +275,7 @@ function Comp.makeDropdown(parent, name, options, callback)
     popup.Size = UDim2.new(1, -8, 0, #options * 28 + 4)
 
     local isOpen = false
-    b.MouseButton1Click:Connect(function()
+    selected.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         popup.Visible = isOpen
     end)
@@ -399,7 +394,7 @@ function Comp.makeCustomCard(parent, title)
     content.Parent = card
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 4) -- 4px sesuai request
+    layout.Padding = UDim.new(0, 4)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = content
 
@@ -475,7 +470,7 @@ function Comp.makeCustomWarn(parent, text)
 end
 
 -- ============================================================
--- MAKE TEXT (BARU DITAMBAHIN)
+-- MAKE TEXT (Buat Deskripsi)
 -- ============================================================
 function Comp.makeText(parent, text, color)
     local lbl = Instance.new("TextLabel")
@@ -499,6 +494,145 @@ function Comp.makeText(parent, text, color)
     pad.Parent = lbl
     
     return lbl
+end
+
+-- ============================================================
+-- SEARCH DROPDOWN (Floating Panel + Search)
+-- ============================================================
+function Comp.makeSearchDropdown(parent, name, options, callback)
+    local f = Instance.new("Frame")
+    f.Name = "SearchDropdown_" .. name
+    f.Size = UDim2.new(1, 0, 0, ITEM_H)
+    f.BackgroundTransparency = 1
+    f.BorderSizePixel = 0
+    f.Parent = parent
+
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(0.5, -12, 1, 0)
+    l.Position = UDim2.new(0, 12, 0, 0)
+    l.Text = name
+    l.TextColor3 = C.text
+    l.TextSize = 11
+    l.Font = F.norm
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.BackgroundTransparency = 1
+    l.Parent = f
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.45, -12, 0, 22)
+    btn.Position = UDim2.new(0.52, 0, 0.5, -11)
+    btn.BackgroundColor3 = C.bg4
+    btn.BorderSizePixel = 0
+    btn.Text = ""
+    btn.AutoButtonColor = false
+    btn.Parent = f
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+    local btnText = Instance.new("TextLabel")
+    btnText.Size = UDim2.new(1, -24, 1, 0)
+    btnText.Position = UDim2.new(0, 8, 0, 0)
+    btnText.Text = options[1] or "None"
+    btnText.TextColor3 = C.text
+    btnText.TextSize = 11
+    btnText.Font = F.norm
+    btnText.TextXAlignment = Enum.TextXAlignment.Left
+    btnText.BackgroundTransparency = 1
+    btnText.Parent = btn
+
+    local arrow = Instance.new("TextLabel")
+    arrow.Size = UDim2.new(0, 20, 1, 0)
+    arrow.Position = UDim2.new(1, -24, 0, 0)
+    arrow.Text = "▼"
+    arrow.TextColor3 = C.textDim
+    arrow.TextSize = 10
+    arrow.Font = F.bold
+    arrow.BackgroundTransparency = 1
+    arrow.Parent = btn
+
+    -- Panel Melayang
+    local panel = Instance.new("Frame")
+    panel.Size = UDim2.new(0, 180, 0, 200)
+    panel.Position = UDim2.new(1, -190, 0, 0) -- Muncul di sebelah kiri tombol
+    panel.BackgroundColor3 = C.bg2
+    panel.BorderSizePixel = 0
+    panel.Visible = false
+    panel.ZIndex = 100
+    panel.Parent = f
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 5)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = C.stroke
+    stroke.Thickness = 1
+    stroke.Transparency = 0.5
+    stroke.Parent = panel
+
+    -- Search Box
+    local searchBx = Instance.new("TextBox")
+    searchBx.Size = UDim2.new(1, -16, 0, 24)
+    searchBx.Position = UDim2.new(0, 8, 0, 8)
+    searchBx.BackgroundColor3 = C.bg3
+    searchBx.BorderSizePixel = 0
+    searchBx.PlaceholderText = "Search..."
+    searchBx.Text = ""
+    searchBx.TextColor3 = C.text
+    searchBx.TextSize = 11
+    searchBx.Font = F.norm
+    searchBx.ClearTextOnFocus = false
+    searchBx.ZIndex = 101
+    searchBx.Parent = panel
+    Instance.new("UICorner", searchBx).CornerRadius = UDim.new(0, 4)
+
+    -- List Container
+    local listFrame = Instance.new("ScrollingFrame")
+    listFrame.Size = UDim2.new(1, -16, 1, -40)
+    listFrame.Position = UDim2.new(0, 8, 0, 36)
+    listFrame.BackgroundTransparency = 1
+    listFrame.BorderSizePixel = 0
+    listFrame.ScrollBarThickness = 3
+    listFrame.ZIndex = 101
+    listFrame.Parent = panel
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0, 2)
+    listLayout.Parent = listFrame
+
+    local function renderOptions(filter)
+        for _, child in pairs(listFrame:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+        for _, opt in ipairs(options) do
+            if filter == "" or string.find(string.lower(opt), string.lower(filter)) then
+                local optBtn = Instance.new("TextButton")
+                optBtn.Size = UDim2.new(1, 0, 0, 26)
+                optBtn.Text = opt
+                optBtn.TextColor3 = C.text
+                optBtn.TextSize = 11
+                optBtn.Font = F.norm
+                optBtn.BackgroundColor3 = C.bg3
+                optBtn.BorderSizePixel = 0
+                optBtn.ZIndex = 102
+                optBtn.Parent = listFrame
+                Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
+                
+                optBtn.MouseButton1Click:Connect(function()
+                    btnText.Text = opt
+                    panel.Visible = false
+                    pcall(callback, opt)
+                end)
+            end
+        end
+        listFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+    end
+
+    renderOptions("")
+
+    searchBx:GetPropertyChangedSignal("Text"):Connect(function()
+        renderOptions(searchBx.Text)
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        panel.Visible = not panel.Visible
+    end)
 end
 
 S.Comp = Comp
