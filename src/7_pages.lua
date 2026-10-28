@@ -332,7 +332,7 @@ S.Comp.makeToggle(rewardSection, "Auto Daily/Weekly Reward", AA.AutoReward == tr
 end)
 
 -- ============================================================
--- CLAIM CODE (FIXED: wrapper)
+-- CLAIM CODE
 -- ============================================================
 local codeSection = trackSection(S.Comp.makeSection(pages["Automation"], "Claim Code", false))
 
@@ -340,7 +340,6 @@ local codeWrapper = Instance.new("Frame")
 codeWrapper.Name = "CodeWrapper"
 codeWrapper.Size = UDim2.new(1, 0, 0, 30)
 codeWrapper.BackgroundTransparency = 1
-codeWrapper.BorderSizePixel = 0
 codeWrapper.Parent = codeSection
 
 local codeBox = Instance.new("TextBox")
@@ -468,7 +467,7 @@ S.Comp.makeButton(serverContent, "Server Hop (Find Small Server)", function()
 end)
 
 -- ============================================================
--- TAB CONFIG (FIXED: state-based confirm)
+-- TAB CONFIG (FIXED CONFIRM BUTTON)
 -- ============================================================
 local cfg = S.Config.Config
 
@@ -480,12 +479,19 @@ end)
 
 local configMgmt = trackSection(S.Comp.makeSection(pages["Config"], "Config Management", false))
 
--- CONFIRM BUTTON HELPER
 local function makeConfirmButton(parent, normalText, confirmText, confirmColor, onConfirm)
-    local btn = S.Comp.makeButton(parent, normalText, function() end)
+    -- PAKAI TRUE UNTUK MEMATIKAN HOVER
+    local btn = S.Comp.makeButton(parent, normalText, function() end, true) 
     local isConfirming = false
     local isProcessing = false
     local cancelToken = 0
+
+    -- Sembunyikan efek flash overlay agar tidak menutupi warna
+    local flash = btn:FindFirstChildWhichIsA("Frame")
+    if flash then
+        flash.BackgroundTransparency = 1
+        flash.Visible = false
+    end
 
     local function resetVisual()
         btn.Text = normalText
@@ -552,7 +558,7 @@ makeConfirmButton(
 )
 
 -- ============================================================
--- DRAG MAIN FRAME (FIXED: clamp)
+-- DRAG MAIN FRAME (KEMBALI KE FUNGSI AWAL - MULUS)
 -- ============================================================
 local mainDrag, mainStart, mainPos
 S.GUI.Header.InputBegan:Connect(function(input)
@@ -566,19 +572,9 @@ end)
 S.GUI.Header.InputChanged:Connect(function(input)
     if mainDrag and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
         local delta = input.Position - mainStart
-        local newX = mainPos.X.Offset + delta.X
-        local newY = mainPos.Y.Offset + delta.Y
-
-        local cam = workspace.CurrentCamera
-        local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
-        local size = S.GUI.MainFrame.AbsoluteSize
-
-        newX = math.clamp(newX, -size.X + 60, vp.X - 60)
-        newY = math.clamp(newY, 0, vp.Y - 40)
-
         S.GUI.MainFrame.Position = UDim2.new(
-            mainPos.X.Scale, newX,
-            mainPos.Y.Scale, newY
+            mainPos.X.Scale, mainPos.X.Offset + delta.X,
+            mainPos.Y.Scale, mainPos.Y.Offset + delta.Y
         )
     end
 end)
@@ -590,7 +586,7 @@ S.GUI.Header.InputEnded:Connect(function(input)
 end)
 
 -- ============================================================
--- MINIMIZE / OPEN (FIXED: nil guard)
+-- MINIMIZE / OPEN
 -- ============================================================
 switchPage("Combat")
 
@@ -623,7 +619,7 @@ S.GUI.MainFrame.Visible = true
 if S.GUI.FloatBtn then S.GUI.FloatBtn.Visible = false end
 
 -- ============================================================
--- SEARCH FEATURE (FIXED: AbsolutePosition)
+-- SEARCH FEATURE
 -- ============================================================
 if S.GUI.SearchBox then
     S.GUI.SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
