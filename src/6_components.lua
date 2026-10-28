@@ -153,7 +153,7 @@ function Comp.makeInput(parent, name, default, callback)
 end
 
 -- ============================================================
--- BUTTON (Ditambah parameter noHover untuk Confirm Button)
+-- BUTTON
 -- ============================================================
 function Comp.makeButton(parent, name, callback, noHover)
     local wrapper = Instance.new("Frame")
@@ -219,7 +219,7 @@ function Comp.makeButton(parent, name, callback, noHover)
 end
 
 -- ============================================================
--- DROPDOWN (LOGIKA FIX: ZIndex Tinggi + Visible Dulu)
+-- DROPDOWN (FIX FINAL: Parent ke ScreenGui, ZIndex 9999)
 -- ============================================================
 function Comp.makeDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -304,7 +304,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     popup.BackgroundTransparency = 0
     popup.BorderSizePixel = 0
     popup.Visible = false
-    popup.ZIndex = 500
+    popup.ZIndex = 9999 -- Paksa paling atas
     popup.ScrollBarThickness = 3
     popup.ScrollBarImageColor3 = C.accent
     popup.ScrollBarImageTransparency = 0.4
@@ -313,7 +313,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     popup.ScrollingDirection = Enum.ScrollingDirection.Y
     popup.ElasticBehavior = Enum.ElasticBehavior.Never
     popup.ClipsDescendants = true
-    popup.Parent = S.GUI.MainFrame
+    popup.Parent = S.GUI.MainFrame.Parent -- Paksa lepas dari MainFrame
     Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 5)
 
     local popLayout = Instance.new("UIListLayout")
@@ -339,17 +339,20 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
         if destroyed then return false end
         local pos = selected.AbsolutePosition
         local size = selected.AbsoluteSize
-        local mfPos = S.GUI.MainFrame.AbsolutePosition
+        local popupH = popup.AbsoluteSize.Y
 
-        if size.X == 0 or size.Y == 0 then return false end
+        if size.X == 0 or size.Y == 0 or popupH == 0 then return false end
 
-        local localX = pos.X - mfPos.X
-        local localY = pos.Y - mfPos.Y - popup.AbsoluteSize.Y - 4
+        local localX = pos.X
+        local localY = pos.Y - popupH - 4
 
-        if localX + DROPDOWN_W > S.GUI.MainFrame.AbsoluteSize.X then
-            localX = S.GUI.MainFrame.AbsoluteSize.X - DROPDOWN_W
+        if localY < 0 then
+            localY = pos.Y + size.Y + 4
         end
-        if localX < 0 then localX = 0 end
+
+        local vp = workspace.CurrentCamera.ViewportSize
+        localX = math.clamp(localX, 0, math.max(0, vp.X - DROPDOWN_W))
+        localY = math.clamp(localY, 0, math.max(0, vp.Y - popupH))
 
         popup.Position = UDim2.new(0, localX, 0, localY)
         return true
@@ -370,7 +373,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             optBtn.TextStrokeTransparency = 1
             optBtn.BackgroundColor3 = C.bg4
             optBtn.BorderSizePixel = 0
-            optBtn.ZIndex = 501
+            optBtn.ZIndex = 10000
             optBtn.AutoButtonColor = false
             optBtn.Parent = popup
             Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
@@ -381,7 +384,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             optOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             optOverlay.BackgroundTransparency = 1
             optOverlay.BorderSizePixel = 0
-            optOverlay.ZIndex = 502
+            optOverlay.ZIndex = 10001
             optOverlay.Parent = optBtn
             Instance.new("UICorner", optOverlay).CornerRadius = UDim.new(0, 4)
 
@@ -411,9 +414,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 
     local function animatePopup(show)
         if destroyed then return end
-        if isAnimating then
-            animToken = animToken + 1
-        end
+        if isAnimating then animToken = animToken + 1 end
         isAnimating = true
         local myToken = animToken
 
@@ -428,17 +429,11 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
                 return
             end
             
-            local startPos = UDim2.new(
-                popup.Position.X.Scale, popup.Position.X.Offset,
-                popup.Position.Y.Scale, popup.Position.Y.Offset + 6
-            )
+            local startPos = UDim2.new(0, popup.Position.X.Offset, 0, popup.Position.Y.Offset + 6)
             popup.Position = startPos
             S.Services.TS:Create(popup, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 BackgroundTransparency = 0,
-                Position = UDim2.new(
-                    popup.Position.X.Scale, popup.Position.X.Offset,
-                    popup.Position.Y.Scale, popup.Position.Y.Offset - 6
-                )
+                Position = UDim2.new(0, popup.Position.X.Offset, 0, popup.Position.Y.Offset - 6)
             }):Play()
             task.delay(0.15, function()
                 if myToken == animToken then isAnimating = false end
