@@ -30,7 +30,7 @@ local function recalcSection(card, content)
 end
 
 -- ============================================================
--- HELPER: Auto recalc (with disconnect tracking)
+-- HELPER: Auto recalc
 -- ============================================================
 local function hookAutoRecalc(card, content)
     local conn = content.ChildAdded:Connect(function()
@@ -153,9 +153,9 @@ function Comp.makeInput(parent, name, default, callback)
 end
 
 -- ============================================================
--- BUTTON
+-- BUTTON (Ditambah parameter noHover untuk Confirm Button)
 -- ============================================================
-function Comp.makeButton(parent, name, callback)
+function Comp.makeButton(parent, name, callback, noHover)
     local wrapper = Instance.new("Frame")
     wrapper.Name = "BtnWrapper_" .. name
     wrapper.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -177,7 +177,6 @@ function Comp.makeButton(parent, name, callback)
     b.Parent = wrapper
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
 
-    -- Flash overlay: ZIndex DI BAWAH teks agar tidak menutupi
     local flash = Instance.new("Frame")
     flash.Size = UDim2.new(1, 0, 1, 0)
     flash.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -201,24 +200,26 @@ function Comp.makeButton(parent, name, callback)
         pcall(callback)
     end)
 
-    b.MouseEnter:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), {
-            BackgroundColor3 = C.bg3,
-            BackgroundTransparency = 0.1
-        }):Play()
-    end)
-    b.MouseLeave:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), {
-            BackgroundColor3 = C.bg4,
-            BackgroundTransparency = 0.3
-        }):Play()
-    end)
+    if not noHover then
+        b.MouseEnter:Connect(function()
+            S.Services.TS:Create(b, TweenInfo.new(0.15), {
+                BackgroundColor3 = C.bg3,
+                BackgroundTransparency = 0.1
+            }):Play()
+        end)
+        b.MouseLeave:Connect(function()
+            S.Services.TS:Create(b, TweenInfo.new(0.15), {
+                BackgroundColor3 = C.bg4,
+                BackgroundTransparency = 0.3
+            }):Play()
+        end)
+    end
 
     return b
 end
 
 -- ============================================================
--- DROPDOWN (FIXED: connection tracking + clamp + tween safety)
+-- DROPDOWN (LOGIKA FIX: ZIndex Tinggi + Visible Dulu)
 -- ============================================================
 function Comp.makeDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -303,7 +304,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     popup.BackgroundTransparency = 0
     popup.BorderSizePixel = 0
     popup.Visible = false
-    popup.ZIndex = 200
+    popup.ZIndex = 500
     popup.ScrollBarThickness = 3
     popup.ScrollBarImageColor3 = C.accent
     popup.ScrollBarImageTransparency = 0.4
@@ -338,21 +339,17 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
         if destroyed then return false end
         local pos = selected.AbsolutePosition
         local size = selected.AbsoluteSize
-        local popupH = popup.AbsoluteSize.Y
         local mfPos = S.GUI.MainFrame.AbsolutePosition
-        local mfSize = S.GUI.MainFrame.AbsoluteSize
 
         if size.X == 0 or size.Y == 0 then return false end
 
         local localX = pos.X - mfPos.X
-        local localY = pos.Y - mfPos.Y - popupH - 4
+        local localY = pos.Y - mfPos.Y - popup.AbsoluteSize.Y - 4
 
-        if pos.Y - popupH - 4 < 0 then
-            localY = pos.Y - mfPos.Y + size.Y + 4
+        if localX + DROPDOWN_W > S.GUI.MainFrame.AbsoluteSize.X then
+            localX = S.GUI.MainFrame.AbsoluteSize.X - DROPDOWN_W
         end
-
-        localX = math.clamp(localX, 0, math.max(0, mfSize.X - DROPDOWN_W))
-        localY = math.clamp(localY, 0, math.max(0, mfSize.Y - popupH))
+        if localX < 0 then localX = 0 end
 
         popup.Position = UDim2.new(0, localX, 0, localY)
         return true
@@ -373,7 +370,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             optBtn.TextStrokeTransparency = 1
             optBtn.BackgroundColor3 = C.bg4
             optBtn.BorderSizePixel = 0
-            optBtn.ZIndex = 201
+            optBtn.ZIndex = 501
             optBtn.AutoButtonColor = false
             optBtn.Parent = popup
             Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
@@ -384,7 +381,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             optOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             optOverlay.BackgroundTransparency = 1
             optOverlay.BorderSizePixel = 0
-            optOverlay.ZIndex = 202
+            optOverlay.ZIndex = 502
             optOverlay.Parent = optBtn
             Instance.new("UICorner", optOverlay).CornerRadius = UDim.new(0, 4)
 
@@ -421,13 +418,16 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
         local myToken = animToken
 
         if show then
+            popup.Visible = true
+            popup.BackgroundTransparency = 1
+            
             if not updatePopupPosition() then
+                popup.Visible = false
                 isAnimating = false
                 isOpen = false
                 return
             end
-            popup.BackgroundTransparency = 1
-            popup.Visible = true
+            
             local startPos = UDim2.new(
                 popup.Position.X.Scale, popup.Position.X.Offset,
                 popup.Position.Y.Scale, popup.Position.Y.Offset + 6
@@ -560,7 +560,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- SECTION (FIXED: connection tracking + safe recalc)
+-- SECTION
 -- ============================================================
 function Comp.makeSection(parent, title, defaultOpen)
     local card = Instance.new("Frame")
