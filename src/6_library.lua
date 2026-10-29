@@ -1,9 +1,9 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v1.0 - Lynx Style)
-  - Clean Code & UIListLayout Murni
-  - Panah Mint Kanan
-  - Dropdown Ke Atas/Bawah
+  [6] LIBRARY (Flow Hub v1.1 - Final Stable)
+  - Fix popup parent ke S.GUI.Screen
+  - Panah Mint
+  - Dropdown ke Atas/Bawah
 ============================================================
 ]]
 
@@ -368,6 +368,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         Parent = selected
     })
 
+    -- PARENT DIUBAH KE S.GUI.SCREEN BIAR GA KEPOTONG
     local popup = Library.new("ScrollingFrame", {
         Name = "DropdownPopup_" .. name,
         Size = UDim2.new(0, DROPDOWN_W, 0, 150),
@@ -379,7 +380,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         ScrollBarImageColor3 = C.accent,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        Parent = S.GUI.MainFrame
+        Parent = S.GUI.Screen -- <--- INI KUNCINYA
     })
     Library.new("UICorner", { Parent = popup, CornerRadius = UDim.new(0, 5) })
 
@@ -409,7 +410,8 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
             localX = S.GUI.MainFrame.AbsoluteSize.X - DROPDOWN_W
         end
 
-        popup.Position = UDim2.new(0, localX, 0, localY)
+        -- Set posisi global berdasarkan layar
+        popup.Position = UDim2.new(0, pos.X, 0, pos.Y + (localY > (pos.Y - mfPos.Y) and size.Y + 4 or -popupH - 4))
         return true
     end
 
