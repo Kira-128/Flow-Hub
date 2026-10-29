@@ -1,10 +1,10 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v2.2)
+  [5] GUI (Flow Hub v3.1)
   - Size: 460x320
-  - Fix gethui crash on mobile
-  - Anti-Double GUI
-  - Separate Header for drag handle
+  - Float Button: Rounded Square (Kotak Tumpul)
+  - PC & Mobile Detection
+  - Anti-Crash gethui
 ============================================================
 ]]
 
@@ -12,15 +12,15 @@ local S = _G.STHAIN
 local C = S.Theme.Colors
 local I = S.Theme.Icons
 local F = S.Theme.Font
+local UIS = game:GetService("UserInputService")
 
--- FIX 1: Anti-Double GUI & Anti-Crash gethui
+-- Deteksi Platform
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+
+-- Anti-Crash gethui
 local parentGui
 local ok, hui = pcall(function() return gethui and gethui() end)
-if ok and hui then
-    parentGui = hui
-else
-    parentGui = game:GetService("CoreGui")
-end
+if ok and hui then parentGui = hui else parentGui = game:GetService("CoreGui") end
 
 local oldGui = parentGui:FindFirstChild("FlowHub")
 if oldGui then oldGui:Destroy() end
@@ -32,7 +32,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parentGui
 
 -- ============================================================
--- FLOAT BUTTON
+-- FLOAT BUTTON (KOTAK TUMPUL)
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Size = UDim2.new(0, 48, 0, 48)
@@ -43,9 +43,25 @@ floatBtn.BorderSizePixel = 0
 floatBtn.AutoButtonColor = false
 floatBtn.Parent = gui
 
+local fBg = Instance.new("Frame")
+fBg.Size = UDim2.new(1, 0, 1, 0)
+fBg.BackgroundColor3 = C.bg2
+fBg.BackgroundTransparency = 0.1
+fBg.BorderSizePixel = 0
+fBg.Parent = floatBtn
+-- Radius 12 = Kotak Tumpul
+Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12)
+
+local fStroke = Instance.new("UIStroke")
+fStroke.Color = C.stroke
+fStroke.Thickness = 1.5
+fStroke.Transparency = 0.3
+fStroke.Parent = fBg
+
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
-fIcon.Size = UDim2.new(1, 0, 1, 0)
+fIcon.Size = UDim2.new(0.6, 0, 0.6, 0)
+fIcon.Position = UDim2.new(0.2, 0, 0.2, 0)
 fIcon.BackgroundTransparency = 1
 fIcon.BorderSizePixel = 0
 fIcon.Image = I.logo
@@ -56,33 +72,26 @@ fIcon.Parent = floatBtn
 -- DRAG FLOAT BUTTON
 local dragging, dragStart, startPos
 floatBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = floatBtn.Position
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
     end
 end)
 floatBtn.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         if dragging then
             local delta = input.Position - dragStart
-            floatBtn.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
+            floatBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end
 end)
 
 -- ============================================================
--- MAIN FRAME (Size: 460x320)
+-- MAIN FRAME (460x320)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
@@ -103,7 +112,47 @@ mStroke.Transparency = 0.3
 mStroke.Parent = mainFrame
 
 -- ============================================================
--- HEADER (Drag Handle)
+-- RESIZE HANDLE (Khusus PC)
+-- ============================================================
+if not isMobile then
+    local resizeHandle = Instance.new("TextButton")
+    resizeHandle.Name = "ResizeHandle"
+    resizeHandle.Size = UDim2.new(0, 18, 0, 18)
+    resizeHandle.Position = UDim2.new(1, 0, 1, 0)
+    resizeHandle.AnchorPoint = Vector2.new(1, 1)
+    resizeHandle.BackgroundTransparency = 1
+    resizeHandle.Text = "◢"
+    resizeHandle.TextColor3 = C.textDim
+    resizeHandle.TextSize = 14
+    resizeHandle.ZIndex = 100
+    resizeHandle.Parent = mainFrame
+    
+    local resizing = false
+    local resizeStart, startSize
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = true
+            resizeStart = input.Position
+            startSize = mainFrame.Size
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - resizeStart
+            local newW = math.max(380, startSize.X.Offset + delta.X)
+            local newH = math.max(250, startSize.Y.Offset + delta.Y)
+            mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = false
+        end
+    end)
+end
+
+-- ============================================================
+-- HEADER
 -- ============================================================
 local HEADER_H = 36
 
@@ -193,7 +242,7 @@ line1.Parent = mainFrame
 -- ============================================================
 -- SEARCH + TITLE + ACCENT LINE + GARIS 2
 -- ============================================================
-local ROW_Y = HEADER_H + 8  -- 44
+local ROW_Y = HEADER_H + 8
 
 local searchFrame = Instance.new("Frame")
 searchFrame.Size = UDim2.new(0, 160, 0, 26)
@@ -258,7 +307,7 @@ line2.Parent = mainFrame
 -- ============================================================
 -- SIDEBAR (TRANSPARAN)
 -- ============================================================
-local SIDEBAR_Y = ROW_Y + 38  -- 82
+local SIDEBAR_Y = ROW_Y + 38
 
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
@@ -317,4 +366,5 @@ S.GUI = {
     SearchBox = searchBox,
     MinBtn = minBtn,
     CloseBtn = nil,
+    IsMobile = isMobile,
 }
