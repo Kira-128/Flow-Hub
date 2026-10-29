@@ -1,542 +1,331 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v2.0 - Lynx Style Dropdown)
-  - Dropdown Slide In + Overlay
-  - Accent Bar Mint
-  - No forceFixSection
+  [5] GUI (Flow Hub v2.5)
+  - Size: 460x320
+  - Float Button: Kotak Tumpul + Logo
+  - Separate Header for drag handle
+  - Export Overlay
 ============================================================
 ]]
 
 local S = _G.STHAIN
 local C = S.Theme.Colors
+local I = S.Theme.Icons
 local F = S.Theme.Font
 
-local Library = {}
-
-local ITEM_H = 34
-local HEADER_H = 32
-local CARD_BG = C.bg3
-local CARD_TRANS = 0.15
-
--- ============================================================
--- HELPER: new Instance
--- ============================================================
-function Library.new(class, props)
-    local inst = Instance.new(class)
-    for k, v in pairs(props) do
-        inst[k] = v
-    end
-    return inst
+-- FIX 1: Anti-Double GUI & Anti-Crash gethui
+local parentGui
+local ok, hui = pcall(function() return gethui and gethui() end)
+if ok and hui then
+    parentGui = hui
+else
+    parentGui = game:GetService("CoreGui")
 end
 
--- ============================================================
--- HELPER: Recalculate Section Height
--- ============================================================
-local function updateSectionHeight(card, content)
-    if not card or not card.Parent then return end
-    if not content.Visible then
-        card.Size = UDim2.new(1, 0, 0, HEADER_H)
-        return
-    end
-    local layout = content:FindFirstChildOfClass("UIListLayout")
-    local totalH = 0
-    if layout then totalH = layout.AbsoluteContentSize.Y end
-    card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
-end
+local oldGui = parentGui:FindFirstChild("FlowHub")
+if oldGui then oldGui:Destroy() end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "FlowHub"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = parentGui
 
 -- ============================================================
--- SECTION
+-- FLOAT BUTTON (Kotak Tumpul)
 -- ============================================================
-function Library.makeSection(parent, title, defaultOpen)
-    local card = Library.new("Frame", {
-        Name = "Section_" .. title,
-        Size = UDim2.new(1, 0, 0, HEADER_H),
-        BackgroundColor3 = CARD_BG,
-        BackgroundTransparency = CARD_TRANS,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        Parent = parent
-    })
-    Library.new("UICorner", { Parent = card, CornerRadius = UDim.new(0, 6) })
+local floatBtn = Instance.new("TextButton")
+floatBtn.Name = "FloatBtn"
+floatBtn.Size = UDim2.new(0, 48, 0, 48)
+floatBtn.Position = UDim2.new(0, 30, 0.5, -24)
+floatBtn.Text = ""
+floatBtn.BackgroundColor3 = C.bg2
+floatBtn.BackgroundTransparency = 0.1
+floatBtn.BorderSizePixel = 0
+floatBtn.AutoButtonColor = false
+floatBtn.Parent = gui
+Instance.new("UICorner", floatBtn).CornerRadius = UDim.new(0, 14)
 
-    local header = Library.new("TextButton", {
-        Name = "Header",
-        Size = UDim2.new(1, 0, 0, HEADER_H),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        AutoButtonColor = false,
-        ZIndex = 2,
-        Parent = card
-    })
+local fStroke = Instance.new("UIStroke")
+fStroke.Color = C.stroke
+fStroke.Thickness = 1.5
+fStroke.Transparency = 0.3
+fStroke.Parent = floatBtn
 
-    Library.new("TextLabel", {
-        Size = UDim2.new(1, -50, 1, 0),
-        Position = UDim2.new(0, 12, 0, 0),
-        Text = title,
-        TextColor3 = C.text,
-        TextSize = 11,
-        Font = F.bold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        ZIndex = 3,
-        Parent = header
-    })
+local fIcon = Instance.new("ImageLabel")
+fIcon.Name = "FloatLogo"
+fIcon.Size = UDim2.new(0.8, 0, 0.8, 0)
+fIcon.Position = UDim2.new(0.1, 0, 0.1, 0)
+fIcon.BackgroundTransparency = 1
+fIcon.BorderSizePixel = 0
+fIcon.Image = I.logo
+fIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+fIcon.ScaleType = Enum.ScaleType.Fit
+fIcon.Parent = floatBtn
 
-    local arrow = Library.new("TextLabel", {
-        Size = UDim2.new(0, 16, 1, 0),
-        Position = UDim2.new(1, -26, 0, 0),
-        AnchorPoint = Vector2.new(1, 0),
-        Text = defaultOpen and "▼" or "▶",
-        TextColor3 = C.accent,
-        TextSize = 10,
-        Font = F.bold,
-        BackgroundTransparency = 1,
-        ZIndex = 3,
-        Parent = header
-    })
-
-    local content = Library.new("Frame", {
-        Name = "Content",
-        Size = UDim2.new(1, 0, 0, 0),
-        Position = UDim2.new(0, 0, 0, HEADER_H),
-        BackgroundTransparency = 1,
-        ClipsDescendants = false,
-        Visible = defaultOpen,
-        ZIndex = 2,
-        Parent = card
-    })
-
-    local contentLayout = Library.new("UIListLayout", {
-        Padding = UDim.new(0, 2),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = content
-    })
-
-    Library.new("UIPadding", {
-        PaddingTop = UDim.new(0, 4),
-        PaddingBottom = UDim.new(0, 4),
-        Parent = content
-    })
-
-    local isOpen = defaultOpen
-    content.ChildAdded:Connect(function()
-        task.defer(function() task.wait(0.02) updateSectionHeight(card, content) end)
-    end)
-
-    header.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        arrow.Text = isOpen and "▼" or "▶"
-        content.Visible = isOpen
-        task.defer(function() task.wait(0.02) updateSectionHeight(card, content) end)
-    end)
-
-    task.defer(function()
-        task.wait(0.15)
-        if defaultOpen then updateSectionHeight(card, content) end
-    end)
-
-    return content
-end
-
--- ============================================================
--- TOGGLE
--- ============================================================
-function Library.makeToggle(parent, name, default, callback)
-    local f = Library.new("Frame", {
-        Name = "Toggle_" .. name,
-        Size = UDim2.new(1, 0, 0, ITEM_H),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Parent = parent
-    })
-
-    Library.new("TextLabel", {
-        Size = UDim2.new(0.7, -12, 1, 0),
-        Position = UDim2.new(0, 12, 0, 0),
-        Text = name,
-        TextColor3 = C.text,
-        TextSize = 11,
-        Font = F.norm,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Parent = f
-    })
-
-    local b = Library.new("TextButton", {
-        Size = UDim2.new(0, 30, 0, 18),
-        Position = UDim2.new(1, -42, 0.5, -9),
-        Text = "",
-        BackgroundColor3 = default and C.accent or C.bg4,
-        BorderSizePixel = 0,
-        AutoButtonColor = false,
-        Parent = f
-    })
-    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(1, 0) })
-
-    local knob = Library.new("Frame", {
-        Size = UDim2.new(0, 12, 0, 12),
-        Position = default and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6),
-        BackgroundColor3 = C.text,
-        BorderSizePixel = 0,
-        Parent = b
-    })
-    Library.new("UICorner", { Parent = knob, CornerRadius = UDim.new(1, 0) })
-
-    local state = default
-
-    local function setState(newState, skipCallback)
-        if state == newState then return end
-        state = newState
-        S.Services.TS:Create(b, TweenInfo.new(0.2), { BackgroundColor3 = state and C.accent or C.bg4 }):Play()
-        S.Services.TS:Create(knob, TweenInfo.new(0.2), { Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6) }):Play()
-        if not skipCallback then pcall(callback, state) end
-    end
-
-    b.MouseButton1Click:Connect(function()
-        setState(not state, false)
-    end)
-
-    return setState
-end
-
--- ============================================================
--- INPUT
--- ============================================================
-function Library.makeInput(parent, name, default, callback)
-    local f = Library.new("Frame", {
-        Name = "Input_" .. name,
-        Size = UDim2.new(1, 0, 0, ITEM_H),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Parent = parent
-    })
-
-    Library.new("TextLabel", {
-        Size = UDim2.new(0.55, -12, 1, 0),
-        Position = UDim2.new(0, 12, 0, 0),
-        Text = name,
-        TextColor3 = C.text,
-        TextSize = 11,
-        Font = F.norm,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Parent = f
-    })
-
-    local b = Library.new("TextBox", {
-        Size = UDim2.new(0, 55, 0, 22),
-        Position = UDim2.new(1, -67, 0.5, -11),
-        Text = tostring(default),
-        TextColor3 = C.text,
-        TextSize = 11,
-        Font = F.norm,
-        BackgroundColor3 = C.bg4,
-        BorderSizePixel = 0,
-        ClearTextOnFocus = false,
-        Parent = f
-    })
-    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
-
-    b.FocusLost:Connect(function()
-        local v = tonumber(b.Text)
-        if v then pcall(callback, v) else b.Text = tostring(default) end
-    end)
-end
-
--- ============================================================
--- BUTTON (Kotak + Flash Putih)
--- ============================================================
-function Library.makeButton(parent, name, callback)
-    local wrapper = Library.new("Frame", {
-        Name = "BtnWrapper_" .. name,
-        Size = UDim2.new(1, 0, 0, ITEM_H - 6),
-        BackgroundTransparency = 1,
-        Parent = parent
-    })
-
-    local b = Library.new("TextButton", {
-        Name = "Button_" .. name,
-        Size = UDim2.new(1, -12, 1, 0),
-        Position = UDim2.new(0, 6, 0, 0),
-        Text = name,
-        TextColor3 = C.text,
-        TextSize = 11,
-        Font = F.norm,
-        BackgroundColor3 = C.bg4,
-        BackgroundTransparency = 0.3,
-        BorderSizePixel = 0,
-        AutoButtonColor = false,
-        Parent = wrapper
-    })
-    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(0, 5) })
-
-    local flash = Library.new("Frame", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 5,
-        Parent = b
-    })
-    Library.new("UICorner", { Parent = flash, CornerRadius = UDim.new(0, 5) })
-
-    b.MouseButton1Down:Connect(function()
-        S.Services.TS:Create(flash, TweenInfo.new(0.1), { BackgroundTransparency = 0.8 }):Play()
-    end)
-    b.MouseButton1Up:Connect(function()
-        S.Services.TS:Create(flash, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
-    end)
-    b.MouseLeave:Connect(function()
-        S.Services.TS:Create(flash, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
-    end)
-
-    b.MouseButton1Click:Connect(function()
-        pcall(callback)
-    end)
-
-    b.MouseEnter:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3, BackgroundTransparency = 0.1 }):Play()
-    end)
-    b.MouseLeave:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg4, BackgroundTransparency = 0.3 }):Play()
-    end)
-
-    return b
-end
-
--- ============================================================
--- DROPDOWN (Slide In + Overlay + Accent Bar)
--- ============================================================
-function Library.makeDropdown(parent, name, initialOptions, callback)
-    local f = Library.new("Frame", {
-        Name = "Dropdown_" .. name,
-        Size = UDim2.new(1, 0, 0, ITEM_H),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ClipsDescendants = false,
-        Parent = parent
-    })
-
-    Library.new("TextLabel", {
-        Size = UDim2.new(0.5, -12, 1, 0),
-        Position = UDim2.new(0, 12, 0, 0),
-        Text = name,
-        TextColor3 = C.text,
-        TextSize = 11,
-        Font = F.norm,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Parent = f
-    })
-
-    local DROPDOWN_W = 130
-
-    local selected = Library.new("TextButton", {
-        Size = UDim2.new(0, DROPDOWN_W, 0, 22),
-        Position = UDim2.new(1, -(DROPDOWN_W + 12), 0.5, -11),
-        Text = "",
-        BackgroundColor3 = C.bg4,
-        BorderSizePixel = 0,
-        AutoButtonColor = false,
-        ZIndex = 10,
-        Parent = f
-    })
-    Library.new("UICorner", { Parent = selected, CornerRadius = UDim.new(0, 4) })
-
-    local selectedAccent = Library.new("Frame", {
-        Size = UDim2.new(0, 2, 0, 14),
-        Position = UDim2.new(0, 6, 0.5, -7),
-        BackgroundColor3 = C.accent,
-        BorderSizePixel = 0,
-        ZIndex = 11,
-        Parent = selected
-    })
-    Library.new("UICorner", { Parent = selectedAccent, CornerRadius = UDim.new(1, 0) })
-
-    local selectedText = Library.new("TextLabel", {
-        Size = UDim2.new(1, -28, 1, 0),
-        Position = UDim2.new(0, 14, 0, 0),
-        Text = initialOptions[1] or "None",
-        TextColor3 = C.text,
-        TextSize = 11,
-        Font = F.norm,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        ZIndex = 11,
-        Parent = selected
-    })
-
-    local arrow = Library.new("TextLabel", {
-        Size = UDim2.new(0, 20, 1, 0),
-        Position = UDim2.new(1, -24, 0, 0),
-        Text = "▼",
-        TextColor3 = C.accent,
-        TextSize = 10,
-        Font = F.bold,
-        BackgroundTransparency = 1,
-        ZIndex = 11,
-        Parent = selected
-    })
-
-    local overlay = Library.new("TextButton", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "",
-        Visible = false,
-        ZIndex = 100,
-        Parent = S.GUI.Screen
-    })
-
-    local popup = Library.new("ScrollingFrame", {
-        Name = "DropdownPopup_" .. name,
-        Size = UDim2.new(0, 180, 1, -20),
-        Position = UDim2.new(1, 200, 0, 10),
-        BackgroundColor3 = C.bg4,
-        BorderSizePixel = 0,
-        Visible = false,
-        ZIndex = 101,
-        ScrollBarThickness = 3,
-        ScrollBarImageColor3 = C.accent,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        Parent = S.GUI.Screen
-    })
-    Library.new("UICorner", { Parent = popup, CornerRadius = UDim.new(0, 5) })
-    Library.new("UIListLayout", { Padding = UDim.new(0, 2), Parent = popup })
-    Library.new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4), Parent = popup })
-
-    local currentValue = initialOptions[1] or "None"
-    local isOpen = false
-    local animating = false
-
-    local function openPopup()
-        if animating then return end
-        animating = true
-        isOpen = true
-        overlay.Visible = true
-        popup.Visible = true
-        popup.Position = UDim2.new(1, 200, 0, 10)
-        S.Services.TS:Create(overlay, TweenInfo.new(0.2), { BackgroundTransparency = 0.5 }):Play()
-        S.Services.TS:Create(popup, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = UDim2.new(1, -200, 0, 10)
-        }):Play()
-        task.delay(0.2, function() animating = false end)
-    end
-
-    local function closePopup()
-        if animating then return end
-        animating = true
-        isOpen = false
-        S.Services.TS:Create(overlay, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
-        S.Services.TS:Create(popup, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(1, 200, 0, 10)
-        }):Play()
-        task.delay(0.2, function()
-            popup.Visible = false
-            overlay.Visible = false
-            animating = false
+-- DRAG FLOAT BUTTON
+local dragging, dragStart, startPos
+floatBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = floatBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
         end)
     end
-
-    overlay.MouseButton1Click:Connect(closePopup)
-
-    local function rebuildOptions(options)
-        for _, child in pairs(popup:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
-        for i, opt in ipairs(options) do
-            local optBtn = Library.new("TextButton", {
-                Size = UDim2.new(1, -8, 0, 32),
-                Text = "",
-                BackgroundColor3 = C.bg4,
-                BorderSizePixel = 0,
-                ZIndex = 201,
-                Parent = popup
-            })
-            Library.new("UICorner", { Parent = optBtn, CornerRadius = UDim.new(0, 4) })
-
-            local optAccent = Library.new("Frame", {
-                Size = UDim2.new(0, 2, 0, 16),
-                Position = UDim2.new(0, 8, 0.5, -8),
-                BackgroundColor3 = C.accent,
-                BorderSizePixel = 0,
-                ZIndex = 202,
-                Visible = false,
-                Parent = optBtn
-            })
-            Library.new("UICorner", { Parent = optAccent, CornerRadius = UDim.new(1, 0) })
-
-            local optText = Library.new("TextLabel", {
-                Size = UDim2.new(1, -24, 1, 0),
-                Position = UDim2.new(0, 16, 0, 0),
-                Text = opt,
-                TextColor3 = C.text,
-                TextSize = 11,
-                Font = F.norm,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                BackgroundTransparency = 1,
-                ZIndex = 202,
-                Parent = optBtn
-            })
-
-            optBtn.MouseEnter:Connect(function()
-                optAccent.Visible = true
-                optText.TextColor3 = C.accent
-            end)
-            optBtn.MouseLeave:Connect(function()
-                if currentValue ~= opt then
-                    optAccent.Visible = false
-                    optText.TextColor3 = C.text
-                end
-            end)
-
-            optBtn.MouseButton1Click:Connect(function()
-                for _, c in pairs(popup:GetChildren()) do
-                    if c:IsA("TextButton") then
-                        local acc = c:FindFirstChildWhichIsA("Frame")
-                        local txt = c:FindFirstChildWhichIsA("TextLabel")
-                        if acc then acc.Visible = false end
-                        if txt then txt.TextColor3 = C.text end
-                    end
-                end
-                optAccent.Visible = true
-                optText.TextColor3 = C.accent
-                
-                selectedText.Text = opt
-                currentValue = opt
-                closePopup()
-                pcall(callback, opt)
-            end)
+end)
+floatBtn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch then
+        if dragging then
+            local delta = input.Position - dragStart
+            floatBtn.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
         end
     end
+end)
 
-    rebuildOptions(initialOptions)
+-- ============================================================
+-- MAIN FRAME (Size: 460x320)
+-- ============================================================
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 460, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -230, 0.5, -160)
+mainFrame.BackgroundColor3 = C.panel
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Visible = false
+mainFrame.Parent = gui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
-    selected.MouseButton1Click:Connect(function()
-        if not isOpen then openPopup() end
-    end)
+local mStroke = Instance.new("UIStroke")
+mStroke.Color = C.stroke
+mStroke.Thickness = 1
+mStroke.Transparency = 0.3
+mStroke.Parent = mainFrame
 
-    return {
-        UpdateOptions = function(options)
-            if isOpen then return end
-            local stillValid = false
-            for _, opt in ipairs(options) do
-                if opt == currentValue then stillValid = true break end
-            end
-            if not stillValid and #options > 0 then
-                currentValue = options[1]
-                selectedText.Text = options[1]
-                pcall(callback, options[1])
-            end
-            rebuildOptions(options)
-        end,
-        SetValue = function(v)
-            currentValue = v
-            selectedText.Text = v
-        end,
-        GetValue = function() return currentValue end
-    }
-end
+-- ============================================================
+-- HEADER (Drag Handle)
+-- ============================================================
+local HEADER_H = 36
 
-S.Comp = Library
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, HEADER_H)
+header.BackgroundColor3 = C.bg2
+header.BackgroundTransparency = 0.1
+header.BorderSizePixel = 0
+header.Active = true
+header.Parent = mainFrame
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 8)
+
+local hFix = Instance.new("Frame")
+hFix.Size = UDim2.new(1, 0, 0, 15)
+hFix.Position = UDim2.new(0, 0, 1, -15)
+hFix.BackgroundColor3 = C.bg2
+hFix.BackgroundTransparency = 0.1
+hFix.BorderSizePixel = 0
+hFix.Parent = header
+
+local lText = Instance.new("TextLabel")
+lText.Size = UDim2.new(0, 60, 1, 0)
+lText.Position = UDim2.new(0, 12, 0, 0)
+lText.Text = "Flow"
+lText.TextColor3 = C.accent
+lText.TextSize = 13
+lText.Font = F.bold
+lText.TextXAlignment = Enum.TextXAlignment.Left
+lText.BackgroundTransparency = 1
+lText.Parent = header
+
+local lIcon = Instance.new("ImageLabel")
+lIcon.Name = "LogoHeader"
+lIcon.Size = UDim2.new(0, 18, 0, 18)
+lIcon.Position = UDim2.new(0, 52, 0.5, -9)
+lIcon.BackgroundTransparency = 1
+lIcon.BorderSizePixel = 0
+lIcon.Image = I.icon
+lIcon.ImageColor3 = C.accent
+lIcon.ScaleType = Enum.ScaleType.Fit
+lIcon.Parent = header
+
+local sep = Instance.new("Frame")
+sep.Size = UDim2.new(0, 1, 0, 18)
+sep.Position = UDim2.new(0, 78, 0.5, -9)
+sep.BackgroundColor3 = C.stroke
+sep.BorderSizePixel = 0
+sep.Parent = header
+
+local sub = Instance.new("TextLabel")
+sub.Size = UDim2.new(0, 200, 1, 0)
+sub.Position = UDim2.new(0, 88, 0, 0)
+sub.Text = "Command An Army"
+sub.TextColor3 = C.textDim
+sub.TextSize = 10
+sub.Font = F.norm
+sub.TextXAlignment = Enum.TextXAlignment.Left
+sub.BackgroundTransparency = 1
+sub.Parent = header
+
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 22, 0, 22)
+minBtn.Position = UDim2.new(1, -30, 0.5, -11)
+minBtn.Text = "−"
+minBtn.TextColor3 = C.accent
+minBtn.TextSize = 14
+minBtn.Font = F.bold
+minBtn.BackgroundColor3 = C.bg3
+minBtn.BackgroundTransparency = 0.2
+minBtn.BorderSizePixel = 0
+minBtn.Parent = header
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 4)
+
+-- ============================================================
+-- GARIS 1
+-- ============================================================
+local line1 = Instance.new("Frame")
+line1.Name = "HeaderLine"
+line1.Size = UDim2.new(1, 0, 0, 1)
+line1.Position = UDim2.new(0, 0, 0, HEADER_H)
+line1.BackgroundColor3 = C.stroke
+line1.BackgroundTransparency = 0.3
+line1.BorderSizePixel = 0
+line1.Parent = mainFrame
+
+-- ============================================================
+-- SEARCH + TITLE + ACCENT LINE + GARIS 2
+-- ============================================================
+local ROW_Y = HEADER_H + 8  -- 44
+
+local searchFrame = Instance.new("Frame")
+searchFrame.Size = UDim2.new(0, 160, 0, 26)
+searchFrame.Position = UDim2.new(0, 10, 0, ROW_Y)
+searchFrame.BackgroundColor3 = C.bg2
+searchFrame.BackgroundTransparency = 0.1
+searchFrame.BorderSizePixel = 0
+searchFrame.Parent = mainFrame
+Instance.new("UICorner", searchFrame).CornerRadius = UDim.new(0, 5)
+
+local sIcon = Instance.new("ImageLabel")
+sIcon.Size = UDim2.new(0, 10, 0, 10)
+sIcon.Position = UDim2.new(0, 9, 0.5, -5)
+sIcon.BackgroundTransparency = 1
+sIcon.Image = I.search
+sIcon.ImageColor3 = C.textDim
+sIcon.Parent = searchFrame
+
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1, -30, 1, 0)
+searchBox.Position = UDim2.new(0, 26, 0, 0)
+searchBox.Text = ""
+searchBox.PlaceholderText = "Search feature.."
+searchBox.PlaceholderColor3 = C.textDim2
+searchBox.TextColor3 = C.text
+searchBox.TextSize = 10
+searchBox.Font = F.norm
+searchBox.BackgroundTransparency = 1
+searchBox.TextXAlignment = Enum.TextXAlignment.Left
+searchBox.ClearTextOnFocus = false
+searchBox.Parent = searchFrame
+
+local vDivider = Instance.new("Frame")
+vDivider.Name = "TitleDivider"
+vDivider.Size = UDim2.new(0, 2, 0, 18)
+vDivider.Position = UDim2.new(0, 180, 0, ROW_Y + 4)
+vDivider.BackgroundColor3 = C.accent
+vDivider.BorderSizePixel = 0
+vDivider.Parent = mainFrame
+Instance.new("UICorner", vDivider).CornerRadius = UDim.new(1, 0)
+
+local cTitle = Instance.new("TextLabel")
+cTitle.Size = UDim2.new(1, -200, 0, 26)
+cTitle.Position = UDim2.new(0, 190, 0, ROW_Y)
+cTitle.Text = "Combat"
+cTitle.TextColor3 = C.text
+cTitle.TextSize = 12
+cTitle.Font = F.bold
+cTitle.TextXAlignment = Enum.TextXAlignment.Left
+cTitle.BackgroundTransparency = 1
+cTitle.Parent = mainFrame
+
+local line2 = Instance.new("Frame")
+line2.Name = "TitleLine"
+line2.Size = UDim2.new(1, -200, 0, 1)
+line2.Position = UDim2.new(0, 190, 0, ROW_Y + 28)
+line2.BackgroundColor3 = C.stroke
+line2.BackgroundTransparency = 0.3
+line2.BorderSizePixel = 0
+line2.Parent = mainFrame
+
+-- ============================================================
+-- SIDEBAR (TRANSPARAN)
+-- ============================================================
+local SIDEBAR_Y = ROW_Y + 38  -- 82
+
+local sidebar = Instance.new("Frame")
+sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
+sidebar.Position = UDim2.new(0, 10, 0, SIDEBAR_Y)
+sidebar.BackgroundTransparency = 1
+sidebar.BorderSizePixel = 0
+sidebar.Parent = mainFrame
+
+local sLayout = Instance.new("UIListLayout")
+sLayout.Padding = UDim.new(0, 4)
+sLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+sLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+sLayout.SortOrder = Enum.SortOrder.LayoutOrder
+sLayout.Parent = sidebar
+
+local sPad = Instance.new("UIPadding")
+sPad.PaddingTop = UDim.new(0, 0)
+sPad.PaddingBottom = UDim.new(0, 4)
+sPad.Parent = sidebar
+
+-- ============================================================
+-- CONTENT PANEL (TRANSPARAN) + CONTAINER
+-- ============================================================
+local contentPanel = Instance.new("Frame")
+contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10))
+contentPanel.Position = UDim2.new(0, 130, 0, SIDEBAR_Y)
+contentPanel.BackgroundTransparency = 1
+contentPanel.BorderSizePixel = 0
+contentPanel.ClipsDescendants = true
+contentPanel.Parent = mainFrame
+
+local contentScroll = Instance.new("Frame")
+contentScroll.Name = "ContentScroll"
+contentScroll.Size = UDim2.new(1, 0, 1, 0)
+contentScroll.Position = UDim2.new(0, 0, 0, 0)
+contentScroll.BackgroundTransparency = 1
+contentScroll.BorderSizePixel = 0
+contentScroll.ClipsDescendants = true
+contentScroll.Parent = contentPanel
+
+-- ============================================================
+-- EXPORT
+-- ============================================================
+S.GUI = {
+    Screen = gui,
+    FloatBtn = floatBtn,
+    MainFrame = mainFrame,
+    Header = header,
+    Sidebar = sidebar,
+    Content = contentPanel,
+    ContentScroll = contentScroll,
+    ContentTitle = cTitle,
+    TitleLine = line2,
+    HeaderLine = line1,
+    TitleDivider = vDivider,
+    SearchBox = searchBox,
+    MinBtn = minBtn,
+    CloseBtn = nil,
+    Overlay = nil, -- (Buat Dropdown)
+}
