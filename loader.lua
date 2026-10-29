@@ -14,7 +14,7 @@ local Modules = {
     "3_theme",
     "4_utils",
     "5_gui",
-    "6_components",
+    "6_library",
     "7_pages",
     "8_logic",
     "9_init",
