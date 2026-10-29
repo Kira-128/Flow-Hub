@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES (Flow Hub v4.0 - Lynx Style)
+  [7] PAGES (Flow Hub v4.1 - Clean Layout)
 ============================================================
 ]]
 
@@ -302,8 +302,9 @@ end)
 
 local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
 
+-- TextBox Dipanggil Duluan biar di Atas
 local codeBox = Instance.new("TextBox")
-codeBox.Size = UDim2.new(1, -24, 0, 24)
+codeBox.Size = UDim2.new(1, -24, 0, 28) -- Sedikit lebih tinggi
 codeBox.BackgroundColor3 = C.bg4
 codeBox.BorderSizePixel = 0
 codeBox.Text = ""
@@ -317,6 +318,7 @@ codeBox.Parent = codeSection
 Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
 codeBox.Position = UDim2.new(0, 12, 0, 0)
 
+-- Dropdown Dipanggil Kedua biar di Bawah
 local codeDropdown = S.Comp.makeDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
     if val ~= "Fetching..." and val ~= "None" then
         codeBox.Text = val
