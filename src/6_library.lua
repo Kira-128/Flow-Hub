@@ -1,9 +1,9 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v1.1 - Final Stable)
-  - Fix popup parent ke S.GUI.Screen
-  - Panah Mint
-  - Dropdown ke Atas/Bawah
+  [6] LIBRARY (Flow Hub v1.2 - Final Fix)
+  - Jarak Item 2px
+  - Button Tanpa Ruang Kosong
+  - Dropdown Viewport (Anti Kepotong)
 ============================================================
 ]]
 
@@ -107,7 +107,7 @@ function Library.makeSection(parent, title, defaultOpen)
     })
 
     local contentLayout = Library.new("UIListLayout", {
-        Padding = UDim.new(0, 3),
+        Padding = UDim.new(0, 2), -- JARAK 2 PIXEL
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = content
     })
@@ -249,15 +249,15 @@ end
 function Library.makeButton(parent, name, callback)
     local wrapper = Library.new("Frame", {
         Name = "BtnWrapper_" .. name,
-        Size = UDim2.new(1, 0, 0, ITEM_H),
+        Size = UDim2.new(1, 0, 0, ITEM_H - 6), -- Tinggi 28px (Sama kayak tombol)
         BackgroundTransparency = 1,
         Parent = parent
     })
 
     local b = Library.new("TextButton", {
         Name = "Button_" .. name,
-        Size = UDim2.new(1, -12, 0, ITEM_H - 6),
-        Position = UDim2.new(0, 6, 0.5, -(ITEM_H-6)/2),
+        Size = UDim2.new(1, -12, 1, 0), -- Penuh
+        Position = UDim2.new(0, 6, 0, 0),
         Text = name,
         TextColor3 = C.text,
         TextSize = 11,
@@ -305,7 +305,7 @@ function Library.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (Ke Atas/Bawah + Panah Mint + UpdateOptions)
+-- DROPDOWN (Viewport Fixed)
 -- ============================================================
 function Library.makeDropdown(parent, name, initialOptions, callback)
     local f = Library.new("Frame", {
@@ -368,7 +368,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         Parent = selected
     })
 
-    -- PARENT DIUBAH KE S.GUI.SCREEN BIAR GA KEPOTONG
     local popup = Library.new("ScrollingFrame", {
         Name = "DropdownPopup_" .. name,
         Size = UDim2.new(0, DROPDOWN_W, 0, 150),
@@ -380,7 +379,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         ScrollBarImageColor3 = C.accent,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        Parent = S.GUI.Screen -- <--- INI KUNCINYA
+        Parent = S.GUI.Screen -- Parent ke Screen
     })
     Library.new("UICorner", { Parent = popup, CornerRadius = UDim.new(0, 5) })
 
@@ -394,24 +393,21 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         local pos = selected.AbsolutePosition
         local size = selected.AbsoluteSize
         local popupH = popup.AbsoluteSize.Y
-        local mfPos = S.GUI.MainFrame.AbsolutePosition
 
         if size.X == 0 or size.Y == 0 then return false end
 
-        local localX = pos.X - mfPos.X
-        local localY = pos.Y - mfPos.Y - popupH - 4
-
-        if pos.Y - popupH - 4 < 0 then
-            localY = pos.Y - mfPos.Y + size.Y + 4
+        local localY = pos.Y + size.Y + 4
+        if pos.Y + size.Y + 4 + popupH > workspace.CurrentCamera.ViewportSize.Y then
+            localY = pos.Y - popupH - 4
         end
 
+        local localX = pos.X
         if localX < 0 then localX = 0 end
-        if localX + DROPDOWN_W > S.GUI.MainFrame.AbsoluteSize.X then
-            localX = S.GUI.MainFrame.AbsoluteSize.X - DROPDOWN_W
+        if localX + DROPDOWN_W > workspace.CurrentCamera.ViewportSize.X then
+            localX = workspace.CurrentCamera.ViewportSize.X - DROPDOWN_W
         end
 
-        -- Set posisi global berdasarkan layar
-        popup.Position = UDim2.new(0, pos.X, 0, pos.Y + (localY > (pos.Y - mfPos.Y) and size.Y + 4 or -popupH - 4))
+        popup.Position = UDim2.new(0, localX, 0, localY)
         return true
     end
 
@@ -459,27 +455,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
             popup.Visible = false
             arrow.Text = "▶"
         end
-    end)
-
-    S.Services.Run.RenderStepped:Connect(function()
-        if not isOpen then return end
-        local anc = f
-        local stillVisible = true
-        while anc do
-            if anc == S.GUI.MainFrame then break end
-            if anc:IsA("GuiObject") then
-                if not anc.Visible then stillVisible = false break end
-                if anc.AbsoluteSize.X == 0 or anc.AbsoluteSize.Y == 0 then stillVisible = false break end
-            end
-            anc = anc.Parent
-        end
-        if not stillVisible then
-            isOpen = false
-            popup.Visible = false
-            arrow.Text = "▶"
-            return
-        end
-        updatePopupPosition()
     end)
 
     S.Services.UIS.InputBegan:Connect(function(input)
