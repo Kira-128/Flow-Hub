@@ -1,9 +1,9 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v1.2 - Final Fix)
-  - Jarak Item 2px
-  - Button Tanpa Ruang Kosong
-  - Dropdown Viewport (Anti Kepotong)
+  [6] LIBRARY (Flow Hub v2.0 - Lynx Style Dropdown)
+  - Dropdown Slide In + Overlay
+  - Accent Bar Mint
+  - No forceFixSection
 ============================================================
 ]]
 
@@ -107,7 +107,7 @@ function Library.makeSection(parent, title, defaultOpen)
     })
 
     local contentLayout = Library.new("UIListLayout", {
-        Padding = UDim.new(0, 2), -- JARAK 2 PIXEL
+        Padding = UDim.new(0, 2),
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = content
     })
@@ -249,14 +249,14 @@ end
 function Library.makeButton(parent, name, callback)
     local wrapper = Library.new("Frame", {
         Name = "BtnWrapper_" .. name,
-        Size = UDim2.new(1, 0, 0, ITEM_H - 6), -- Tinggi 28px (Sama kayak tombol)
+        Size = UDim2.new(1, 0, 0, ITEM_H - 6),
         BackgroundTransparency = 1,
         Parent = parent
     })
 
     local b = Library.new("TextButton", {
         Name = "Button_" .. name,
-        Size = UDim2.new(1, -12, 1, 0), -- Penuh
+        Size = UDim2.new(1, -12, 1, 0),
         Position = UDim2.new(0, 6, 0, 0),
         Text = name,
         TextColor3 = C.text,
@@ -305,7 +305,7 @@ function Library.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (Viewport Fixed)
+-- DROPDOWN (Slide In + Overlay + Accent Bar)
 -- ============================================================
 function Library.makeDropdown(parent, name, initialOptions, callback)
     local f = Library.new("Frame", {
@@ -343,9 +343,19 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
     })
     Library.new("UICorner", { Parent = selected, CornerRadius = UDim.new(0, 4) })
 
+    local selectedAccent = Library.new("Frame", {
+        Size = UDim2.new(0, 2, 0, 14),
+        Position = UDim2.new(0, 6, 0.5, -7),
+        BackgroundColor3 = C.accent,
+        BorderSizePixel = 0,
+        ZIndex = 11,
+        Parent = selected
+    })
+    Library.new("UICorner", { Parent = selectedAccent, CornerRadius = UDim.new(1, 0) })
+
     local selectedText = Library.new("TextLabel", {
-        Size = UDim2.new(1, -24, 1, 0),
-        Position = UDim2.new(0, 8, 0, 0),
+        Size = UDim2.new(1, -28, 1, 0),
+        Position = UDim2.new(0, 14, 0, 0),
         Text = initialOptions[1] or "None",
         TextColor3 = C.text,
         TextSize = 11,
@@ -368,48 +378,68 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         Parent = selected
     })
 
+    local overlay = Library.new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Visible = false,
+        ZIndex = 100,
+        Parent = S.GUI.Screen
+    })
+
     local popup = Library.new("ScrollingFrame", {
         Name = "DropdownPopup_" .. name,
-        Size = UDim2.new(0, DROPDOWN_W, 0, 150),
+        Size = UDim2.new(0, 180, 1, -20),
+        Position = UDim2.new(1, 200, 0, 10),
         BackgroundColor3 = C.bg4,
         BorderSizePixel = 0,
         Visible = false,
-        ZIndex = 200,
+        ZIndex = 101,
         ScrollBarThickness = 3,
         ScrollBarImageColor3 = C.accent,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        Parent = S.GUI.Screen -- Parent ke Screen
+        Parent = S.GUI.Screen
     })
     Library.new("UICorner", { Parent = popup, CornerRadius = UDim.new(0, 5) })
-
     Library.new("UIListLayout", { Padding = UDim.new(0, 2), Parent = popup })
     Library.new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4), Parent = popup })
 
     local currentValue = initialOptions[1] or "None"
     local isOpen = false
+    local animating = false
 
-    local function updatePopupPosition()
-        local pos = selected.AbsolutePosition
-        local size = selected.AbsoluteSize
-        local popupH = popup.AbsoluteSize.Y
-
-        if size.X == 0 or size.Y == 0 then return false end
-
-        local localY = pos.Y + size.Y + 4
-        if pos.Y + size.Y + 4 + popupH > workspace.CurrentCamera.ViewportSize.Y then
-            localY = pos.Y - popupH - 4
-        end
-
-        local localX = pos.X
-        if localX < 0 then localX = 0 end
-        if localX + DROPDOWN_W > workspace.CurrentCamera.ViewportSize.X then
-            localX = workspace.CurrentCamera.ViewportSize.X - DROPDOWN_W
-        end
-
-        popup.Position = UDim2.new(0, localX, 0, localY)
-        return true
+    local function openPopup()
+        if animating then return end
+        animating = true
+        isOpen = true
+        overlay.Visible = true
+        popup.Visible = true
+        popup.Position = UDim2.new(1, 200, 0, 10)
+        S.Services.TS:Create(overlay, TweenInfo.new(0.2), { BackgroundTransparency = 0.5 }):Play()
+        S.Services.TS:Create(popup, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = UDim2.new(1, -200, 0, 10)
+        }):Play()
+        task.delay(0.2, function() animating = false end)
     end
+
+    local function closePopup()
+        if animating then return end
+        animating = true
+        isOpen = false
+        S.Services.TS:Create(overlay, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
+        S.Services.TS:Create(popup, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 200, 0, 10)
+        }):Play()
+        task.delay(0.2, function()
+            popup.Visible = false
+            overlay.Visible = false
+            animating = false
+        end)
+    end
+
+    overlay.MouseButton1Click:Connect(closePopup)
 
     local function rebuildOptions(options)
         for _, child in pairs(popup:GetChildren()) do
@@ -417,11 +447,8 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         end
         for i, opt in ipairs(options) do
             local optBtn = Library.new("TextButton", {
-                Size = UDim2.new(1, -8, 0, 26),
-                Text = opt,
-                TextColor3 = C.text,
-                TextSize = 11,
-                Font = F.norm,
+                Size = UDim2.new(1, -8, 0, 32),
+                Text = "",
                 BackgroundColor3 = C.bg4,
                 BorderSizePixel = 0,
                 ZIndex = 201,
@@ -429,51 +456,65 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
             })
             Library.new("UICorner", { Parent = optBtn, CornerRadius = UDim.new(0, 4) })
 
+            local optAccent = Library.new("Frame", {
+                Size = UDim2.new(0, 2, 0, 16),
+                Position = UDim2.new(0, 8, 0.5, -8),
+                BackgroundColor3 = C.accent,
+                BorderSizePixel = 0,
+                ZIndex = 202,
+                Visible = false,
+                Parent = optBtn
+            })
+            Library.new("UICorner", { Parent = optAccent, CornerRadius = UDim.new(1, 0) })
+
+            local optText = Library.new("TextLabel", {
+                Size = UDim2.new(1, -24, 1, 0),
+                Position = UDim2.new(0, 16, 0, 0),
+                Text = opt,
+                TextColor3 = C.text,
+                TextSize = 11,
+                Font = F.norm,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                BackgroundTransparency = 1,
+                ZIndex = 202,
+                Parent = optBtn
+            })
+
+            optBtn.MouseEnter:Connect(function()
+                optAccent.Visible = true
+                optText.TextColor3 = C.accent
+            end)
+            optBtn.MouseLeave:Connect(function()
+                if currentValue ~= opt then
+                    optAccent.Visible = false
+                    optText.TextColor3 = C.text
+                end
+            end)
+
             optBtn.MouseButton1Click:Connect(function()
+                for _, c in pairs(popup:GetChildren()) do
+                    if c:IsA("TextButton") then
+                        local acc = c:FindFirstChildWhichIsA("Frame")
+                        local txt = c:FindFirstChildWhichIsA("TextLabel")
+                        if acc then acc.Visible = false end
+                        if txt then txt.TextColor3 = C.text end
+                    end
+                end
+                optAccent.Visible = true
+                optText.TextColor3 = C.accent
+                
                 selectedText.Text = opt
                 currentValue = opt
-                isOpen = false
-                arrow.Text = "▶"
-                popup.Visible = false
+                closePopup()
                 pcall(callback, opt)
             end)
         end
-        local maxH = 150
-        local contentH = #options * 28 + 8
-        popup.Size = UDim2.new(0, DROPDOWN_W, 0, math.min(contentH, maxH))
     end
 
     rebuildOptions(initialOptions)
 
     selected.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        if isOpen then
-            updatePopupPosition()
-            popup.Visible = true
-            arrow.Text = "▼"
-        else
-            popup.Visible = false
-            arrow.Text = "▶"
-        end
-    end)
-
-    S.Services.UIS.InputBegan:Connect(function(input)
-        if isOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mousePos = input.Position
-            local popPos = popup.AbsolutePosition
-            local popSize = popup.AbsoluteSize
-            local selPos = selected.AbsolutePosition
-            local selSize = selected.AbsoluteSize
-
-            local inPopup = mousePos.X >= popPos.X and mousePos.X <= popPos.X + popSize.X and mousePos.Y >= popPos.Y and mousePos.Y <= popPos.Y + popSize.Y
-            local inSelected = mousePos.X >= selPos.X and mousePos.X <= selPos.X + selSize.X and mousePos.Y >= selPos.Y and mousePos.Y <= selPos.Y + selSize.Y
-
-            if not inPopup and not inSelected then
-                isOpen = false
-                popup.Visible = false
-                arrow.Text = "▶"
-            end
-        end
+        if not isOpen then openPopup() end
     end)
 
     return {
