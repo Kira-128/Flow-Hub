@@ -1,11 +1,10 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v2.1 - Lynx Style Dropdown FIXED)
-  - Overlay scoped to MainFrame (ga nutupin Float Button)
-  - Popup anchored to dropdown (no hardcode)
-  - No race condition on close
-  - Accent Bar Mint preserved
-  - Tween slide-in preserved
+  [6] LIBRARY (Flow Hub v3.0 - AUTOMIZE)
+  - Realtime Section Height (no forceFixSection)
+  - UIScale support (buat pembesar UI)
+  - Resize Handle (pojok kanan bawah)
+  - Layout Consistency (semua item ITEM_H)
 ============================================================
 ]]
 
@@ -34,7 +33,7 @@ function Library.new(class, props)
 end
 
 -- ============================================================
--- HELPER: Recalculate Section Height
+-- HELPER: Realtime Section Height
 -- ============================================================
 local function updateSectionHeight(card, content)
     if not card or not card.Parent then return end
@@ -46,6 +45,18 @@ local function updateSectionHeight(card, content)
     local totalH = 0
     if layout then totalH = layout.AbsoluteContentSize.Y end
     card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
+end
+
+local function bindRealtimeHeight(card, content)
+    local layout = content:FindFirstChildOfClass("UIListLayout")
+    if layout then
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            updateSectionHeight(card, content)
+        end)
+    end
+    content.ChildAdded:Connect(function()
+        task.defer(function() updateSectionHeight(card, content) end)
+    end)
 end
 
 -- ============================================================
@@ -123,15 +134,13 @@ function Library.makeSection(parent, title, defaultOpen)
     })
 
     local isOpen = defaultOpen
-    content.ChildAdded:Connect(function()
-        task.defer(function() task.wait(0.02) updateSectionHeight(card, content) end)
-    end)
+    bindRealtimeHeight(card, content)
 
     header.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         arrow.Text = isOpen and "▼" or "▶"
         content.Visible = isOpen
-        task.defer(function() task.wait(0.02) updateSectionHeight(card, content) end)
+        task.defer(function() updateSectionHeight(card, content) end)
     end)
 
     task.defer(function()
@@ -204,7 +213,7 @@ function Library.makeToggle(parent, name, default, callback)
 end
 
 -- ============================================================
--- INPUT
+-- INPUT (Angka)
 -- ============================================================
 function Library.makeInput(parent, name, default, callback)
     local f = Library.new("Frame", {
@@ -248,20 +257,86 @@ function Library.makeInput(parent, name, default, callback)
 end
 
 -- ============================================================
+-- TEXT INPUT (Bebas Teks, Full Width Sejajar Tombol)
+-- ============================================================
+function Library.makeTextInput(parent, name, default, placeholder, callback, isFullWidth)
+    local f = Library.new("Frame", {
+        Name = "TextInput_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+
+    local labelSize = isFullWidth and UDim2.new(0, 80, 1, 0) or UDim2.new(0.5, -12, 1, 0)
+    Library.new("TextLabel", {
+        Size = labelSize,
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
+
+    local b
+    if isFullWidth then
+        b = Library.new("TextBox", {
+            Size = UDim2.new(1, -12, 0, 22),
+            Position = UDim2.new(0, 6, 0.5, -11),
+            Text = tostring(default or ""),
+            PlaceholderText = placeholder or "",
+            PlaceholderColor3 = C.textDim2,
+            TextColor3 = C.text,
+            TextSize = 11,
+            Font = F.norm,
+            BackgroundColor3 = C.bg4,
+            BorderSizePixel = 0,
+            ClearTextOnFocus = false,
+            Parent = f
+        })
+    else
+        b = Library.new("TextBox", {
+            Size = UDim2.new(0, 130, 0, 22),
+            Position = UDim2.new(1, -142, 0.5, -11),
+            Text = tostring(default or ""),
+            PlaceholderText = placeholder or "",
+            PlaceholderColor3 = C.textDim2,
+            TextColor3 = C.text,
+            TextSize = 11,
+            Font = F.norm,
+            BackgroundColor3 = C.bg4,
+            BorderSizePixel = 0,
+            ClearTextOnFocus = false,
+            Parent = f
+        })
+    end
+    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
+
+    b.FocusLost:Connect(function()
+        pcall(callback, b.Text)
+    end)
+
+    return b
+end
+
+-- ============================================================
 -- BUTTON (Kotak + Flash Putih)
 -- ============================================================
 function Library.makeButton(parent, name, callback)
     local wrapper = Library.new("Frame", {
         Name = "BtnWrapper_" .. name,
-        Size = UDim2.new(1, 0, 0, ITEM_H - 6),
+        Size = UDim2.new(1, 0, 0, ITEM_H),
         BackgroundTransparency = 1,
         Parent = parent
     })
 
     local b = Library.new("TextButton", {
         Name = "Button_" .. name,
-        Size = UDim2.new(1, -12, 1, 0),
-        Position = UDim2.new(0, 6, 0, 0),
+        Size = UDim2.new(1, -12, 1, -6),
+        Position = UDim2.new(0, 6, 0, 3),
         Text = name,
         TextColor3 = C.text,
         TextSize = 11,
@@ -309,7 +384,7 @@ function Library.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (FIXED v2.1)
+-- DROPDOWN (Sama persis dengan v2.1, no changes)
 -- ============================================================
 function Library.makeDropdown(parent, name, initialOptions, callback)
     local f = Library.new("Frame", {
@@ -382,9 +457,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         Parent = selected
     })
 
-    -- ============================================================
-    -- OVERLAY: scoped to MainFrame, ZIndex di bawah Float Button (50)
-    -- ============================================================
     local overlay = Library.new("TextButton", {
         Name = "DropdownOverlay_" .. name,
         Size = UDim2.new(1, 0, 1, 0),
@@ -393,8 +465,8 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         BackgroundTransparency = 1,
         Text = "",
         Visible = false,
-        ZIndex = 5,                     -- ✅ di bawah Float Button (50)
-        Parent = S.GUI.MainFrame         -- ✅ dalam MainFrame, bukan Screen
+        ZIndex = 5,
+        Parent = S.GUI.MainFrame
     })
 
     local popup = Library.new("ScrollingFrame", {
@@ -403,13 +475,13 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         BackgroundColor3 = C.bg4,
         BorderSizePixel = 0,
         Visible = false,
-        ZIndex = 20,                     -- ✅ di atas overlay
+        ZIndex = 20,
         ScrollBarThickness = 3,
         ScrollBarImageColor3 = C.accent,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ClipsDescendants = true,
-        Parent = S.GUI.MainFrame         -- ✅ dalam MainFrame
+        Parent = S.GUI.MainFrame
     })
     Library.new("UICorner", { Parent = popup, CornerRadius = UDim.new(0, 5) })
     Library.new("UIListLayout", { Padding = UDim.new(0, 2), Parent = popup })
@@ -424,9 +496,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
     local openTween = nil
     local closeTween = nil
 
-    -- ============================================================
-    -- POSITIONING: anchor ke dropdown asli, ga hardcode
-    -- ============================================================
     local function updatePopupPosition()
         local selPos = selected.AbsolutePosition
         local selSize = selected.AbsoluteSize
@@ -437,14 +506,12 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         if popupH == 0 then popupH = POPUP_MAX_H end
 
         local localX = selPos.X - mfPos.X
-        local localY = selPos.Y - mfPos.Y + selSize.Y + 4  -- default: bawah
+        local localY = selPos.Y - mfPos.Y + selSize.Y + 4
 
-        -- Kalau ga muat di bawah, muncul di atas
         if localY + popupH > mfSize.Y then
             localY = selPos.Y - mfPos.Y - popupH - 4
         end
 
-        -- Clamp horizontal biar ga keluar frame
         if localX + POPUP_W > mfSize.X then
             localX = mfSize.X - POPUP_W - 4
         end
@@ -455,9 +522,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         return true
     end
 
-    -- ============================================================
-    -- REBUILD OPTIONS
-    -- ============================================================
     local function rebuildOptions(options)
         for _, child in pairs(popup:GetChildren()) do
             if child:IsA("TextButton") then child:Destroy() end
@@ -524,26 +588,21 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
 
                 selectedText.Text = opt
                 currentValue = opt
-                closePopup(false)         -- ✅ close SELALU jalan
+                closePopup(false)
                 pcall(callback, opt)
             end)
         end
 
-        -- Clamp tinggi popup
         local contentH = #options * 32 + 8
         popup.Size = UDim2.new(0, POPUP_W, 0, math.min(contentH, POPUP_MAX_H))
     end
 
-    -- ============================================================
-    -- OPEN / CLOSE — NO RACE CONDITION
-    -- ============================================================
     local function cancelTweens()
         if openTween then openTween:Cancel() openTween = nil end
         if closeTween then closeTween:Cancel() closeTween = nil end
     end
 
     function openPopup()
-        -- Defensive: kalau udah kebuka, skip
         if isOpen and popup.Visible then return end
         isOpen = true
         cancelTweens()
@@ -554,7 +613,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         overlay.BackgroundTransparency = 1
         popup.BackgroundTransparency = 1
 
-        -- Slide-in dari offset +6px
         local startY = popup.Position.Y.Offset + 6
         popup.Position = UDim2.new(0, popup.Position.X.Offset, 0, startY)
 
@@ -592,16 +650,10 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         end
     end
 
-    -- ============================================================
-    -- OVERLAY CLICK = CLOSE
-    -- ============================================================
     overlay.MouseButton1Click:Connect(function()
         closePopup(false)
     end)
 
-    -- ============================================================
-    -- SELECTED CLICK = TOGGLE
-    -- ============================================================
     selected.MouseButton1Click:Connect(function()
         if isOpen then
             closePopup(false)
@@ -610,9 +662,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         end
     end)
 
-    -- ============================================================
-    -- OUTSIDE CLICK VIA UIS (defensif kalo overlay ga nangkep)
-    -- ============================================================
     S.Services.UIS.InputBegan:Connect(function(input)
         if not isOpen then return end
         if input.UserInputType ~= Enum.UserInputType.MouseButton1
@@ -632,9 +681,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         if not inPopup and not inSelected then closePopup(false) end
     end)
 
-    -- ============================================================
-    -- AUTO-CLOSE KALAU MAINFRAME HIDDEN
-    -- ============================================================
     S.GUI.MainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
         if not S.GUI.MainFrame.Visible then closePopup(true) end
     end)
@@ -662,6 +708,55 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         GetValue = function() return currentValue end,
         ClosePopup = function() closePopup(true) end
     }
+end
+
+-- ============================================================
+-- RESIZE HANDLE (pojok kanan bawah MainFrame)
+-- ============================================================
+function Library.attachResizeHandle(mainFrame)
+    local handle = Library.new("TextButton", {
+        Name = "ResizeHandle",
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(1, -16, 1, -16),
+        BackgroundColor3 = Color3.fromRGB(50, 50, 60),
+        BorderSizePixel = 0,
+        Text = "◢",
+        TextColor3 = C.accent,
+        TextSize = 10,
+        Font = F.bold,
+        ZIndex = 100,
+        Parent = mainFrame
+    })
+    Library.new("UICorner", { Parent = handle, CornerRadius = UDim.new(0, 3) })
+
+    local dragging = false
+    local startPos, startSize
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            startPos = input.Position
+            startSize = mainFrame.AbsoluteSize
+        end
+    end)
+    S.Services.UIS.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - startPos
+            local newW = math.max(300, startSize.X + delta.X)
+            local newH = math.max(200, startSize.Y + delta.Y)
+            mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        end
+    end)
+    S.Services.UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    return handle
 end
 
 S.Comp = Library
