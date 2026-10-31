@@ -1,11 +1,7 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v3.2 - AUTOMIZE + LYNX DROPDOWN)
-  - No forceFixSection
-  - Realtime Section Height
-  - Lynx Dropdown (Search, Slide Panel, Virtual Pool)
-  - attachResizeHandle (pojok kanan bawah)
-  - makeTextInput (Full Width / Kanan)
+  [6] LIBRARY (Flow Hub v3.3 - AUTOMIZE + LYNX DROPDOWN FIXED)
+  - Fix Dropdown Overlay: Ga nutupin Header/Title
 ============================================================
 ]]
 
@@ -413,10 +409,12 @@ Library._dropdownCount = 0
 
 function Library._initDropdownSystem()
     if Library._dropdownOverlay then return end
+    
+    -- ⬇️ OVERLAY DIUBAH: Mulai dari bawah Title Line (Y = 80) ⬇️
     Library._dropdownOverlay = Library.new("Frame", {
         Parent = S.GUI.MainFrame,
-        Size = UDim2.new(1, 0, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, -80),           -- Kurangi tinggi 80px dari atas
+        Position = UDim2.new(0, 0, 0, 80),         -- Mulai dari Y = 80px
         BackgroundColor3 = C.bg,
         BackgroundTransparency = 0.95,
         BorderSizePixel = 0,
