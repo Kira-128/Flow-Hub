@@ -1,18 +1,20 @@
 --[[
 ============================================================
-  [2] CONFIG — Command An Army (v3.0 Updated)
+  [2] CONFIG — Command An Army (v3.1 Updated)
 ============================================================
 ]]
 
 local Config = {
     -- Naikin versi biar config lama ke-reset ke default
-    ConfigVersion = 3,
+    ConfigVersion = 4,
 
     Combat = {
         AutoAttack = false, AutoRush = false, AutoFollow = false,
         KillAura = false, TargetLock = false, AutoHeal = false, AntiStun = false,
         AttackDelay = 0.35, RushDelay = 0.5, FollowDelay = 0.35,
         KillAuraRange = 20, HealThreshold = 30,
+        FOVSize = 150,   -- Tambahan buat Slider Target Lock
+        ShowFOV = true,  -- Tambahan buat visual lingkaran
     },
 
     Spawn = {
@@ -43,7 +45,11 @@ local Config = {
         AutoAscend      = false,
         AutoEvolve      = false,
         AutoReward      = false,
-        AutoDailyReward = false,  -- BARU: buat klaim login harian
+        AutoDailyReward = false,
+    },
+
+    AfkFarm = {             -- ⬅️ TAMBAHAN BUAT TAB AFK FARM
+        EnableFarm = false,
     },
 
     Misc = {
@@ -52,6 +58,8 @@ local Config = {
 
     Config = {
         AutoSave = true,
+        -- WindowSize = {X = 450, Y = 300}, -- Bisa ditambahin nanti kalau butuh resize
+        -- UIScale = 100,                   -- Bisa ditambahin nanti kalau butuh zoom
     },
 }
 
@@ -70,7 +78,7 @@ if readfile and isfile then
 
             if ok2 and type(decoded) == "table" then
                 local savedVersion = decoded.ConfigVersion or 1
-                local currentVersion = Config.ConfigVersion or 3
+                local currentVersion = Config.ConfigVersion or 4
 
                 -- Kalau versi save-an lama, reset ke default
                 if savedVersion < currentVersion then
