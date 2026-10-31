@@ -1,646 +1,865 @@
 --[[
 ============================================================
-  [7] PAGES (Flow Hub v5.0 - Automize & Lynx Dropdown)
+  [6] LIBRARY (Flow Hub v3.2 - AUTOMIZE + LYNX DROPDOWN)
   - No forceFixSection
-  - makeTextInput full-width (simetris)
+  - Realtime Section Height
+  - Lynx Dropdown (Search, Slide Panel, Virtual Pool)
   - attachResizeHandle (pojok kanan bawah)
-  - Tab AFK Farm
+  - makeTextInput (Full Width / Kanan)
 ============================================================
 ]]
 
 local S = _G.STHAIN
-repeat task.wait() until S.Config and S.Config.Combat 
-
 local C = S.Theme.Colors
-local I = S.Theme.Icons
 local F = S.Theme.Font
 
-local UIS = S.Services.UIS or game:GetService("UserInputService")
-local Run = S.Services.Run or game:GetService("RunService")
-local TS = S.Services.TS or game:GetService("TweenService")
+local Library = {}
 
-local pages = {}
-local tabs = {}
+local ITEM_H = 34
+local HEADER_H = 32
+local CARD_BG = C.bg3
+local CARD_TRANS = 0.15
+local POPUP_W = 180
+local POPUP_MAX_H = 200
 
-local function save()
-    if _G.STHAIN.MarkDirty then
-        _G.STHAIN.MarkDirty()
-    elseif S.Utils and S.Utils.SaveConfig then
-        task.spawn(S.Utils.SaveConfig)
+-- ============================================================
+-- HELPER: new Instance
+-- ============================================================
+function Library.new(class, props)
+    local inst = Instance.new(class)
+    for k, v in pairs(props) do
+        inst[k] = v
     end
+    return inst
 end
 
-local function createPage(name)
-    local page = Instance.new("ScrollingFrame")
-    page.Name = "Page_" .. name
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1
-    page.BorderSizePixel = 0
-    page.ScrollBarThickness = 3
-    page.ScrollBarImageColor3 = C.accent
-    page.ScrollBarImageTransparency = 0.5
-    page.CanvasSize = UDim2.new(0, 0, 0, 0)
-    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    page.ScrollingDirection = Enum.ScrollingDirection.Y
-    page.ElasticBehavior = Enum.ElasticBehavior.Never
-    page.ClipsDescendants = false
-    page.Visible = false
-    page.Parent = S.GUI.ContentScroll
-
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 4)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    layout.VerticalAlignment = Enum.VerticalAlignment.Top
-    layout.Parent = page
-
-    local pad = Instance.new("UIPadding")
-    pad.PaddingRight = UDim.new(0, 6)
-    pad.PaddingBottom = UDim.new(0, 6)
-    pad.Parent = page
-
-    pages[name] = page
-    return page
+-- ============================================================
+-- HELPER: Realtime Section Height (v3.2)
+-- ============================================================
+local function updateSectionHeight(card, content)
+    if not card or not card.Parent then return end
+    if not content.Visible then
+        card.Size = UDim2.new(1, 0, 0, HEADER_H)
+        return
+    end
+    local layout = content:FindFirstChildOfClass("UIListLayout")
+    local totalH = 0
+    if layout then
+        totalH = layout.AbsoluteContentSize.Y
+    end
+    card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
 end
 
-local function switchPage(name)
-    for n, p in pairs(pages) do
-        p.Visible = (n == name)
+local function bindAutoHeight(card, content)
+    local layout = content:FindFirstChildOfClass("UIListLayout")
+    if layout then
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            updateSectionHeight(card, content)
+        end)
     end
-    if S.GUI.ContentTitle then
-        S.GUI.ContentTitle.Text = name
+
+    local uiScale = card:FindFirstChildOfClass("UIScale")
+    if uiScale then
+        uiScale:GetPropertyChangedSignal("Scale"):Connect(function()
+            updateSectionHeight(card, content)
+        end)
     end
-end
 
-local function makeTab(iconId, name)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 30)
-    btn.Text = ""
-    btn.BackgroundColor3 = C.bg2
-    btn.BackgroundTransparency = 1
-    btn.BorderSizePixel = 0
-    btn.AutoButtonColor = false
-    btn.Parent = S.GUI.Sidebar
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-
-    local acc = Instance.new("Frame")
-    acc.Name = "AccentLine"
-    acc.Size = UDim2.new(0, 3, 0, 0)
-    acc.Position = UDim2.new(0, 6, 0.5, 0)
-    acc.AnchorPoint = Vector2.new(0, 0.5)
-    acc.BackgroundColor3 = C.accent
-    acc.BorderSizePixel = 0
-    acc.Visible = false
-    acc.Parent = btn
-    Instance.new("UICorner", acc).CornerRadius = UDim.new(1, 0)
-
-    local ic = Instance.new("ImageLabel")
-    ic.Size = UDim2.new(0, 14, 0, 14)
-    ic.Position = UDim2.new(0, 16, 0.5, -7)
-    ic.BackgroundTransparency = 1
-    ic.Image = iconId
-    ic.ImageColor3 = C.textDim
-    ic.Parent = btn
-
-    local tx = Instance.new("TextLabel")
-    tx.Size = UDim2.new(1, -40, 1, 0)
-    tx.Position = UDim2.new(0, 38, 0, 0)
-    tx.Text = name
-    tx.TextColor3 = C.textDim
-    tx.TextSize = 10
-    tx.Font = F.norm
-    tx.TextXAlignment = Enum.TextXAlignment.Left
-    tx.BackgroundTransparency = 1
-    tx.Parent = btn
-
-    btn.MouseButton1Click:Connect(function()
-        for _, t in pairs(tabs) do
-            t.btn.BackgroundColor3 = C.bg2
-            t.btn.BackgroundTransparency = 1
-            t.icon.ImageColor3 = C.textDim
-            t.text.TextColor3 = C.textDim
-            t.bar.Visible = false
-        end
-        btn.BackgroundColor3 = C.bg3
-        btn.BackgroundTransparency = 0.3
-        ic.ImageColor3 = C.accent
-        tx.TextColor3 = C.text
-        acc.Visible = true
-        acc.Size = UDim2.new(0, 3, 0, 0)
-        TS:Create(acc, TweenInfo.new(0.15), {
-            Size = UDim2.new(0, 3, 0, 18)
-        }):Play()
-        switchPage(name)
+    content.ChildAdded:Connect(function()
+        task.defer(function() updateSectionHeight(card, content) end)
     end)
 
-    table.insert(tabs, {btn = btn, icon = ic, text = tx, bar = acc})
+    content.ChildRemoved:Connect(function()
+        task.defer(function() updateSectionHeight(card, content) end)
+    end)
+
+    content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        updateSectionHeight(card, content)
+    end)
 end
 
 -- ============================================================
--- BUAT PAGES + TABS
+-- SECTION
 -- ============================================================
-createPage("Combat")
-createPage("Esp")
-createPage("Teleport")
-createPage("Automation")
-createPage("Afk Farm")
-createPage("Settings")
-createPage("Config")
+function Library.makeSection(parent, title, defaultOpen)
+    local card = Library.new("Frame", {
+        Name = "Section_" .. title,
+        Size = UDim2.new(1, 0, 0, HEADER_H),
+        BackgroundColor3 = CARD_BG,
+        BackgroundTransparency = CARD_TRANS,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Parent = parent
+    })
+    Library.new("UICorner", { Parent = card, CornerRadius = UDim.new(0, 6) })
 
-makeTab(I.combat, "Combat")
-makeTab(I.visual, "Esp")
-makeTab(I.teleport, "Teleport")
-makeTab(I.automation, "Automation")
-makeTab(I.afk, "Afk Farm")
-makeTab(I.settings, "Settings")
-makeTab(I.config, "Config")
+    local header = Library.new("TextButton", {
+        Name = "Header",
+        Size = UDim2.new(1, 0, 0, HEADER_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        ZIndex = 2,
+        Parent = card
+    })
+
+    Library.new("TextLabel", {
+        Size = UDim2.new(1, -50, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = title,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.bold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        ZIndex = 3,
+        Parent = header
+    })
+
+    local arrow = Library.new("TextLabel", {
+        Size = UDim2.new(0, 16, 1, 0),
+        Position = UDim2.new(1, -26, 0, 0),
+        AnchorPoint = Vector2.new(1, 0),
+        Text = defaultOpen and "▼" or "▶",
+        TextColor3 = C.accent,
+        TextSize = 10,
+        Font = F.bold,
+        BackgroundTransparency = 1,
+        ZIndex = 3,
+        Parent = header
+    })
+
+    local content = Library.new("Frame", {
+        Name = "Content",
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = UDim2.new(0, 0, 0, HEADER_H),
+        BackgroundTransparency = 1,
+        ClipsDescendants = false,
+        Visible = defaultOpen,
+        ZIndex = 2,
+        Parent = card
+    })
+
+    Library.new("UIListLayout", {
+        Padding = UDim.new(0, 2),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = content
+    })
+
+    Library.new("UIPadding", {
+        PaddingTop = UDim.new(0, 4),
+        PaddingBottom = UDim.new(0, 4),
+        Parent = content
+    })
+
+    local isOpen = defaultOpen
+    bindAutoHeight(card, content)
+
+    header.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        arrow.Text = isOpen and "▼" or "▶"
+        content.Visible = isOpen
+        task.defer(function() updateSectionHeight(card, content) end)
+    end)
+
+    task.defer(function()
+        task.wait(0.15)
+        if defaultOpen then updateSectionHeight(card, content) end
+    end)
+
+    return content
+end
 
 -- ============================================================
--- TAB COMBAT
+-- TOGGLE
 -- ============================================================
-local CC = S.Config.Combat
-local SS = S.Config.Spawn
+function Library.makeToggle(parent, name, default, callback)
+    local f = Library.new("Frame", {
+        Name = "Toggle_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
 
-local autoCombat = S.Comp.makeSection(pages["Combat"], "Auto Combat", false)
-S.Comp.makeToggle(autoCombat, "Auto Attack (V)", CC.AutoAttack == true, function(v) CC.AutoAttack = v save() end)
-S.Comp.makeToggle(autoCombat, "Auto Rush (B)", CC.AutoRush == true, function(v) CC.AutoRush = v save() end)
-S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow == true, function(v) CC.AutoFollow = v save() end)
+    Library.new("TextLabel", {
+        Size = UDim2.new(0.7, -12, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
 
-local spawnSection = S.Comp.makeSection(pages["Combat"], "Spawn Unit", false)
-S.Comp.makeDropdown(spawnSection, "Unit Slot", {"1", "2", "3", "4"}, function(v)
-    SS.UnitSlot = tonumber(v) or 1
-    save()
-end)
-S.Comp.makeButton(spawnSection, "Spawn Unit", function()
-    if _G.STHAIN.SpawnUnit then _G.STHAIN.SpawnUnit(SS.UnitSlot) end
-end)
-S.Comp.makeToggle(spawnSection, "Auto Respawn [BETA]", SS.AutoSpawn == true, function(v) 
-    SS.AutoSpawn = v 
-    save() 
-end)
+    local b = Library.new("TextButton", {
+        Size = UDim2.new(0, 30, 0, 18),
+        Position = UDim2.new(1, -42, 0.5, -9),
+        Text = "",
+        BackgroundColor3 = default and C.accent or C.bg4,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Parent = f
+    })
+    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(1, 0) })
 
-local pvpSection = S.Comp.makeSection(pages["Combat"], "PvP", false)
-S.Comp.makeToggle(pvpSection, "Kill Aura", CC.KillAura == true, function(v) CC.KillAura = v save() end)
-S.Comp.makeToggle(pvpSection, "Target Lock", CC.TargetLock == true, function(v) CC.TargetLock = v save() end)
-S.Comp.makeToggle(pvpSection, "Auto Heal", CC.AutoHeal == true, function(v) CC.AutoHeal = v save() end)
-S.Comp.makeToggle(pvpSection, "Anti-Stun", CC.AntiStun == true, function(v) CC.AntiStun = v save() end)
+    local knob = Library.new("Frame", {
+        Size = UDim2.new(0, 12, 0, 12),
+        Position = default and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6),
+        BackgroundColor3 = C.text,
+        BorderSizePixel = 0,
+        Parent = b
+    })
+    Library.new("UICorner", { Parent = knob, CornerRadius = UDim.new(1, 0) })
 
-local combatDelay = S.Comp.makeSection(pages["Combat"], "Delay Settings", false)
-S.Comp.makeInput(combatDelay, "Attack Delay", CC.AttackDelay, function(v) CC.AttackDelay = v save() end)
-S.Comp.makeInput(combatDelay, "Rush Delay", CC.RushDelay, function(v) CC.RushDelay = v save() end)
-S.Comp.makeInput(combatDelay, "Follow Delay", CC.FollowDelay, function(v) CC.FollowDelay = v save() end)
+    local state = default
+
+    local function setState(newState, skipCallback)
+        if state == newState then return end
+        state = newState
+        S.Services.TS:Create(b, TweenInfo.new(0.2), { BackgroundColor3 = state and C.accent or C.bg4 }):Play()
+        S.Services.TS:Create(knob, TweenInfo.new(0.2), { Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6) }):Play()
+        if not skipCallback then pcall(callback, state) end
+    end
+
+    b.MouseButton1Click:Connect(function()
+        setState(not state, false)
+    end)
+
+    return setState
+end
 
 -- ============================================================
--- TAB ESP
+-- INPUT (Angka)
 -- ============================================================
-local VV = S.Config.Visual
+function Library.makeInput(parent, name, default, callback)
+    local f = Library.new("Frame", {
+        Name = "Input_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
 
-local enableEsp = S.Comp.makeSection(pages["Esp"], "Enable Esp", false)
-S.Comp.makeToggle(enableEsp, "Enable Esp", VV.Chams == true, function(v) VV.Chams = v save() end)
+    Library.new("TextLabel", {
+        Size = UDim2.new(0.55, -12, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
 
-local espSetting = S.Comp.makeSection(pages["Esp"], "Esp Setting", false)
-S.Comp.makeToggle(espSetting, "Show Distance", VV.ESPShowDistance == true, function(v) VV.ESPShowDistance = v save() end)
-S.Comp.makeToggle(espSetting, "Show Health", VV.ESPHealth == true, function(v) VV.ESPHealth = v save() end)
-S.Comp.makeToggle(espSetting, "Show Name", VV.ESPName == true, function(v) VV.ESPName = v save() end)
+    local b = Library.new("TextBox", {
+        Size = UDim2.new(0, 55, 0, 22),
+        Position = UDim2.new(1, -67, 0.5, -11),
+        Text = tostring(default),
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        BackgroundColor3 = C.bg4,
+        BorderSizePixel = 0,
+        ClearTextOnFocus = false,
+        Parent = f
+    })
+    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
 
-local espObject = S.Comp.makeSection(pages["Esp"], "Esp Object", false)
-S.Comp.makeToggle(espObject, "Esp Supply", VV.ESPSupply == true, function(v) VV.ESPSupply = v save() end)
-S.Comp.makeToggle(espObject, "Esp Capture", VV.ESPCapture == true, function(v) VV.ESPCapture = v save() end)
+    b.FocusLost:Connect(function()
+        local v = tonumber(b.Text)
+        if v then pcall(callback, v) else b.Text = tostring(default) end
+    end)
+end
 
 -- ============================================================
--- TAB TELEPORT
+-- TEXT INPUT
 -- ============================================================
-local TT = S.Config.Teleport
+function Library.makeTextInput(parent, name, default, placeholder, callback, isFullWidth)
+    local f = Library.new("Frame", {
+        Name = "TextInput_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
 
-local tpCapture = S.Comp.makeSection(pages["Teleport"], "Capture Point", false)
-S.Comp.makeButton(tpCapture, "TP to Nearest Capture", function()
-    if _G.STHAIN.TeleportToNearestCapture then _G.STHAIN.TeleportToNearestCapture() end
-end)
-S.Comp.makeButton(tpCapture, "TP to Base", function()
-    if _G.STHAIN.TeleportToBase then _G.STHAIN.TeleportToBase() end
-end)
-S.Comp.makeButton(tpCapture, "TP to Point A", function()
-    if _G.STHAIN.TeleportToPointA then _G.STHAIN.TeleportToPointA() end
-end)
-S.Comp.makeButton(tpCapture, "TP to Point B", function()
-    if _G.STHAIN.TeleportToPointB then _G.STHAIN.TeleportToPointB() end
-end)
+    local labelSize = isFullWidth and UDim2.new(0, 80, 1, 0) or UDim2.new(0.5, -12, 1, 0)
+    Library.new("TextLabel", {
+        Size = labelSize,
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
 
-local tpPlayer = S.Comp.makeSection(pages["Teleport"], "Player", false)
-S.Comp.makeButton(tpPlayer, "TP to Nearest Enemy", function()
-    if _G.STHAIN.TeleportToNearestEnemy then _G.STHAIN.TeleportToNearestEnemy() end
-end)
-S.Comp.makeButton(tpPlayer, "TP to Teammate", function()
-    if _G.STHAIN.TeleportToTeammate then _G.STHAIN.TeleportToTeammate() end
-end)
+    local b
+    if isFullWidth then
+        b = Library.new("TextBox", {
+            Size = UDim2.new(1, -12, 0, 22),
+            Position = UDim2.new(0, 6, 0.5, -11),
+            Text = tostring(default or ""),
+            PlaceholderText = placeholder or "",
+            PlaceholderColor3 = C.textDim2,
+            TextColor3 = C.text,
+            TextSize = 11,
+            Font = F.norm,
+            BackgroundColor3 = C.bg4,
+            BorderSizePixel = 0,
+            ClearTextOnFocus = false,
+            Parent = f
+        })
+    else
+        b = Library.new("TextBox", {
+            Size = UDim2.new(0, 130, 0, 22),
+            Position = UDim2.new(1, -142, 0.5, -11),
+            Text = tostring(default or ""),
+            PlaceholderText = placeholder or "",
+            PlaceholderColor3 = C.textDim2,
+            TextColor3 = C.text,
+            TextSize = 11,
+            Font = F.norm,
+            BackgroundColor3 = C.bg4,
+            BorderSizePixel = 0,
+            ClearTextOnFocus = false,
+            Parent = f
+        })
+    end
+    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
 
-local supplyEnemySection = S.Comp.makeSection(pages["Teleport"], "Supply Enemy", false)
-local enemyDropdown = S.Comp.makeDropdown(supplyEnemySection, "Supply Target", {TT.EnemySupplyTarget or "None"}, function(v)
-    TT.EnemySupplyTarget = v
-    save()
-end)
-S.Comp.makeButton(supplyEnemySection, "TP Supply Enemy", function()
-    if _G.STHAIN.TeleportToSupplyEnemy then _G.STHAIN.TeleportToSupplyEnemy(TT.EnemySupplyTarget or "") end
-end)
+    b.FocusLost:Connect(function()
+        pcall(callback, b.Text)
+    end)
 
-local supplyOwnerSection = S.Comp.makeSection(pages["Teleport"], "Supply Owner", false)
-local ownerDropdown = S.Comp.makeDropdown(supplyOwnerSection, "Supply Target", {TT.OwnerSupplyTarget or "None"}, function(v)
-    TT.OwnerSupplyTarget = v
-    save()
-end)
-S.Comp.makeButton(supplyOwnerSection, "TP Supply Owner", function()
-    if _G.STHAIN.TeleportToSupplyOwner then _G.STHAIN.TeleportToSupplyOwner(TT.OwnerSupplyTarget or "") end
-end)
+    return b
+end
 
-task.spawn(function()
-    while task.wait(2) do
-        if _G.STHAIN.GetSupplyList then
-            local ok, data = pcall(_G.STHAIN.GetSupplyList)
-            local hasAnySupply = false
-            if ok and data then
-                hasAnySupply = (#(data.enemySupplies or {}) > 0) or (#(data.ownerSupplies or {}) > 0)
+-- ============================================================
+-- BUTTON
+-- ============================================================
+function Library.makeButton(parent, name, callback)
+    local wrapper = Library.new("Frame", {
+        Name = "BtnWrapper_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        Parent = parent
+    })
+
+    local b = Library.new("TextButton", {
+        Name = "Button_" .. name,
+        Size = UDim2.new(1, -12, 1, -6),
+        Position = UDim2.new(0, 6, 0, 3),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        BackgroundColor3 = C.bg4,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Parent = wrapper
+    })
+    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(0, 5) })
+
+    local flash = Library.new("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 5,
+        Parent = b
+    })
+    Library.new("UICorner", { Parent = flash, CornerRadius = UDim.new(0, 5) })
+
+    b.MouseButton1Down:Connect(function()
+        S.Services.TS:Create(flash, TweenInfo.new(0.1), { BackgroundTransparency = 0.8 }):Play()
+    end)
+    b.MouseButton1Up:Connect(function()
+        S.Services.TS:Create(flash, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+    end)
+    b.MouseLeave:Connect(function()
+        S.Services.TS:Create(flash, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
+    end)
+
+    b.MouseButton1Click:Connect(function()
+        pcall(callback)
+    end)
+
+    b.MouseEnter:Connect(function()
+        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3, BackgroundTransparency = 0.1 }):Play()
+    end)
+    b.MouseLeave:Connect(function()
+        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg4, BackgroundTransparency = 0.3 }):Play()
+    end)
+
+    return b
+end
+
+-- ============================================================
+-- DROPDOWN (Lynx Style)
+-- ============================================================
+Library._dropdownOverlay = nil
+Library._dropdownPanel = nil
+Library._dropdownFolder = nil
+Library._dropdownPageLayout = nil
+Library._dropdownCount = 0
+
+function Library._initDropdownSystem()
+    if Library._dropdownOverlay then return end
+    Library._dropdownOverlay = Library.new("Frame", {
+        Parent = S.GUI.MainFrame,
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = C.bg,
+        BackgroundTransparency = 0.95,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Visible = false,
+        ZIndex = 50,
+        Name = "DropdownOverlay"
+    })
+
+    local closeOverlay = Library.new("TextButton", {
+        Parent = Library._dropdownOverlay,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Text = "",
+        ZIndex = 51
+    })
+
+    Library._dropdownPanel = Library.new("Frame", {
+        Parent = Library._dropdownOverlay,
+        AnchorPoint = Vector2.new(1, 0.5),
+        Size = UDim2.new(0, 160, 1, -16),
+        Position = UDim2.new(1, 172, 0.5, 0),
+        BackgroundColor3 = C.bg2,
+        BackgroundTransparency = 0.09,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = 52,
+        Name = "DropdownPanel"
+    })
+    Library.new("UICorner", { Parent = Library._dropdownPanel, CornerRadius = UDim.new(0, 6) })
+    Library.new("UIStroke", { Parent = Library._dropdownPanel, Color = C.stroke, Thickness = 1, Transparency = 0.45 })
+
+    Library._dropdownFolder = Library.new("Frame", {
+        Parent = Library._dropdownPanel,
+        Size = UDim2.new(1, -2, 1, 0),
+        Position = UDim2.new(0, 1, 0, 1),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = 53,
+        Name = "DropdownFolder"
+    })
+
+    Library._dropdownPageLayout = Library.new("UIPageLayout", {
+        Parent = Library._dropdownFolder,
+        EasingDirection = Enum.EasingDirection.InOut,
+        EasingStyle = Enum.EasingStyle.Quad,
+        TweenTime = 0.01,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        FillDirection = Enum.FillDirection.Vertical,
+        Name = "DropdownPageLayout"
+    })
+
+    closeOverlay.Activated:Connect(function()
+        if Library._dropdownOverlay.Visible then
+            Library._dropdownOverlay.BackgroundTransparency = 0.95
+            Library._dropdownPanel.Position = UDim2.new(1, 172, 0.5, 0)
+            Library._dropdownOverlay.Visible = false
+        end
+    end)
+end
+
+function Library._showDropdown(dropdownContainer)
+    Library._initDropdownSystem()
+    Library._dropdownOverlay.Visible = true
+    Library._dropdownPageLayout:JumpTo(dropdownContainer)
+    Library._dropdownOverlay.BackgroundTransparency = 0.95
+    Library._dropdownPanel.Position = UDim2.new(1, -11, 0.5, 0)
+end
+
+function Library._hideDropdown()
+    if Library._dropdownOverlay and Library._dropdownOverlay.Visible then
+        Library._dropdownOverlay.BackgroundTransparency = 0.95
+        Library._dropdownPanel.Position = UDim2.new(1, 172, 0.5, 0)
+        Library._dropdownOverlay.Visible = false
+    end
+end
+
+function Library.makeDropdown(parent, name, initialOptions, callback)
+    Library._initDropdownSystem()
+    local dropdownLayoutOrder = Library._dropdownCount
+    Library._dropdownCount = Library._dropdownCount + 1
+
+    local f = Library.new("Frame", {
+        Name = "Dropdown_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
+
+    Library.new("TextLabel", {
+        Size = UDim2.new(0.5, -12, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
+
+    local selectFrame = Library.new("Frame", {
+        Parent = f,
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundColor3 = C.bg2,
+        BackgroundTransparency = CARD_TRANS,
+        Position = UDim2.new(1, -12, 0.5, 0),
+        Size = UDim2.new(0.48, 0, 0, 22),
+        LayoutOrder = dropdownLayoutOrder,
+        ZIndex = 8
+    })
+    Library.new("UICorner", { Parent = selectFrame, CornerRadius = UDim.new(0, 4) })
+    Library.new("UIStroke", { Parent = selectFrame, Color = C.stroke, Thickness = 1, Transparency = 0.5 })
+
+    local optionLabel = Library.new("TextLabel", {
+        Parent = selectFrame,
+        Font = F.bold,
+        Text = initialOptions[1] or "Select",
+        TextColor3 = C.textDim,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 8, 0.5, 0),
+        Size = UDim2.new(1, -24, 1, 0),
+        ZIndex = 9
+    })
+
+    Library.new("ImageLabel", {
+        Parent = selectFrame,
+        Image = "rbxassetid://6031091004",
+        ImageColor3 = C.accent,
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -6, 0.5, 0),
+        Size = UDim2.new(0, 11, 0, 11),
+        ZIndex = 9
+    })
+
+    local dropdownButton = Library.new("TextButton", {
+        Parent = selectFrame,
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 10
+    })
+
+    local dropdownContainer = Library.new("Frame", {
+        Parent = Library._dropdownFolder,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        LayoutOrder = dropdownLayoutOrder
+    })
+
+    local searchBox = Library.new("TextBox", {
+        Parent = dropdownContainer,
+        PlaceholderText = "Search...",
+        Font = F.bold,
+        Text = "",
+        TextSize = 11,
+        TextColor3 = C.text,
+        PlaceholderColor3 = C.textDim2,
+        BackgroundColor3 = C.bg2,
+        BackgroundTransparency = CARD_TRANS,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, -8, 0, 24),
+        Position = UDim2.new(0, 4, 0, 4),
+        ClearTextOnFocus = false,
+        ZIndex = 54
+    })
+    Library.new("UICorner", { Parent = searchBox, CornerRadius = UDim.new(0, 4) })
+    Library.new("UIStroke", { Parent = searchBox, Color = C.stroke, Thickness = 1, Transparency = 0.5 })
+    Library.new("UIPadding", { Parent = searchBox, PaddingLeft = UDim.new(0, 8) })
+
+    local ROW_H, ROW_GAP = 26, 3
+    local ROW_STRIDE = ROW_H + ROW_GAP
+    local POOL_SIZE = 18
+
+    local scrollSelect = Library.new("ScrollingFrame", {
+        Parent = dropdownContainer,
+        Size = UDim2.new(1, -8, 1, -36),
+        Position = UDim2.new(0, 4, 0, 32),
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        ScrollBarThickness = 0,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ZIndex = 54
+    })
+
+    local allOptions, filteredOptions = {}, {}
+    local selectedValue = initialOptions[1] or "None"
+    local rowPool = {}
+    local searchThread = nil
+    local poolBuilt = false
+
+    local function applyFilter(query)
+        table.clear(filteredOptions)
+        if not query or query == "" then
+            for i = 1, #allOptions do filteredOptions[i] = allOptions[i] end
+            return
+        end
+        local q = string.lower(query)
+        for _, opt in ipairs(allOptions) do
+            if string.find(opt.lower, q, 1, true) then
+                filteredOptions[#filteredOptions + 1] = opt
             end
-            
-            if hasAnySupply then
-                if #data.enemySupplies > 0 then enemyDropdown.UpdateOptions(data.enemySupplies) else enemyDropdown.UpdateOptions({"None"}) end
-                if #data.ownerSupplies > 0 then ownerDropdown.UpdateOptions(data.ownerSupplies) else ownerDropdown.UpdateOptions({"None"}) end
+        end
+    end
+
+    local function ensureOptionsNormalized()
+        if poolBuilt then return end
+        table.clear(allOptions)
+        for _, opt in ipairs(initialOptions) do
+            local label = tostring(opt)
+            allOptions[#allOptions + 1] = { label = label, value = label, lower = string.lower(label) }
+        end
+        applyFilter("")
+        poolBuilt = true
+    end
+
+    local function updateClosedLabel()
+        ensureOptionsNormalized()
+        local found = nil
+        for _, opt in ipairs(allOptions) do
+            if opt.value == selectedValue then found = opt.label break end
+        end
+        optionLabel.Text = found or tostring(selectedValue)
+    end
+
+    local function paintRow(row, opt)
+        local selected = (opt.value == selectedValue)
+        row.ChooseFrame.Size = selected and UDim2.new(0, 3, 0, 16) or UDim2.new(0, 0, 0, 0)
+        row.BackgroundColor3 = selected and C.bg3 or C.bg2
+        row.BackgroundTransparency = selected and CARD_TRANS or 0.5
+        row.OptionText.TextColor3 = selected and C.text or C.textDim
+        row.OptionText.Text = opt.label
+    end
+
+    local function refreshVisible()
+        if not poolBuilt then return end
+        local list = filteredOptions
+        local total = #list
+        local viewH = scrollSelect.AbsoluteSize.Y
+        if viewH <= 0 then return end
+
+        local canvasH = total * ROW_STRIDE
+        if total > 0 then canvasH = canvasH - ROW_GAP end
+        scrollSelect.CanvasSize = UDim2.new(0, 0, 0, canvasH)
+
+        local scrollY = scrollSelect.CanvasPosition.Y
+        local firstVisible = math.floor(scrollY / ROW_STRIDE) + 1
+        if firstVisible < 1 then firstVisible = 1 end
+        local maxVisible = math.floor(viewH / ROW_STRIDE) + 2
+        local lastVisible = math.min(total, firstVisible + maxVisible - 1)
+
+        for i = 1, #rowPool do
+            local row = rowPool[i]
+            local optIndex = firstVisible + i - 1
+            if optIndex <= lastVisible then
+                local opt = list[optIndex]
+                row.Frame.Position = UDim2.new(0, 0, 0, (optIndex - 1) * ROW_STRIDE)
+                paintRow(row, opt)
+                row.Frame.Visible = true
+                row.Index = optIndex
             else
-                enemyDropdown.UpdateOptions({"None"})
-                ownerDropdown.UpdateOptions({"None"})
+                row.Frame.Visible = false
             end
         end
     end
-end)
 
--- ============================================================
--- TAB AUTOMATION
--- ============================================================
-local AA = S.Config.Automation or {}
+    local function buildPool()
+        if #rowPool > 0 then return end
+        for i = 1, POOL_SIZE do
+            local rowFrame = Library.new("TextButton", {
+                Parent = scrollSelect,
+                Size = UDim2.new(1, 0, 0, ROW_H),
+                BackgroundColor3 = C.bg2,
+                BackgroundTransparency = 0.5,
+                BorderSizePixel = 0,
+                Text = "",
+                AutoButtonColor = false,
+                Visible = false,
+                ZIndex = 55
+            })
+            Library.new("UICorner", { Parent = rowFrame, CornerRadius = UDim.new(0, 4) })
 
-local summonSection = S.Comp.makeSection(pages["Automation"], "Summon", false)
-S.Comp.makeToggle(summonSection, "Auto Summon", AA.AutoSummon == true, function(v) 
-    AA.AutoSummon = v 
-    save() 
-end)
-S.Comp.makeDropdown(summonSection, "Summon Amount", {"1x", "10x"}, function(val)
-    AA.SummonAmount = val
-    save()
-end)
-S.Comp.makeInput(summonSection, "Keep Gems", AA.KeepGems or 0, function(v)
-    AA.KeepGems = v
-    save()
-end)
+            local chooseFrame = Library.new("Frame", {
+                Parent = rowFrame,
+                Size = UDim2.new(0, 0, 0, 16),
+                Position = UDim2.new(0, 0, 0.5, -8),
+                BackgroundColor3 = C.accent,
+                BorderSizePixel = 0,
+                ZIndex = 56
+            })
+            Library.new("UICorner", { Parent = chooseFrame, CornerRadius = UDim.new(1, 0) })
 
-local ascendSection = S.Comp.makeSection(pages["Automation"], "Ascend", false)
-S.Comp.makeToggle(ascendSection, "Auto Ascend", AA.AutoAscend == true, function(v) 
-    AA.AutoAscend = v 
-    save() 
-end)
+            local optionText = Library.new("TextLabel", {
+                Parent = rowFrame,
+                Text = "",
+                Font = F.bold,
+                TextSize = 11,
+                TextColor3 = C.textDim,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 10, 0, 0),
+                Size = UDim2.new(1, -14, 1, 0),
+                ZIndex = 56
+            })
 
-local evolveSection = S.Comp.makeSection(pages["Automation"], "Evolve", false)
-S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(v) 
-    AA.AutoEvolve = v 
-    save() 
-end)
-
-local rewardSection = S.Comp.makeSection(pages["Automation"], "Rewards", false)
-S.Comp.makeToggle(rewardSection, "Auto Daily/Weekly Reward", AA.AutoReward == true, function(v) 
-    AA.AutoReward = v 
-    save() 
-end)
-
-local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
-
--- Pake makeTextInput dari Library v3.2
-local codeBox = S.Comp.makeTextInput(codeSection, "Enter Code", "", "Enter A Code...", function(v)
-    -- callback opsional
-end, true) -- true = Full-Width
-
-local codeDropdown = S.Comp.makeDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
-    if val ~= "Fetching..." and val ~= "None" and val ~= "No Codes" then
-        codeBox.Text = val
-    end
-end)
-
-task.spawn(function()
-    task.wait(2)
-    if _G.STHAIN.FetchCodesSmart then
-        local codes = _G.STHAIN.FetchCodesSmart()
-        if codes and #codes > 0 then
-            codeDropdown.UpdateOptions(codes)
-        else
-            codeDropdown.UpdateOptions({"No Codes"})
-        end
-    end
-end)
-
-S.Comp.makeButton(codeSection, "Claim Code", function()
-    local code = codeBox.Text
-    if code ~= "" and code ~= "Enter A Code..." and code ~= "Fetching..." and code ~= "None" and code ~= "No Codes" then
-        local Remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Shared") and game:GetService("ReplicatedStorage").Shared:FindFirstChild("Remotes")
-        local RedeemCode = Remotes and Remotes:FindFirstChild("RedeemCode")
-        if RedeemCode then
-            pcall(function() RedeemCode:InvokeServer(code) end)
-        end
-        codeBox.Text = "" 
-    end
-end)
-
--- ============================================================
--- TAB AFK FARM
--- ============================================================
-local afkFarmSection = S.Comp.makeSection(pages["Afk Farm"], "Afk Farm", false)
-S.Comp.makeToggle(afkFarmSection, "Enable Farm", (S.Config.AfkFarm and S.Config.AfkFarm.EnableFarm) == true, function(v)
-    if not S.Config.AfkFarm then S.Config.AfkFarm = {} end
-    S.Config.AfkFarm.EnableFarm = v
-    save()
-end)
-
-local antiAfkSection = S.Comp.makeSection(pages["Afk Farm"], "Anti Afk", false)
-S.Comp.makeToggle(antiAfkSection, "Anti Afk", S.Config.Misc.AntiAFK == true, function(v)
-    S.Config.Misc.AntiAFK = v
-    save()
-end)
-
--- ============================================================
--- TAB SETTINGS
--- ============================================================
-local MM = S.Config.Movement
-local XX = S.Config.Misc
-
-local utilityContent = S.Comp.makeSection(pages["Settings"], "Player Utility", false)
-S.Comp.makeInput(utilityContent, "Speed Value", MM.WalkSpeed, function(v) MM.WalkSpeed = v save() end)
-S.Comp.makeToggle(utilityContent, "Enable Run Speed", MM.EnableRunSpeed == true, function(v) 
-    MM.EnableRunSpeed = v 
-    save() 
-end)
-S.Comp.makeToggle(utilityContent, "No Clip", MM.Noclip == true, function(v) MM.Noclip = v save() end)
-S.Comp.makeToggle(utilityContent, "Fly", MM.Fly == true, function(v) MM.Fly = v save() end)
-S.Comp.makeToggle(utilityContent, "Infinite Jump", MM.InfJump == true, function(v) MM.InfJump = v save() end)
-S.Comp.makeInput(utilityContent, "Fly Speed", MM.FlySpeed, function(v) MM.FlySpeed = v save() end)
-S.Comp.makeInput(utilityContent, "Jump Power", MM.JumpPower, function(v) MM.JumpPower = v save() end)
-
-local visualContent = S.Comp.makeSection(pages["Settings"], "Visuals", false)
-S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright == true, function(v) VV.Fullbright = v save() end)
-S.Comp.makeToggle(visualContent, "No Fog", VV.NoFog == true, function(v) VV.NoFog = v save() end)
-
-local autoJoinContent = S.Comp.makeSection(pages["Settings"], "Auto Join Team", false)
-local setJoinDefender, setJoinAttacker
-
-local initialTeam = XX.AutoJoinTeam or "none"
-local initDef = (initialTeam == "defender")
-local initAtt = (initialTeam == "attacker")
-
-setJoinDefender = S.Comp.makeToggle(autoJoinContent, "Auto Join Defenders", initDef, function(v)
-    if v then
-        XX.AutoJoinTeam = "defender"
-        if setJoinAttacker then setJoinAttacker(false, true) end
-        save()
-    elseif XX.AutoJoinTeam == "defender" then
-        XX.AutoJoinTeam = "none"
-        save()
-    end
-end)
-
-setJoinAttacker = S.Comp.makeToggle(autoJoinContent, "Auto Join Attackers", initAtt, function(v)
-    if v then
-        XX.AutoJoinTeam = "attacker"
-        if setJoinDefender then setJoinDefender(false, true) end
-        save()
-    elseif XX.AutoJoinTeam == "attacker" then
-        XX.AutoJoinTeam = "none"
-        save()
-    end
-end)
-
-local serverContent = S.Comp.makeSection(pages["Settings"], "Server", false)
-S.Comp.makeButton(serverContent, "Rejoin Server", function()
-    pcall(function()
-        game:GetService("TeleportService"):Teleport(game.PlaceId, S.LP)
-    end)
-end)
-S.Comp.makeButton(serverContent, "Server Hop (Find Small Server)", function()
-    pcall(function()
-        local Http = game:GetService("HttpService")
-        local TeleportService = game:GetService("TeleportService")
-        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
-        local data = Http:JSONDecode(game:HttpGet(url))
-        local best = nil
-        for _, server in pairs(data.data) do
-            if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                if not best or server.playing < best.playing then
-                    best = server
+            rowFrame.MouseEnter:Connect(function()
+                if rowFrame.Visible then
+                    S.Services.TS:Create(rowFrame, TweenInfo.new(0.15), { BackgroundTransparency = CARD_TRANS - 0.05 }):Play()
                 end
-            end
-        end
-        if best then TeleportService:TeleportToPlaceInstance(game.PlaceId, best.id, S.LP) end
-    end)
-end)
-
--- ============================================================
--- TAB CONFIG
--- ============================================================
-local cfg = S.Config.Config
-
-local autoSaveSection = S.Comp.makeSection(pages["Config"], "Auto Save", false)
-S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, function(v)
-    cfg.AutoSave = v
-    save()
-end)
-
-local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
-
-local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
-    if resetBtn.Text == "Reset to Default" then
-        resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 136, 0)
-        resetBtn.BackgroundTransparency = 0.1
-        resetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        
-        task.delay(3, function()
-            if resetBtn.Text == "Click Again to Confirm" then
-                resetBtn.Text = "Reset to Default"
-                resetBtn.BackgroundColor3 = C.bg4
-                resetBtn.BackgroundTransparency = 0.3
-                resetBtn.TextColor3 = C.text
-            end
-        end)
-    elseif resetBtn.Text == "Click Again to Confirm" then
-        if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
-            _G.STHAIN.Utils.DeleteConfig()
-        end
-        resetBtn.Text = "Reset to Default"
-        resetBtn.BackgroundColor3 = C.bg4
-        resetBtn.BackgroundTransparency = 0.3
-        resetBtn.TextColor3 = C.text
-    end
-end)
-
-local deleteBtn = S.Comp.makeButton(configMgmt, "Delete Config File", function()
-    if deleteBtn.Text == "Delete Config File" then
-        deleteBtn.Text = "Click Again to Confirm"
-        deleteBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-        deleteBtn.BackgroundTransparency = 0.1
-        deleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        
-        task.delay(3, function()
-            if deleteBtn.Text == "Click Again to Confirm" then
-                deleteBtn.Text = "Delete Config File"
-                deleteBtn.BackgroundColor3 = C.bg4
-                deleteBtn.BackgroundTransparency = 0.3
-                deleteBtn.TextColor3 = C.text
-            end
-        end)
-    elseif deleteBtn.Text == "Click Again to Confirm" then
-        if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
-            _G.STHAIN.Utils.DeleteConfig()
-        end
-        deleteBtn.Text = "Delete Config File"
-        deleteBtn.BackgroundColor3 = C.bg4
-        deleteBtn.BackgroundTransparency = 0.3
-        deleteBtn.TextColor3 = C.text
-    end
-end)
-
--- ============================================================
--- DRAG MAIN FRAME (SMOOTH TOUCH)
--- ============================================================
-local mainDrag = false
-local mainStart, mainPos
-
-S.GUI.Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch 
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        mainDrag = true
-        mainStart = input.Position
-        mainPos = S.GUI.MainFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                mainDrag = false
-            end
-        end)
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if mainDrag and (input.UserInputType == Enum.UserInputType.Touch 
-    or input.UserInputType == Enum.UserInputType.MouseMovement) then
-        local delta = input.Position - mainStart
-        S.GUI.MainFrame.Position = UDim2.new(
-            mainPos.X.Scale, mainPos.X.Offset + delta.X,
-            mainPos.Y.Scale, mainPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch 
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        mainDrag = false
-    end
-end)
-
--- ============================================================
--- RESIZE HANDLE (Pojok Kanan Bawah)
--- ============================================================
-if S.Comp.attachResizeHandle then
-    S.Comp.attachResizeHandle(S.GUI.MainFrame)
-end
-
--- ============================================================
--- MINIMIZE / OPEN
--- ============================================================
-switchPage("Combat")
-
-for _, t in pairs(tabs) do
-    if t.text.Text == "Combat" then
-        t.btn.BackgroundColor3 = C.bg3
-        t.btn.BackgroundTransparency = 0.3
-        t.icon.ImageColor3 = C.accent
-        t.text.TextColor3 = C.text
-        t.bar.Visible = true
-        t.bar.Size = UDim2.new(0, 3, 0, 18)
-        break
-    end
-end
-
-S.GUI.MinBtn.MouseButton1Click:Connect(function()
-    S.GUI.MainFrame.Visible = false
-    S.GUI.FloatBtn.Visible = true
-end)
-S.GUI.FloatBtn.MouseButton1Click:Connect(function()
-    S.GUI.FloatBtn.Visible = false
-    S.GUI.MainFrame.Visible = true
-end)
-
-S.GUI.MainFrame.Visible = true
-S.GUI.FloatBtn.Visible = false
-
--- ============================================================
--- SEARCH FEATURE
--- ============================================================
-if S.GUI.SearchBox then
-    S.GUI.SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        local query = string.lower(S.GUI.SearchBox.Text)
-        if query == "" then return end
-
-        for pageName, page in pairs(pages) do
-            for _, section in pairs(page:GetChildren()) do
-                if section.Name:find("Section_") then
-                    local sectionName = string.lower(section.Name:gsub("Section_", ""))
-                    local matchFound = false
-
-                    if string.find(sectionName, query) then
-                        matchFound = true
-                    end
-
-                    local content = section:FindFirstChild("Content")
-                    if content then
-                        for _, item in pairs(content:GetChildren()) do
-                            local itemName = ""
-                            if item:IsA("Frame") then
-                                local lbl = item:FindFirstChildWhichIsA("TextLabel")
-                                if lbl then itemName = string.lower(lbl.Text) end
-                            end
-                            if string.find(itemName, query) then
-                                matchFound = true
-                                break
-                            end
-                        end
-                    end
-
-                    if matchFound then
-                        switchPage(pageName)
-                        if S.GUI.ContentTitle then 
-                            S.GUI.ContentTitle.Text = pageName 
-                        end
-                        
-                        for _, t in pairs(tabs) do
-                            if t.text.Text == pageName then
-                                t.btn.BackgroundColor3 = S.Theme.Colors.bg3
-                                t.btn.BackgroundTransparency = 0.3
-                                t.icon.ImageColor3 = S.Theme.Colors.accent
-                                t.text.TextColor3 = S.Theme.Colors.text
-                                t.bar.Visible = true
-                            else
-                                t.btn.BackgroundColor3 = S.Theme.Colors.bg2
-                                t.btn.BackgroundTransparency = 1
-                                t.icon.ImageColor3 = S.Theme.Colors.textDim
-                                t.text.TextColor3 = S.Theme.Colors.textDim
-                                t.bar.Visible = false
-                            end
-                        end
-
-                        task.defer(function()
-                            if page:IsA("ScrollingFrame") then
-                                page.CanvasPosition = Vector2.new(0, section.Position.Y.Offset)
-                            end
-                        end)
-                        return
-                    end
+            end)
+            rowFrame.MouseLeave:Connect(function()
+                if rowFrame.Visible then
+                    paintRow({ Frame = rowFrame, ChooseFrame = chooseFrame, OptionText = optionText, Index = nil }, filteredOptions[1] or {value = "None", label = "None"})
                 end
+            end)
+
+            rowFrame.MouseButton1Click:Connect(function()
+                local rowData = rowPool[i]
+                if not rowData or not rowData.Index then return end
+                local opt = filteredOptions[rowData.Index]
+                if not opt then return end
+                selectedValue = opt.value
+                updateClosedLabel()
+                Library._hideDropdown()
+                pcall(callback, opt.value)
+            end)
+
+            table.insert(rowPool, {
+                Frame = rowFrame,
+                ChooseFrame = chooseFrame,
+                OptionText = optionText,
+                Index = nil,
+            })
+        end
+    end
+
+    scrollSelect:GetPropertyChangedSignal("CanvasPosition"):Connect(refreshVisible)
+    scrollSelect:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshVisible)
+
+    dropdownButton.MouseButton1Click:Connect(function()
+        ensureOptionsNormalized()
+        buildPool()
+        updateClosedLabel()
+        Library._showDropdown(dropdownContainer)
+        task.defer(refreshVisible)
+    end)
+
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local text = searchBox.Text
+        if searchThread then pcall(task.cancel, searchThread) searchThread = nil end
+        searchThread = task.delay(0.1, function()
+            searchThread = nil
+            applyFilter(text)
+            refreshVisible()
+        end)
+    end)
+
+    ensureOptionsNormalized()
+    updateClosedLabel()
+
+    task.defer(function()
+        buildPool()
+        refreshVisible()
+    end)
+
+    return {
+        UpdateOptions = function(options)
+            initialOptions = options
+            table.clear(allOptions)
+            for _, opt in ipairs(options) do
+                local label = tostring(opt)
+                allOptions[#allOptions + 1] = { label = label, value = label, lower = string.lower(label) }
             end
+            updateClosedLabel()
+            applyFilter(searchBox.Text)
+            refreshVisible()
+        end,
+        SetValue = function(v)
+            selectedValue = v
+            updateClosedLabel()
+            refreshVisible()
+        end,
+        GetValue = function() return selectedValue end,
+        ClosePopup = function() Library._hideDropdown() end
+    }
+end
+
+-- ============================================================
+-- RESIZE HANDLE
+-- ============================================================
+function Library.attachResizeHandle(mainFrame)
+    local handle = Library.new("TextButton", {
+        Name = "ResizeHandle",
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(1, -16, 1, -16),
+        BackgroundColor3 = Color3.fromRGB(50, 50, 60),
+        BorderSizePixel = 0,
+        Text = "◢",
+        TextColor3 = C.accent,
+        TextSize = 10,
+        Font = F.bold,
+        ZIndex = 100,
+        Parent = mainFrame
+    })
+    Library.new("UICorner", { Parent = handle, CornerRadius = UDim.new(0, 3) })
+
+    local dragging = false
+    local startPos, startSize
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            startPos = input.Position
+            startSize = mainFrame.AbsoluteSize
         end
     end)
+    S.Services.UIS.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - startPos
+            local newW = math.max(300, startSize.X + delta.X)
+            local newH = math.max(200, startSize.Y + delta.Y)
+            mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        end
+    end)
+    S.Services.UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    return handle
 end
+
+S.Comp = Library
