@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES (Flow Hub v4.1 - Clean Layout)
+  [7] PAGES — Command An Army (v5.1 - Library Automize)
 ============================================================
 ]]
 
@@ -132,10 +132,14 @@ local function makeTab(iconId, name)
     table.insert(tabs, {btn = btn, icon = ic, text = tx, bar = acc})
 end
 
+-- ============================================================
+-- BUAT PAGES + TABS
+-- ============================================================
 createPage("Combat")
 createPage("Esp")
 createPage("Teleport")
 createPage("Automation")
+createPage("Afk Farm")
 createPage("Settings")
 createPage("Config")
 
@@ -143,6 +147,7 @@ makeTab(I.combat, "Combat")
 makeTab(I.visual, "Esp")
 makeTab(I.teleport, "Teleport")
 makeTab(I.automation, "Automation")
+makeTab(I.afk, "Afk Farm")
 makeTab(I.settings, "Settings")
 makeTab(I.config, "Config")
 
@@ -302,25 +307,13 @@ end)
 
 local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
 
--- TextBox Dipanggil Duluan biar di Atas
-local codeBox = Instance.new("TextBox")
-codeBox.Size = UDim2.new(1, -24, 0, 28) -- Sedikit lebih tinggi
-codeBox.BackgroundColor3 = C.bg4
-codeBox.BorderSizePixel = 0
-codeBox.Text = ""
-codeBox.PlaceholderText = "Enter A Code..."
-codeBox.TextColor3 = C.text
-codeBox.PlaceholderColor3 = C.textDim2
-codeBox.TextSize = 11
-codeBox.Font = F.norm
-codeBox.ClearTextOnFocus = false
-codeBox.Parent = codeSection
-Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
-codeBox.Position = UDim2.new(0, 12, 0, 0)
+-- Pake makeTextInput Full-Width (true)
+local codeBox = S.Comp.makeTextInput(codeSection, "Enter Code", "", "Enter A Code...", function(v)
+    -- callback opsional
+end, true)
 
--- Dropdown Dipanggil Kedua biar di Bawah
 local codeDropdown = S.Comp.makeDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
-    if val ~= "Fetching..." and val ~= "None" then
+    if val ~= "Fetching..." and val ~= "None" and val ~= "No Codes" then
         codeBox.Text = val
     end
 end)
@@ -339,13 +332,30 @@ end)
 
 S.Comp.makeButton(codeSection, "Claim Code", function()
     local code = codeBox.Text
-    if code ~= "" and code ~= "Fetching..." and code ~= "None" then
+    if code ~= "" and code ~= "Enter A Code..." and code ~= "Fetching..." and code ~= "None" and code ~= "No Codes" then
         local Remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Shared") and game:GetService("ReplicatedStorage").Shared:FindFirstChild("Remotes")
         local RedeemCode = Remotes and Remotes:FindFirstChild("RedeemCode")
         if RedeemCode then
             pcall(function() RedeemCode:InvokeServer(code) end)
         end
+        codeBox.Text = "" 
     end
+end)
+
+-- ============================================================
+-- TAB AFK FARM
+-- ============================================================
+local afkFarmSection = S.Comp.makeSection(pages["Afk Farm"], "Afk Farm", false)
+S.Comp.makeToggle(afkFarmSection, "Enable Farm", (S.Config.AfkFarm and S.Config.AfkFarm.EnableFarm) == true, function(v)
+    if not S.Config.AfkFarm then S.Config.AfkFarm = {} end
+    S.Config.AfkFarm.EnableFarm = v
+    save()
+end)
+
+local antiAfkSection = S.Comp.makeSection(pages["Afk Farm"], "Anti Afk", false)
+S.Comp.makeToggle(antiAfkSection, "Anti Afk", S.Config.Misc.AntiAFK == true, function(v)
+    S.Config.Misc.AntiAFK = v
+    save()
 end)
 
 -- ============================================================
@@ -365,7 +375,6 @@ S.Comp.makeToggle(utilityContent, "Fly", MM.Fly == true, function(v) MM.Fly = v 
 S.Comp.makeToggle(utilityContent, "Infinite Jump", MM.InfJump == true, function(v) MM.InfJump = v save() end)
 S.Comp.makeInput(utilityContent, "Fly Speed", MM.FlySpeed, function(v) MM.FlySpeed = v save() end)
 S.Comp.makeInput(utilityContent, "Jump Power", MM.JumpPower, function(v) MM.JumpPower = v save() end)
-S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK == true, function(v) XX.AntiAFK = v save() end)
 
 local visualContent = S.Comp.makeSection(pages["Settings"], "Visuals", false)
 S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright == true, function(v) VV.Fullbright = v save() end)
@@ -527,6 +536,13 @@ game:GetService("UserInputService").InputEnded:Connect(function(input)
         mainDrag = false
     end
 end)
+
+-- ============================================================
+-- RESIZE HANDLE (Pojok Kanan Bawah)
+-- ============================================================
+if S.Comp.attachResizeHandle then
+    S.Comp.attachResizeHandle(S.GUI.MainFrame)
+end
 
 -- ============================================================
 -- MINIMIZE / OPEN
