@@ -1,10 +1,11 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v2.5)
-  - Size: 460x320
-  - Float Button: Kotak Tumpul + Logo
-  - Separate Header for drag handle
-  - Export Overlay
+  [5] GUI (Flow Hub v3.3)
+  - Size: 450x300
+  - Float Button: Rounded Square (Anti-Lepas saat drag)
+  - Klik vs Drag Threshold
+  - PC & Mobile Detection
+  - Anti-Crash gethui
 ============================================================
 ]]
 
@@ -12,15 +13,15 @@ local S = _G.STHAIN
 local C = S.Theme.Colors
 local I = S.Theme.Icons
 local F = S.Theme.Font
+local UIS = game:GetService("UserInputService")
 
--- FIX 1: Anti-Double GUI & Anti-Crash gethui
+-- Deteksi Platform
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+
+-- Anti-Crash gethui
 local parentGui
 local ok, hui = pcall(function() return gethui and gethui() end)
-if ok and hui then
-    parentGui = hui
-else
-    parentGui = game:GetService("CoreGui")
-end
+if ok and hui then parentGui = hui else parentGui = game:GetService("CoreGui") end
 
 local oldGui = parentGui:FindFirstChild("FlowHub")
 if oldGui then oldGui:Destroy() end
@@ -32,57 +33,80 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parentGui
 
 -- ============================================================
--- FLOAT BUTTON (Kotak Tumpul)
+-- FLOAT BUTTON (KOTAK TUMPUL + ANTI LEPAS DRAG)
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Name = "FloatBtn"
 floatBtn.Size = UDim2.new(0, 48, 0, 48)
 floatBtn.Position = UDim2.new(0, 30, 0.5, -24)
 floatBtn.Text = ""
-floatBtn.BackgroundColor3 = C.bg2
-floatBtn.BackgroundTransparency = 0.1
+floatBtn.BackgroundTransparency = 1
 floatBtn.BorderSizePixel = 0
 floatBtn.AutoButtonColor = false
+floatBtn.Active = true
+floatBtn.ZIndex = 100
 floatBtn.Parent = gui
-Instance.new("UICorner", floatBtn).CornerRadius = UDim.new(0, 14)
+
+local fBg = Instance.new("Frame")
+fBg.Size = UDim2.new(1, 0, 1, 0)
+fBg.BackgroundColor3 = C.bg2
+fBg.BackgroundTransparency = 0.1
+fBg.BorderSizePixel = 0
+fBg.Active = false
+fBg.ZIndex = 100
+fBg.Parent = floatBtn
+Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12)
 
 local fStroke = Instance.new("UIStroke")
 fStroke.Color = C.stroke
 fStroke.Thickness = 1.5
 fStroke.Transparency = 0.3
-fStroke.Parent = floatBtn
+fStroke.Parent = fBg
 
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
-fIcon.Size = UDim2.new(0.8, 0, 0.8, 0)
-fIcon.Position = UDim2.new(0.1, 0, 0.1, 0)
+fIcon.Size = UDim2.new(0.6, 0, 0.6, 0)
+fIcon.Position = UDim2.new(0.2, 0, 0.2, 0)
 fIcon.BackgroundTransparency = 1
 fIcon.BorderSizePixel = 0
 fIcon.Image = I.logo
 fIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
 fIcon.ScaleType = Enum.ScaleType.Fit
+fIcon.Active = false
+fIcon.ZIndex = 100
 fIcon.Parent = floatBtn
 
--- DRAG FLOAT BUTTON
-local dragging, dragStart, startPos
+-- ============================================================
+-- FLOAT BUTTON DRAG (UIS GLOBAL - ANTI PUTUS)
+-- ============================================================
+local dragging = false
+local dragStart, startPos
+local hasMoved = false
+local DRAG_THRESHOLD = 5
+
 floatBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
     or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
+        hasMoved = false
         dragStart = input.Position
         startPos = floatBtn.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
     end
 end)
-floatBtn.InputChanged:Connect(function(input)
+
+-- Pake UIS.InputChanged (Global) biar ga lepas kalau mouse keluar dari tombol
+UIS.InputChanged:Connect(function(input)
+    if not dragging then return end
     if input.UserInputType == Enum.UserInputType.MouseMovement
     or input.UserInputType == Enum.UserInputType.Touch then
-        if dragging then
-            local delta = input.Position - dragStart
+        local delta = input.Position - dragStart
+        
+        -- Cek threshold, kalau gerak lebih dari 5px berarti nge-drag
+        if math.abs(delta.X) > DRAG_THRESHOLD or math.abs(delta.Y) > DRAG_THRESHOLD then
+            hasMoved = true
+        end
+        
+        if hasMoved then
             floatBtn.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
@@ -91,13 +115,28 @@ floatBtn.InputChanged:Connect(function(input)
     end
 end)
 
+-- Pake UIS.InputEnded (Global) biar tetep kedeteksi walau jempol geser jauh
+UIS.InputEnded:Connect(function(input)
+    if not dragging then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+        
+        -- Kalau ga geser sama sekali (cuma klik), buka GUI
+        if not hasMoved then
+            S.GUI.FloatBtn.Visible = false
+            S.GUI.MainFrame.Visible = true
+        end
+    end
+end)
+
 -- ============================================================
--- MAIN FRAME (Size: 460x320)
+-- MAIN FRAME (450x300)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 460, 0, 320)
-mainFrame.Position = UDim2.new(0.5, -230, 0.5, -160)
+mainFrame.Size = UDim2.new(0, 450, 0, 300) -- ⬅️ UBAH KE 450x300
+mainFrame.Position = UDim2.new(0.5, -225, 0.5, -150) -- ⬅️ SETENGAH DARI 450 & 300
 mainFrame.BackgroundColor3 = C.panel
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
@@ -113,7 +152,48 @@ mStroke.Transparency = 0.3
 mStroke.Parent = mainFrame
 
 -- ============================================================
--- HEADER (Drag Handle)
+-- RESIZE HANDLE (Khusus PC)
+-- ============================================================
+if not isMobile then
+    local resizeHandle = Instance.new("TextButton")
+    resizeHandle.Name = "ResizeHandle"
+    resizeHandle.Size = UDim2.new(0, 18, 0, 18)
+    resizeHandle.Position = UDim2.new(1, 0, 1, 0)
+    resizeHandle.AnchorPoint = Vector2.new(1, 1)
+    resizeHandle.BackgroundTransparency = 1
+    resizeHandle.Text = "◢"
+    resizeHandle.TextColor3 = C.textDim
+    resizeHandle.TextSize = 14
+    resizeHandle.ZIndex = 100
+    resizeHandle.Parent = mainFrame
+    
+    local resizing = false
+    local resizeStart, startSize
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = true
+            resizeStart = input.Position
+            startSize = mainFrame.Size
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - resizeStart
+            -- Ukuran minimum diubah jadi 350x230 (proporsional sama 450x300)
+            local newW = math.max(350, startSize.X.Offset + delta.X)
+            local newH = math.max(230, startSize.Y.Offset + delta.Y)
+            mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = false
+        end
+    end)
+end
+
+-- ============================================================
+-- HEADER
 -- ============================================================
 local HEADER_H = 36
 
@@ -203,7 +283,7 @@ line1.Parent = mainFrame
 -- ============================================================
 -- SEARCH + TITLE + ACCENT LINE + GARIS 2
 -- ============================================================
-local ROW_Y = HEADER_H + 8  -- 44
+local ROW_Y = HEADER_H + 8
 
 local searchFrame = Instance.new("Frame")
 searchFrame.Size = UDim2.new(0, 160, 0, 26)
@@ -268,7 +348,7 @@ line2.Parent = mainFrame
 -- ============================================================
 -- SIDEBAR (TRANSPARAN)
 -- ============================================================
-local SIDEBAR_Y = ROW_Y + 38  -- 82
+local SIDEBAR_Y = ROW_Y + 38
 
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
@@ -327,5 +407,5 @@ S.GUI = {
     SearchBox = searchBox,
     MinBtn = minBtn,
     CloseBtn = nil,
-    Overlay = nil, -- (Buat Dropdown)
+    IsMobile = isMobile,
 }
