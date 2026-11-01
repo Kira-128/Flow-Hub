@@ -1,7 +1,7 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v3.3 - AUTOMIZE + LYNX DROPDOWN)
-  - Fix Dropdown Overlay: Pas di bawah garis padding Title
+  [6] LIBRARY (Flow Hub v4.1 - AUTOMIZE + LYNX DROPDOWN)
+  - Fix Dropdown Overlay: Mulai dari bawah garis Header (Y = 36)
 ============================================================
 ]]
 
@@ -410,11 +410,11 @@ Library._dropdownCount = 0
 function Library._initDropdownSystem()
     if Library._dropdownOverlay then return end
     
-    -- ⬇️ Y = 76 (Pas di bawah Title Line 450x300) ⬇️
+    -- ⬇️ DIUBAH KE 36: Pas di bawah garis Header (sebelum Search Bar) ⬇️
     Library._dropdownOverlay = Library.new("Frame", {
         Parent = S.GUI.MainFrame,
-        Size = UDim2.new(1, 0, 1, -76),           -- Kurangi tinggi 76px
-        Position = UDim2.new(0, 0, 0, 76),         -- Mulai dari Y = 76px
+        Size = UDim2.new(1, 0, 1, -36),           
+        Position = UDim2.new(0, 0, 0, 36),         
         BackgroundColor3 = C.bg,
         BackgroundTransparency = 0.95,
         BorderSizePixel = 0,
