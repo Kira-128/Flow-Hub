@@ -1,8 +1,9 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v3.3)
+  [5] GUI (Flow Hub v3.4)
   - Size: 450x300
-  - Float Button: Rounded Square (Anti-Lepas saat drag)
+  - Float Button: Kotak Tumpul + Logo di Tengah (Anti-kotak dalam kotak)
+  - Anti-Lepas Drag (Global Input)
   - Klik vs Drag Threshold
   - PC & Mobile Detection
   - Anti-Crash gethui
@@ -33,7 +34,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parentGui
 
 -- ============================================================
--- FLOAT BUTTON (KOTAK TUMPUL + ANTI LEPAS DRAG)
+-- FLOAT BUTTON (KOTAK TUMPUL + LOGO TENGAH)
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Name = "FloatBtn"
@@ -47,7 +48,9 @@ floatBtn.Active = true
 floatBtn.ZIndex = 100
 floatBtn.Parent = gui
 
+-- 1. KOTAK BACKGROUND (SQUARE)
 local fBg = Instance.new("Frame")
+fBg.Name = "FloatBg"
 fBg.Size = UDim2.new(1, 0, 1, 0)
 fBg.BackgroundColor3 = C.bg2
 fBg.BackgroundTransparency = 0.1
@@ -55,7 +58,7 @@ fBg.BorderSizePixel = 0
 fBg.Active = false
 fBg.ZIndex = 100
 fBg.Parent = floatBtn
-Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12) -- Sudut Tumpul
 
 local fStroke = Instance.new("UIStroke")
 fStroke.Color = C.stroke
@@ -63,18 +66,19 @@ fStroke.Thickness = 1.5
 fStroke.Transparency = 0.3
 fStroke.Parent = fBg
 
+-- 2. GAMBAR LOGO DI TENGAH
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
-fIcon.Size = UDim2.new(0.6, 0, 0.6, 0)
-fIcon.Position = UDim2.new(0.2, 0, 0.2, 0)
+fIcon.Size = UDim2.new(0.45, 0, 0.45, 0) -- 45% dari kotak
+fIcon.Position = UDim2.new(0.275, 0, 0.275, 0) -- Pas di tengah
 fIcon.BackgroundTransparency = 1
 fIcon.BorderSizePixel = 0
 fIcon.Image = I.logo
 fIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
 fIcon.ScaleType = Enum.ScaleType.Fit
 fIcon.Active = false
-fIcon.ZIndex = 100
-fIcon.Parent = floatBtn
+fIcon.ZIndex = 101
+fIcon.Parent = fBg
 
 -- ============================================================
 -- FLOAT BUTTON DRAG (UIS GLOBAL - ANTI PUTUS)
@@ -101,7 +105,6 @@ UIS.InputChanged:Connect(function(input)
     or input.UserInputType == Enum.UserInputType.Touch then
         local delta = input.Position - dragStart
         
-        -- Cek threshold, kalau gerak lebih dari 5px berarti nge-drag
         if math.abs(delta.X) > DRAG_THRESHOLD or math.abs(delta.Y) > DRAG_THRESHOLD then
             hasMoved = true
         end
@@ -115,7 +118,7 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Pake UIS.InputEnded (Global) biar tetep kedeteksi walau jempol geser jauh
+-- Pake UIS.InputEnded (Global) biar tetep kedeteksi
 UIS.InputEnded:Connect(function(input)
     if not dragging then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1
@@ -135,8 +138,8 @@ end)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 450, 0, 300) -- ⬅️ UBAH KE 450x300
-mainFrame.Position = UDim2.new(0.5, -225, 0.5, -150) -- ⬅️ SETENGAH DARI 450 & 300
+mainFrame.Size = UDim2.new(0, 450, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
 mainFrame.BackgroundColor3 = C.panel
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
@@ -179,7 +182,6 @@ if not isMobile then
     UIS.InputChanged:Connect(function(input)
         if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - resizeStart
-            -- Ukuran minimum diubah jadi 350x230 (proporsional sama 450x300)
             local newW = math.max(350, startSize.X.Offset + delta.X)
             local newH = math.max(230, startSize.Y.Offset + delta.Y)
             mainFrame.Size = UDim2.new(0, newW, 0, newH)
@@ -269,7 +271,7 @@ minBtn.Parent = header
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 4)
 
 -- ============================================================
--- GARIS 1
+-- GARIS 1 (Header Line)
 -- ============================================================
 local line1 = Instance.new("Frame")
 line1.Name = "HeaderLine"
