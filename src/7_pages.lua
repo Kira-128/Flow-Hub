@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES (Flow Hub v4.1 - Clean Layout)
+  [7] PAGES — Command An Army (v3.2)
 ============================================================
 ]]
 
@@ -26,6 +26,31 @@ local function save()
     end
 end
 
+-- ============================================================
+-- FORCE SECTION AUTO-SIZE
+-- ============================================================
+local function forceFixSection(sectionFrame)
+    if not sectionFrame then return end
+    pcall(function()
+        if sectionFrame:IsA("Frame") or sectionFrame:IsA("ScrollingFrame") then
+            sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
+            sectionFrame.ClipsDescendants = false
+        end
+        for _, child in pairs(sectionFrame:GetDescendants()) do
+            if child:IsA("Frame") or child:IsA("ScrollingFrame") then
+                if not child.Name:find("Popup") and not child.Name:find("Dropdown") then
+                    pcall(function()
+                        child.AutomaticSize = Enum.AutomaticSize.Y
+                    end)
+                end
+            end
+        end
+    end)
+end
+
+-- ============================================================
+-- CREATE PAGE
+-- ============================================================
 local function createPage(name)
     local page = Instance.new("ScrollingFrame")
     page.Name = "Page_" .. name
@@ -68,6 +93,9 @@ local function switchPage(name)
     end
 end
 
+-- ============================================================
+-- MAKE TAB
+-- ============================================================
 local function makeTab(iconId, name)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 30)
@@ -132,6 +160,16 @@ local function makeTab(iconId, name)
     table.insert(tabs, {btn = btn, icon = ic, text = tx, bar = acc})
 end
 
+-- ============================================================
+-- HELPER BUTTON
+-- ============================================================
+local function makeSectionButton(parent, text, callback)
+    return S.Comp.makeButton(parent, text, callback)
+end
+
+-- ============================================================
+-- BUAT PAGES + TABS
+-- ============================================================
 createPage("Combat")
 createPage("Esp")
 createPage("Teleport")
@@ -156,6 +194,7 @@ local autoCombat = S.Comp.makeSection(pages["Combat"], "Auto Combat", false)
 S.Comp.makeToggle(autoCombat, "Auto Attack (V)", CC.AutoAttack == true, function(v) CC.AutoAttack = v save() end)
 S.Comp.makeToggle(autoCombat, "Auto Rush (B)", CC.AutoRush == true, function(v) CC.AutoRush = v save() end)
 S.Comp.makeToggle(autoCombat, "Auto Follow (C)", CC.AutoFollow == true, function(v) CC.AutoFollow = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(autoCombat) end)
 
 local spawnSection = S.Comp.makeSection(pages["Combat"], "Spawn Unit", false)
 S.Comp.makeDropdown(spawnSection, "Unit Slot", {"1", "2", "3", "4"}, function(v)
@@ -169,17 +208,20 @@ S.Comp.makeToggle(spawnSection, "Auto Respawn [BETA]", SS.AutoSpawn == true, fun
     SS.AutoSpawn = v 
     save() 
 end)
+task.defer(function() task.wait(0.1) forceFixSection(spawnSection) end)
 
 local pvpSection = S.Comp.makeSection(pages["Combat"], "PvP", false)
 S.Comp.makeToggle(pvpSection, "Kill Aura", CC.KillAura == true, function(v) CC.KillAura = v save() end)
 S.Comp.makeToggle(pvpSection, "Target Lock", CC.TargetLock == true, function(v) CC.TargetLock = v save() end)
 S.Comp.makeToggle(pvpSection, "Auto Heal", CC.AutoHeal == true, function(v) CC.AutoHeal = v save() end)
 S.Comp.makeToggle(pvpSection, "Anti-Stun", CC.AntiStun == true, function(v) CC.AntiStun = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(pvpSection) end)
 
 local combatDelay = S.Comp.makeSection(pages["Combat"], "Delay Settings", false)
 S.Comp.makeInput(combatDelay, "Attack Delay", CC.AttackDelay, function(v) CC.AttackDelay = v save() end)
 S.Comp.makeInput(combatDelay, "Rush Delay", CC.RushDelay, function(v) CC.RushDelay = v save() end)
 S.Comp.makeInput(combatDelay, "Follow Delay", CC.FollowDelay, function(v) CC.FollowDelay = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(combatDelay) end)
 
 -- ============================================================
 -- TAB ESP
@@ -188,15 +230,18 @@ local VV = S.Config.Visual
 
 local enableEsp = S.Comp.makeSection(pages["Esp"], "Enable Esp", false)
 S.Comp.makeToggle(enableEsp, "Enable Esp", VV.Chams == true, function(v) VV.Chams = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(enableEsp) end)
 
 local espSetting = S.Comp.makeSection(pages["Esp"], "Esp Setting", false)
 S.Comp.makeToggle(espSetting, "Show Distance", VV.ESPShowDistance == true, function(v) VV.ESPShowDistance = v save() end)
 S.Comp.makeToggle(espSetting, "Show Health", VV.ESPHealth == true, function(v) VV.ESPHealth = v save() end)
 S.Comp.makeToggle(espSetting, "Show Name", VV.ESPName == true, function(v) VV.ESPName = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(espSetting) end)
 
 local espObject = S.Comp.makeSection(pages["Esp"], "Esp Object", false)
 S.Comp.makeToggle(espObject, "Esp Supply", VV.ESPSupply == true, function(v) VV.ESPSupply = v save() end)
 S.Comp.makeToggle(espObject, "Esp Capture", VV.ESPCapture == true, function(v) VV.ESPCapture = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(espObject) end)
 
 -- ============================================================
 -- TAB TELEPORT
@@ -216,6 +261,7 @@ end)
 S.Comp.makeButton(tpCapture, "TP to Point B", function()
     if _G.STHAIN.TeleportToPointB then _G.STHAIN.TeleportToPointB() end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(tpCapture) end)
 
 local tpPlayer = S.Comp.makeSection(pages["Teleport"], "Player", false)
 S.Comp.makeButton(tpPlayer, "TP to Nearest Enemy", function()
@@ -224,6 +270,7 @@ end)
 S.Comp.makeButton(tpPlayer, "TP to Teammate", function()
     if _G.STHAIN.TeleportToTeammate then _G.STHAIN.TeleportToTeammate() end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(tpPlayer) end)
 
 local supplyEnemySection = S.Comp.makeSection(pages["Teleport"], "Supply Enemy", false)
 local enemyDropdown = S.Comp.makeDropdown(supplyEnemySection, "Supply Target", {TT.EnemySupplyTarget or "None"}, function(v)
@@ -233,6 +280,7 @@ end)
 S.Comp.makeButton(supplyEnemySection, "TP Supply Enemy", function()
     if _G.STHAIN.TeleportToSupplyEnemy then _G.STHAIN.TeleportToSupplyEnemy(TT.EnemySupplyTarget or "") end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(supplyEnemySection) end)
 
 local supplyOwnerSection = S.Comp.makeSection(pages["Teleport"], "Supply Owner", false)
 local ownerDropdown = S.Comp.makeDropdown(supplyOwnerSection, "Supply Target", {TT.OwnerSupplyTarget or "None"}, function(v)
@@ -242,7 +290,11 @@ end)
 S.Comp.makeButton(supplyOwnerSection, "TP Supply Owner", function()
     if _G.STHAIN.TeleportToSupplyOwner then _G.STHAIN.TeleportToSupplyOwner(TT.OwnerSupplyTarget or "") end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(supplyOwnerSection) end)
 
+-- ============================================================
+-- DYNAMIC DROPDOWN UPDATE LOOP
+-- ============================================================
 task.spawn(function()
     while task.wait(2) do
         if _G.STHAIN.GetSupplyList then
@@ -268,6 +320,7 @@ end)
 -- ============================================================
 local AA = S.Config.Automation or {}
 
+-- 1. SUMMON SECTION
 local summonSection = S.Comp.makeSection(pages["Automation"], "Summon", false)
 S.Comp.makeToggle(summonSection, "Auto Summon", AA.AutoSummon == true, function(v) 
     AA.AutoSummon = v 
@@ -281,46 +334,43 @@ S.Comp.makeInput(summonSection, "Keep Gems", AA.KeepGems or 0, function(v)
     AA.KeepGems = v
     save()
 end)
+task.defer(function() task.wait(0.1) forceFixSection(summonSection) end)
 
+-- 2. ASCEND SECTION
 local ascendSection = S.Comp.makeSection(pages["Automation"], "Ascend", false)
 S.Comp.makeToggle(ascendSection, "Auto Ascend", AA.AutoAscend == true, function(v) 
     AA.AutoAscend = v 
     save() 
 end)
+task.defer(function() task.wait(0.1) forceFixSection(ascendSection) end)
 
+-- 3. EVOLVE SECTION
 local evolveSection = S.Comp.makeSection(pages["Automation"], "Evolve", false)
 S.Comp.makeToggle(evolveSection, "Auto Evolve", AA.AutoEvolve == true, function(v) 
     AA.AutoEvolve = v 
     save() 
 end)
+task.defer(function() task.wait(0.1) forceFixSection(evolveSection) end)
 
+-- 4. REWARDS SECTION
 local rewardSection = S.Comp.makeSection(pages["Automation"], "Rewards", false)
 S.Comp.makeToggle(rewardSection, "Auto Daily/Weekly Reward", AA.AutoReward == true, function(v) 
     AA.AutoReward = v 
     save() 
 end)
+task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
 
+-- 5. CLAIM CODE SECTION
 local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
 
--- TextBox Dipanggil Duluan biar di Atas
-local codeBox = Instance.new("TextBox")
-codeBox.Size = UDim2.new(1, -24, 0, 28) -- Sedikit lebih tinggi
-codeBox.BackgroundColor3 = C.bg4
-codeBox.BorderSizePixel = 0
-codeBox.Text = ""
-codeBox.PlaceholderText = "Enter A Code..."
-codeBox.TextColor3 = C.text
-codeBox.PlaceholderColor3 = C.textDim2
-codeBox.TextSize = 11
-codeBox.Font = F.norm
-codeBox.ClearTextOnFocus = false
-codeBox.Parent = codeSection
-Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
-codeBox.Position = UDim2.new(0, 12, 0, 0)
+-- TextBox pake makeTextInput (Simetris sama Dropdown)
+local codeBox = S.Comp.makeTextInput(codeSection, "Enter Code", "", "Enter A Code...", function(v)
+    -- callback opsional kalau user selesai ngetik
+end)
 
--- Dropdown Dipanggil Kedua biar di Bawah
+-- Dropdown
 local codeDropdown = S.Comp.makeDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
-    if val ~= "Fetching..." and val ~= "None" then
+    if val ~= "Fetching..." and val ~= "None" and val ~= "No Codes" then
         codeBox.Text = val
     end
 end)
@@ -337,16 +387,19 @@ task.spawn(function()
     end
 end)
 
+-- Tombol Claim Code (reset TextBox setelah claim)
 S.Comp.makeButton(codeSection, "Claim Code", function()
     local code = codeBox.Text
-    if code ~= "" and code ~= "Fetching..." and code ~= "None" then
+    if code ~= "" and code ~= "Enter A Code..." and code ~= "Fetching..." and code ~= "None" and code ~= "No Codes" then
         local Remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Shared") and game:GetService("ReplicatedStorage").Shared:FindFirstChild("Remotes")
         local RedeemCode = Remotes and Remotes:FindFirstChild("RedeemCode")
         if RedeemCode then
             pcall(function() RedeemCode:InvokeServer(code) end)
         end
+        codeBox.Text = "" -- Reset ke placeholder
     end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(codeSection) end)
 
 -- ============================================================
 -- TAB SETTINGS
@@ -366,10 +419,12 @@ S.Comp.makeToggle(utilityContent, "Infinite Jump", MM.InfJump == true, function(
 S.Comp.makeInput(utilityContent, "Fly Speed", MM.FlySpeed, function(v) MM.FlySpeed = v save() end)
 S.Comp.makeInput(utilityContent, "Jump Power", MM.JumpPower, function(v) MM.JumpPower = v save() end)
 S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK == true, function(v) XX.AntiAFK = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(utilityContent) end)
 
 local visualContent = S.Comp.makeSection(pages["Settings"], "Visuals", false)
 S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright == true, function(v) VV.Fullbright = v save() end)
 S.Comp.makeToggle(visualContent, "No Fog", VV.NoFog == true, function(v) VV.NoFog = v save() end)
+task.defer(function() task.wait(0.1) forceFixSection(visualContent) end)
 
 local autoJoinContent = S.Comp.makeSection(pages["Settings"], "Auto Join Team", false)
 local setJoinDefender, setJoinAttacker
@@ -399,6 +454,7 @@ setJoinAttacker = S.Comp.makeToggle(autoJoinContent, "Auto Join Attackers", init
         save()
     end
 end)
+task.defer(function() task.wait(0.1) forceFixSection(autoJoinContent) end)
 
 local serverContent = S.Comp.makeSection(pages["Settings"], "Server", false)
 S.Comp.makeButton(serverContent, "Rejoin Server", function()
@@ -423,6 +479,7 @@ S.Comp.makeButton(serverContent, "Server Hop (Find Small Server)", function()
         if best then TeleportService:TeleportToPlaceInstance(game.PlaceId, best.id, S.LP) end
     end)
 end)
+task.defer(function() task.wait(0.1) forceFixSection(serverContent) end)
 
 -- ============================================================
 -- TAB CONFIG
@@ -434,9 +491,11 @@ S.Comp.makeToggle(autoSaveSection, "Auto Save Config", cfg.AutoSave == true, fun
     cfg.AutoSave = v
     save()
 end)
+task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 
+-- Tombol Reset (Oranye + Confirm)
 local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
@@ -463,6 +522,7 @@ local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     end
 end)
 
+-- Tombol Delete (Merah + Confirm)
 local deleteBtn = S.Comp.makeButton(configMgmt, "Delete Config File", function()
     if deleteBtn.Text == "Delete Config File" then
         deleteBtn.Text = "Click Again to Confirm"
@@ -489,30 +549,21 @@ local deleteBtn = S.Comp.makeButton(configMgmt, "Delete Config File", function()
     end
 end)
 
--- ============================================================
--- DRAG MAIN FRAME (SMOOTH TOUCH)
--- ============================================================
-local mainDrag = false
-local mainStart, mainPos
+task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
 
+-- ============================================================
+-- DRAG MAIN FRAME (Pakai Header)
+-- ============================================================
+local mainDrag, mainStart, mainPos
 S.GUI.Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch 
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         mainDrag = true
         mainStart = input.Position
         mainPos = S.GUI.MainFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                mainDrag = false
-            end
-        end)
     end
 end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if mainDrag and (input.UserInputType == Enum.UserInputType.Touch 
-    or input.UserInputType == Enum.UserInputType.MouseMovement) then
+S.GUI.Header.InputChanged:Connect(function(input)
+    if mainDrag and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
         local delta = input.Position - mainStart
         S.GUI.MainFrame.Position = UDim2.new(
             mainPos.X.Scale, mainPos.X.Offset + delta.X,
@@ -520,10 +571,8 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
         )
     end
 end)
-
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch 
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
+S.GUI.Header.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         mainDrag = false
     end
 end)
