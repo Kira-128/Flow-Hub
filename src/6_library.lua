@@ -1,9 +1,9 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub - Components v3.1 Automize)
-  - Dropdown Automize (Fixed Position & Scale)
-  - Tambah: makeSlider, attachResizeHandle
-  - Realtime Section Height
+  [6] LIBRARY (Flow Hub - Components v3.2 Automize)
+  - Dropdown Automize (Responsif saat Resize)
+  - Slider, Resize Handle, Text Input
+  - Anti-Melencang (AnchorPoint Kanan + Padding)
 ============================================================
 ]]
 
@@ -161,7 +161,8 @@ function Comp.makeToggle(parent, name, default, callback)
 
     local b = Instance.new("TextButton")
     b.Size = UDim2.new(0, 30, 0, 18)
-    b.Position = UDim2.new(1, -42, 0.5, -9)
+    b.AnchorPoint = Vector2.new(1, 0.5)
+    b.Position = UDim2.new(1, -12, 0.5, 0)
     b.Text = ""
     b.BackgroundColor3 = default and C.accent or C.bg4
     b.BorderSizePixel = 0
@@ -214,8 +215,9 @@ function Comp.makeInput(parent, name, default, callback)
     l.Parent = f
 
     local b = Instance.new("TextBox")
-    b.Size = UDim2.new(0, 55, 0, 22)
-    b.Position = UDim2.new(1, -67, 0.5, -11)
+    b.AnchorPoint = Vector2.new(1, 0.5)
+    b.Size = UDim2.new(0, 70, 0, 22)
+    b.Position = UDim2.new(1, -12, 0.5, 0)
     b.Text = tostring(default)
     b.TextColor3 = C.text
     b.TextSize = 11
@@ -256,8 +258,9 @@ function Comp.makeTextInput(parent, name, default, placeholder, callback)
 
     local b = Instance.new("TextBox")
     b.Name = "TextBox"
+    b.AnchorPoint = Vector2.new(1, 0.5)
     b.Size = UDim2.new(0, 130, 0, 22)
-    b.Position = UDim2.new(1, -142, 0.5, -11)
+    b.Position = UDim2.new(1, -12, 0.5, 0)
     b.Text = tostring(default or "")
     b.PlaceholderText = placeholder or ""
     b.PlaceholderColor3 = C.textDim2
@@ -418,7 +421,7 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (AUTOMIZE UKURAN + POSISI RAPI)
+-- DROPDOWN (AUTOMIZE PROPORSIONAL + PADDING)
 -- ============================================================
 function Comp.makeDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -441,13 +444,14 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     lbl.TextStrokeTransparency = 1
     lbl.Parent = f
 
-    -- 🔥 FIX: Pakai Scale (Persentase) tapi AnchorPoint Kanan
-    local DROPDOWN_SCALE = 0.30 
+    -- 🔥 AUTOMIZE SETTING: Proporsional 35% layar, jarak aman 12px
+    local DROPDOWN_SCALE_X = 0.35 
+    local PADDING_RIGHT = 12
 
     local selected = Instance.new("TextButton")
-    selected.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, 22) 
-    selected.AnchorPoint = Vector2.new(1, 0.5)
-    selected.Position = UDim2.new(1, -12, 0.5, 0) 
+    selected.AnchorPoint = Vector2.new(1, 0.5) -- Tumpu di kanan
+    selected.Size = UDim2.new(DROPDOWN_SCALE_X, 0, 0, 22)
+    selected.Position = UDim2.new(1, -PADDING_RIGHT, 0.5, 0)
     selected.Text = ""
     selected.BackgroundColor3 = C.bg4
     selected.BackgroundTransparency = 0
@@ -500,7 +504,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 
     local popup = Instance.new("ScrollingFrame")
     popup.Name = "DropdownPopup_" .. name
-    popup.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, 150) 
+    popup.Size = UDim2.new(DROPDOWN_SCALE_X, 0, 0, 150) 
     popup.BackgroundColor3 = C.bg4
     popup.BackgroundTransparency = 0
     popup.BorderSizePixel = 0
@@ -606,7 +610,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
         end
         local maxH = 150
         local contentH = #options * 28 + 8
-        popup.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, math.min(contentH, maxH))
+        popup.Size = UDim2.new(DROPDOWN_SCALE_X, 0, 0, math.min(contentH, maxH))
     end
 
     rebuildOptions(initialOptions)
