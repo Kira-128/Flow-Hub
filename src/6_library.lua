@@ -1,9 +1,8 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub - Components v3.2 Automize)
-  - Dropdown Automize (Lebar Popup Fix)
-  - Slider, Resize Handle, Text Input
-  - Anti-Melencang (AnchorPoint Kanan + Padding)
+  [6] LIBRARY (Flow Hub - Components v3.3)
+  - Dropdown Automize (Scale + Offset)
+  - Resize Handle
 ============================================================
 ]]
 
@@ -18,7 +17,7 @@ local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
 
 -- ============================================================
--- HELPER: Recalculate Section Height
+-- HELPER: Recalculate section height
 -- ============================================================
 local function recalcSection(card, content)
     if not card or not card.Parent then return end
@@ -421,7 +420,7 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (FIX FINAL: Popup Selalu Selebar Tombol)
+-- DROPDOWN (AUTOMIZE PAS - SCALE + OFFSET)
 -- ============================================================
 function Comp.makeDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -444,13 +443,14 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     lbl.TextStrokeTransparency = 1
     lbl.Parent = f
 
-    -- 🔥 UKURAN TOMBOL DROPDOWN
-    local DROPDOWN_SCALE_X = 0.32 
+    -- 🔥 RUMUS AUTOMIZE: 25% layar + 60px (Agar di HP ukurannya pas ~130px)
+    local DROPDOWN_SCALE_X = 0.25
+    local DROPDOWN_OFFSET_X = 60
     local PADDING_RIGHT = 12
 
     local selected = Instance.new("TextButton")
     selected.AnchorPoint = Vector2.new(1, 0.5)
-    selected.Size = UDim2.new(DROPDOWN_SCALE_X, 0, 0, 24) 
+    selected.Size = UDim2.new(DROPDOWN_SCALE_X, DROPDOWN_OFFSET_X, 0, 22) 
     selected.Position = UDim2.new(1, -PADDING_RIGHT, 0.5, 0)
     selected.Text = ""
     selected.BackgroundColor3 = C.bg4
@@ -504,6 +504,8 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 
     local popup = Instance.new("ScrollingFrame")
     popup.Name = "DropdownPopup_" .. name
+    -- Popup juga pakai rumus automize yang sama
+    popup.Size = UDim2.new(DROPDOWN_SCALE_X, DROPDOWN_OFFSET_X, 0, 150) 
     popup.BackgroundColor3 = C.bg4
     popup.BackgroundTransparency = 0
     popup.BorderSizePixel = 0
@@ -538,19 +540,22 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     local function updatePopupPosition()
         local pos = selected.AbsolutePosition
         local size = selected.AbsoluteSize
+        local popupH = popup.AbsoluteSize.Y
         local mfPos = S.GUI.MainFrame.AbsolutePosition
+        local popupW = popup.AbsoluteSize.X 
 
         if size.X == 0 or size.Y == 0 then return false end
 
-        -- Paksa popup selebar tombol dropdown
-        popup.Size = UDim2.new(0, size.X, 0, popup.Size.Y.Offset)
-
         local localX = pos.X - mfPos.X
-        local localY = pos.Y - mfPos.Y + size.Y + 4
+        local localY = pos.Y - mfPos.Y - popupH - 4
+
+        if pos.Y - popupH - 4 < 0 then
+            localY = pos.Y - mfPos.Y + size.Y + 4
+        end
 
         if localX < 0 then localX = 0 end
-        if localX + size.X > S.GUI.MainFrame.AbsoluteSize.X then
-            localX = S.GUI.MainFrame.AbsoluteSize.X - size.X
+        if localX + popupW > S.GUI.MainFrame.AbsoluteSize.X then
+            localX = S.GUI.MainFrame.AbsoluteSize.X - popupW
         end
 
         popup.Position = UDim2.new(0, localX, 0, localY)
@@ -606,7 +611,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
         end
         local maxH = 150
         local contentH = #options * 28 + 8
-        popup.Size = UDim2.new(0, selected.AbsoluteSize.X, 0, math.min(contentH, maxH))
+        popup.Size = UDim2.new(DROPDOWN_SCALE_X, DROPDOWN_OFFSET_X, 0, math.min(contentH, maxH))
     end
 
     rebuildOptions(initialOptions)
