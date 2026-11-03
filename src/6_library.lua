@@ -1,9 +1,9 @@
 --[[
 ============================================================
-  [1] LIBB (Flow Hub - Components v3.3 FINAL)
+  [1] LIBB (Flow Hub - Components v3.4 STABIL)
   - Item Height: 30px
   - Header Height: 32px
-  - Dropdown Automize (Scale)
+  - Dropdown Auto-Scale
 ============================================================
 ]]
 
@@ -275,93 +275,6 @@ function Comp.makeTextInput(parent, name, default, placeholder, callback)
 end
 
 -- ============================================================
--- SLIDER
--- ============================================================
-function Comp.makeSlider(parent, name, min, max, default, callback)
-    local f = Instance.new("Frame")
-    f.Name = "Slider_" .. name
-    f.Size = UDim2.new(1, 0, 0, ITEM_H)
-    f.BackgroundTransparency = 1
-    f.BorderSizePixel = 0
-    f.Parent = parent
-
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.6, -12, 1, 0)
-    l.Position = UDim2.new(0, 12, 0, 0)
-    l.Text = name
-    l.TextColor3 = C.text
-    l.TextSize = 11
-    l.Font = F.norm
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.BackgroundTransparency = 1
-    l.Parent = f
-
-    local valLabel = Instance.new("TextLabel")
-    valLabel.Size = UDim2.new(0, 30, 1, 0)
-    valLabel.Position = UDim2.new(1, -42, 0, 0)
-    valLabel.Text = tostring(default)
-    valLabel.TextColor3 = C.accent
-    valLabel.TextSize = 11
-    valLabel.Font = F.bold
-    valLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valLabel.BackgroundTransparency = 1
-    valLabel.Parent = f
-
-    local barBG = Instance.new("Frame")
-    barBG.Size = UDim2.new(0.5, -70, 0, 6)
-    barBG.Position = UDim2.new(0.5, 0, 0.5, -3)
-    barBG.BackgroundColor3 = C.bg4
-    barBG.BorderSizePixel = 0
-    barBG.Parent = f
-    Instance.new("UICorner", barBG).CornerRadius = UDim.new(1, 0)
-
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = C.accent
-    fill.BorderSizePixel = 0
-    fill.Parent = barBG
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
-
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 14, 0, 14)
-    knob.Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, -7)
-    knob.AnchorPoint = Vector2.new(0.5, 0)
-    knob.BackgroundColor3 = C.text
-    knob.BorderSizePixel = 0
-    knob.ZIndex = 2
-    knob.Parent = barBG
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-
-    local sliderBtn = Instance.new("TextButton")
-    sliderBtn.Size = UDim2.new(1, 0, 1, 0)
-    sliderBtn.BackgroundTransparency = 1
-    sliderBtn.Text = ""
-    sliderBtn.ZIndex = 3
-    sliderBtn.Parent = barBG
-
-    local isDragging = false
-    local function updateValue(x)
-        local relX = math.clamp((x - barBG.AbsolutePosition.X) / barBG.AbsoluteSize.X, 0, 1)
-        local val = math.floor(min + (max - min) * relX + 0.5)
-        valLabel.Text = tostring(val)
-        fill.Size = UDim2.new(relX, 0, 1, 0)
-        knob.Position = UDim2.new(relX, 0, 0.5, -7)
-        pcall(callback, val)
-    end
-
-    sliderBtn.MouseButton1Down:Connect(function() isDragging = true updateValue(S.Services.UIS:GetMouseLocation().X) end)
-    sliderBtn.MouseButton1Up:Connect(function() isDragging = false end)
-    S.Services.UIS.InputChanged:Connect(function(input)
-        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            updateValue(input.Position.X)
-        end
-    end)
-    S.Services.UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDragging = false end
-    end)
-end
-
--- ============================================================
 -- BUTTON
 -- ============================================================
 function Comp.makeButton(parent, name, callback)
@@ -374,7 +287,7 @@ function Comp.makeButton(parent, name, callback)
     local b = Instance.new("TextButton")
     b.Name = "Button_" .. name
     b.Size = UDim2.new(1, -12, 1, -4)
-    b.Position = UDim2.new(0, 6, 0.5, -(ITEM_H-4)/2)
+    b.Position = UDim2.new(0, 6, 0.5, -((ITEM_H-4)/2))
     b.Text = name
     b.TextColor3 = C.text
     b.TextSize = 11
@@ -438,7 +351,6 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     lbl.Font = F.norm
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.BackgroundTransparency = 1
-    lbl.TextStrokeTransparency = 1
     lbl.Parent = f
 
     local DROPDOWN_SCALE = 0.2889 
@@ -448,7 +360,6 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     selected.Position = UDim2.new(1, -12, 0.5, -10)
     selected.Text = ""
     selected.BackgroundColor3 = C.bg4
-    selected.BackgroundTransparency = 0
     selected.BorderSizePixel = 0
     selected.AutoButtonColor = false
     selected.ZIndex = 10
@@ -464,8 +375,8 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     selectedText.Font = F.norm
     selectedText.TextXAlignment = Enum.TextXAlignment.Left
     selectedText.BackgroundTransparency = 1
-    selectedText.ZIndex = 11
     selectedText.TextTruncate = Enum.TextTruncate.AtEnd
+    selectedText.ZIndex = 11
     selectedText.Parent = selected
 
     local arrow = Instance.new("TextLabel")
@@ -479,54 +390,24 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     arrow.ZIndex = 11
     arrow.Parent = selected
 
-    local selOverlay = Instance.new("Frame")
-    selOverlay.Name = "ClickOverlay"
-    selOverlay.Size = UDim2.new(1, 0, 1, 0)
-    selOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    selOverlay.BackgroundTransparency = 1
-    selOverlay.BorderSizePixel = 0
-    selOverlay.ZIndex = 12
-    selOverlay.Parent = selected
-    Instance.new("UICorner", selOverlay).CornerRadius = UDim.new(0, 4)
-
-    selected.MouseButton1Down:Connect(function() selOverlay.BackgroundTransparency = 0.85 end)
-    selected.MouseButton1Up:Connect(function()
-        S.Services.TS:Create(selOverlay, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
-    end)
-    selected.MouseLeave:Connect(function()
-        S.Services.TS:Create(selOverlay, TweenInfo.new(0.15), { BackgroundTransparency = 1 }):Play()
-    end)
-
     local popup = Instance.new("ScrollingFrame")
     popup.Name = "DropdownPopup_" .. name
     popup.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, 150) 
     popup.BackgroundColor3 = C.bg4
-    popup.BackgroundTransparency = 0
     popup.BorderSizePixel = 0
     popup.Visible = false
     popup.ZIndex = 200
-    popup.ScrollBarThickness = 3
+    popup.ScrollBarThickness = 2
     popup.ScrollBarImageColor3 = C.accent
-    popup.ScrollBarImageTransparency = 0.4
     popup.CanvasSize = UDim2.new(0, 0, 0, 0)
     popup.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    popup.ScrollingDirection = Enum.ScrollingDirection.Y
-    popup.ElasticBehavior = Enum.ElasticBehavior.Never
     popup.ClipsDescendants = true
     popup.Parent = S.GUI.MainFrame
     Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 5)
 
     local popLayout = Instance.new("UIListLayout")
     popLayout.Padding = UDim.new(0, 2)
-    popLayout.SortOrder = Enum.SortOrder.LayoutOrder
     popLayout.Parent = popup
-
-    local popPad = Instance.new("UIPadding")
-    popPad.PaddingTop = UDim.new(0, 4)
-    popPad.PaddingBottom = UDim.new(0, 4)
-    popPad.PaddingLeft = UDim.new(0, 4)
-    popPad.PaddingRight = UDim.new(0, 4)
-    popPad.Parent = popup
 
     local currentValue = initialOptions[1] or "None"
     local isOpen = false
@@ -568,7 +449,6 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             optBtn.TextColor3 = C.text
             optBtn.TextSize = 11
             optBtn.Font = F.norm
-            optBtn.TextStrokeTransparency = 1
             optBtn.BackgroundColor3 = C.bg4
             optBtn.BorderSizePixel = 0
             optBtn.ZIndex = 201
@@ -576,22 +456,11 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             optBtn.Parent = popup
             Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
 
-            local optOverlay = Instance.new("Frame")
-            optOverlay.Name = "ClickOverlay"
-            optOverlay.Size = UDim2.new(1, 0, 1, 0)
-            optOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            optOverlay.BackgroundTransparency = 1
-            optOverlay.BorderSizePixel = 0
-            optOverlay.ZIndex = 202
-            optOverlay.Parent = optBtn
-            Instance.new("UICorner", optOverlay).CornerRadius = UDim.new(0, 4)
-
-            optBtn.MouseButton1Down:Connect(function() optOverlay.BackgroundTransparency = 0.85 end)
-            optBtn.MouseButton1Up:Connect(function()
-                S.Services.TS:Create(optOverlay, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+            optBtn.MouseEnter:Connect(function()
+                S.Services.TS:Create(optBtn, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3 }):Play()
             end)
             optBtn.MouseLeave:Connect(function()
-                S.Services.TS:Create(optOverlay, TweenInfo.new(0.15), { BackgroundTransparency = 1 }):Play()
+                S.Services.TS:Create(optBtn, TweenInfo.new(0.15), { BackgroundColor3 = C.bg4 }):Play()
             end)
 
             optBtn.MouseButton1Click:Connect(function()
@@ -603,34 +472,23 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
                 pcall(callback, opt)
             end)
         end
-        local maxH = 150
         local contentH = #options * 26 + 8
-        popup.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, math.min(contentH, maxH))
+        popup.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, math.min(contentH, 150))
     end
 
     rebuildOptions(initialOptions)
 
-    local function openPopup()
-        isOpen = true
-        if not updatePopupPosition() then isOpen = false return end
-        popup.Visible = true
-        arrow.Text = "▶"
-        
-        local startPos = UDim2.new(popup.Position.X.Scale, popup.Position.X.Offset, popup.Position.Y.Scale, popup.Position.Y.Offset + 6)
-        popup.Position = startPos
-        S.Services.TS:Create(popup, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = UDim2.new(popup.Position.X.Scale, popup.Position.X.Offset, popup.Position.Y.Scale, popup.Position.Y.Offset - 6)
-        }):Play()
-    end
-
-    local function closePopup()
-        isOpen = false
-        popup.Visible = false
-        arrow.Text = "▼"
-    end
-
     selected.MouseButton1Click:Connect(function()
-        if isOpen then closePopup() else openPopup() end
+        if isOpen then
+            isOpen = false
+            popup.Visible = false
+            arrow.Text = "▼"
+        else
+            isOpen = true
+            if not updatePopupPosition() then isOpen = false return end
+            popup.Visible = true
+            arrow.Text = "▶"
+        end
     end)
 
     S.Services.Run.RenderStepped:Connect(function()
@@ -641,11 +499,15 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             if anc == S.GUI.MainFrame then break end
             if anc:IsA("GuiObject") then
                 if not anc.Visible then stillVisible = false break end
-                if anc.AbsoluteSize.X == 0 or anc.AbsoluteSize.Y == 0 then stillVisible = false break end
             end
             anc = anc.Parent
         end
-        if not stillVisible then closePopup() return end
+        if not stillVisible then
+            isOpen = false
+            popup.Visible = false
+            arrow.Text = "▼"
+            return
+        end
         updatePopupPosition()
     end)
 
@@ -660,22 +522,17 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             local inPopup = mousePos.X >= popPos.X and mousePos.X <= popPos.X + popSize.X and mousePos.Y >= popPos.Y and mousePos.Y <= popPos.Y + popSize.Y
             local inSelected = mousePos.X >= selPos.X and mousePos.X <= selPos.X + selSize.X and mousePos.Y >= selPos.Y and mousePos.Y <= selPos.Y + selSize.Y
 
-            if not inPopup and not inSelected then closePopup() end
+            if not inPopup and not inSelected then
+                isOpen = false
+                popup.Visible = false
+                arrow.Text = "▼"
+            end
         end
     end)
 
     return {
         UpdateOptions = function(options)
             if isOpen then return end
-            local stillValid = false
-            for _, opt in ipairs(options) do
-                if opt == currentValue then stillValid = true break end
-            end
-            if not stillValid and #options > 0 then
-                currentValue = options[1]
-                selectedText.Text = options[1]
-                pcall(callback, options[1])
-            end
             rebuildOptions(options)
         end,
         SetValue = function(v)
@@ -683,7 +540,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             selectedText.Text = v
         end,
         GetValue = function() return currentValue end,
-        ClosePopup = function() closePopup() end
+        ClosePopup = function() isOpen = false popup.Visible = false arrow.Text = "▼" end
     }
 end
 
