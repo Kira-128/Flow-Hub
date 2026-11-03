@@ -1,9 +1,10 @@
 --[[
 ============================================================
-  [1] LIBB (Flow Hub - Components v3.1 Automize)
-  - Dropdown Automize (Default 130px, mengecil/membesar pas resize)
+  [1] LIBB (Flow Hub - Components v3.3)
+  - Item Height: 30px (Button, Toggle, Dropdown)
+  - Header Height: 32px (Default)
+  - Dropdown Automize
   - Tambah: makeSlider, attachResizeHandle
-  - Realtime Section Height
 ============================================================
 ]]
 
@@ -12,8 +13,8 @@ local C = S.Theme.Colors
 local F = S.Theme.Font
 
 local Comp = {}
-local ITEM_H = 34
-local HEADER_H = 32
+local ITEM_H = 30    -- ⬅️ Tinggi Item (Button, Toggle, Dropdown)
+local HEADER_H = 32  -- ⬅️ Tinggi Header (Balik ke Default)
 local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
 
@@ -110,7 +111,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     content.Parent = card
 
     local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 3)
+    contentLayout.Padding = UDim.new(0, 2)
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = content
 
@@ -214,8 +215,8 @@ function Comp.makeInput(parent, name, default, callback)
     l.Parent = f
 
     local b = Instance.new("TextBox")
-    b.Size = UDim2.new(0, 55, 0, 22)
-    b.Position = UDim2.new(1, -67, 0.5, -11)
+    b.Size = UDim2.new(0, 55, 0, 20) -- Disesuaikan dengan tinggi ITEM_H 30
+    b.Position = UDim2.new(1, -67, 0.5, -10)
     b.Text = tostring(default)
     b.TextColor3 = C.text
     b.TextSize = 11
@@ -256,8 +257,8 @@ function Comp.makeTextInput(parent, name, default, placeholder, callback)
 
     local b = Instance.new("TextBox")
     b.Name = "TextBox"
-    b.Size = UDim2.new(0, 130, 0, 22)
-    b.Position = UDim2.new(1, -142, 0.5, -11)
+    b.Size = UDim2.new(0, 130, 0, 20)
+    b.Position = UDim2.new(1, -142, 0.5, -10)
     b.Text = tostring(default or "")
     b.PlaceholderText = placeholder or ""
     b.PlaceholderColor3 = C.textDim2
@@ -373,8 +374,8 @@ function Comp.makeButton(parent, name, callback)
 
     local b = Instance.new("TextButton")
     b.Name = "Button_" .. name
-    b.Size = UDim2.new(1, -12, 0, ITEM_H - 6)
-    b.Position = UDim2.new(0, 6, 0.5, -(ITEM_H-6)/2)
+    b.Size = UDim2.new(1, -12, 1, -4)
+    b.Position = UDim2.new(0, 6, 0.5, -((ITEM_H-4)/2))
     b.Text = name
     b.TextColor3 = C.text
     b.TextSize = 11
@@ -418,12 +419,12 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (AUTOMIZE UKURAN)
+-- DROPDOWN (AUTOMIZE)
 -- ============================================================
 function Comp.makeDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
     f.Name = "Dropdown_" .. name
-    f.Size = UDim2.new(1, 0, 0, 34)
+    f.Size = UDim2.new(1, 0, 0, ITEM_H)
     f.BackgroundTransparency = 1
     f.BorderSizePixel = 0
     f.ClipsDescendants = false
@@ -442,12 +443,11 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     lbl.Parent = f
 
     -- ⬇️ UKURAN DEFAULT: 130px (tapi pake Scale biar automize)
-    -- Angka 0.2889 itu didapet dari 130 / 450 (lebar default MainFrame)
     local DROPDOWN_SCALE = 0.2889 
 
     local selected = Instance.new("TextButton")
-    selected.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, 22) 
-    selected.Position = UDim2.new(1, -12, 0.5, -11)
+    selected.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, 20) 
+    selected.Position = UDim2.new(1, -12, 0.5, -10)
     selected.Text = ""
     selected.BackgroundColor3 = C.bg4
     selected.BackgroundTransparency = 0
@@ -467,6 +467,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     selectedText.TextXAlignment = Enum.TextXAlignment.Left
     selectedText.BackgroundTransparency = 1
     selectedText.ZIndex = 11
+    selectedText.TextTruncate = Enum.TextTruncate.AtEnd
     selectedText.Parent = selected
 
     local arrow = Instance.new("TextLabel")
@@ -550,7 +551,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 
         if localX < 0 then localX = 0 end
         if localX + popupW > S.GUI.MainFrame.AbsoluteSize.X then
-            localX = S.GUI.MainFrame.AbsoluteSize.X - popupW
+            localX = S.GUI.MainFrame.AbsoluteSize.X - popupW - 4
         end
 
         popup.Position = UDim2.new(0, localX, 0, localY)
@@ -563,7 +564,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
         end
         for i, opt in ipairs(options) do
             local optBtn = Instance.new("TextButton")
-            optBtn.Size = UDim2.new(1, -8, 0, 26)
+            optBtn.Size = UDim2.new(1, -8, 0, 24) -- Sedikit lebih kecil dari ITEM_H
             optBtn.LayoutOrder = i
             optBtn.Text = opt
             optBtn.TextColor3 = C.text
@@ -605,7 +606,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             end)
         end
         local maxH = 150
-        local contentH = #options * 28 + 8
+        local contentH = #options * 26 + 8 -- Sesuaikan dengan tinggi optBtn
         popup.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, math.min(contentH, maxH))
     end
 
