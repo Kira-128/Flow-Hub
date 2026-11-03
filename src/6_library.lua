@@ -1,10 +1,9 @@
 --[[
 ============================================================
-  [1] LIBB (Flow Hub - Components v3.3)
-  - Item Height: 30px (Button, Toggle, Dropdown)
-  - Header Height: 32px (Default)
-  - Dropdown Automize
-  - Tambah: makeSlider, attachResizeHandle
+  [1] LIBB (Flow Hub - Components v3.3 FINAL)
+  - Item Height: 30px
+  - Header Height: 32px
+  - Dropdown Automize (Scale)
 ============================================================
 ]]
 
@@ -13,8 +12,8 @@ local C = S.Theme.Colors
 local F = S.Theme.Font
 
 local Comp = {}
-local ITEM_H = 30    -- ⬅️ Tinggi Item (Button, Toggle, Dropdown)
-local HEADER_H = 32  -- ⬅️ Tinggi Header (Balik ke Default)
+local ITEM_H = 30
+local HEADER_H = 32
 local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
 
@@ -215,7 +214,7 @@ function Comp.makeInput(parent, name, default, callback)
     l.Parent = f
 
     local b = Instance.new("TextBox")
-    b.Size = UDim2.new(0, 55, 0, 20) -- Disesuaikan dengan tinggi ITEM_H 30
+    b.Size = UDim2.new(0, 55, 0, 20)
     b.Position = UDim2.new(1, -67, 0.5, -10)
     b.Text = tostring(default)
     b.TextColor3 = C.text
@@ -375,7 +374,7 @@ function Comp.makeButton(parent, name, callback)
     local b = Instance.new("TextButton")
     b.Name = "Button_" .. name
     b.Size = UDim2.new(1, -12, 1, -4)
-    b.Position = UDim2.new(0, 6, 0.5, -((ITEM_H-4)/2))
+    b.Position = UDim2.new(0, 6, 0.5, -(ITEM_H-4)/2)
     b.Text = name
     b.TextColor3 = C.text
     b.TextSize = 11
@@ -442,7 +441,6 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     lbl.TextStrokeTransparency = 1
     lbl.Parent = f
 
-    -- ⬇️ UKURAN DEFAULT: 130px (tapi pake Scale biar automize)
     local DROPDOWN_SCALE = 0.2889 
 
     local selected = Instance.new("TextButton")
@@ -564,7 +562,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
         end
         for i, opt in ipairs(options) do
             local optBtn = Instance.new("TextButton")
-            optBtn.Size = UDim2.new(1, -8, 0, 24) -- Sedikit lebih kecil dari ITEM_H
+            optBtn.Size = UDim2.new(1, -8, 0, 24)
             optBtn.LayoutOrder = i
             optBtn.Text = opt
             optBtn.TextColor3 = C.text
@@ -606,7 +604,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             end)
         end
         local maxH = 150
-        local contentH = #options * 26 + 8 -- Sesuaikan dengan tinggi optBtn
+        local contentH = #options * 26 + 8
         popup.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, math.min(contentH, maxH))
     end
 
