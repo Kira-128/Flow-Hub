@@ -1,7 +1,7 @@
 --[[
 ============================================================
-  [1] LIBB (Flow Hub - Components v3.1 Automize)
-  - Dropdown Automize (Default 130px, mengecil/membesar pas resize)
+  [6] LIBRARY (Flow Hub - Components v3.1 Automize)
+  - Dropdown Automize (Fixed Position & Scale)
   - Tambah: makeSlider, attachResizeHandle
   - Realtime Section Height
 ============================================================
@@ -391,7 +391,7 @@ function Comp.makeButton(parent, name, callback)
     flash.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     flash.BackgroundTransparency = 1
     flash.BorderSizePixel = 0
-    flash.ZIndex = 5
+    flash.ZIndex = 1
     flash.Parent = b
     Instance.new("UICorner", flash).CornerRadius = UDim.new(0, 5)
 
@@ -418,7 +418,7 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (AUTOMIZE UKURAN)
+-- DROPDOWN (AUTOMIZE UKURAN + POSISI RAPI)
 -- ============================================================
 function Comp.makeDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
@@ -441,13 +441,13 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     lbl.TextStrokeTransparency = 1
     lbl.Parent = f
 
-    -- ⬇️ UKURAN DEFAULT: 130px (tapi pake Scale biar automize)
-    -- Angka 0.2889 itu didapet dari 130 / 450 (lebar default MainFrame)
-    local DROPDOWN_SCALE = 0.2889 
+    -- 🔥 FIX: Pakai Scale (Persentase) tapi AnchorPoint Kanan
+    local DROPDOWN_SCALE = 0.30 
 
     local selected = Instance.new("TextButton")
     selected.Size = UDim2.new(DROPDOWN_SCALE, 0, 0, 22) 
-    selected.Position = UDim2.new(1, -12, 0.5, -11)
+    selected.AnchorPoint = Vector2.new(1, 0.5)
+    selected.Position = UDim2.new(1, -12, 0.5, 0) 
     selected.Text = ""
     selected.BackgroundColor3 = C.bg4
     selected.BackgroundTransparency = 0
@@ -505,7 +505,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     popup.BackgroundTransparency = 0
     popup.BorderSizePixel = 0
     popup.Visible = false
-    popup.ZIndex = 200
+    popup.ZIndex = 500
     popup.ScrollBarThickness = 3
     popup.ScrollBarImageColor3 = C.accent
     popup.ScrollBarImageTransparency = 0.4
@@ -572,7 +572,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             optBtn.TextStrokeTransparency = 1
             optBtn.BackgroundColor3 = C.bg4
             optBtn.BorderSizePixel = 0
-            optBtn.ZIndex = 201
+            optBtn.ZIndex = 501
             optBtn.AutoButtonColor = false
             optBtn.Parent = popup
             Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
@@ -583,7 +583,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             optOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             optOverlay.BackgroundTransparency = 1
             optOverlay.BorderSizePixel = 0
-            optOverlay.ZIndex = 202
+            optOverlay.ZIndex = 502
             optOverlay.Parent = optBtn
             Instance.new("UICorner", optOverlay).CornerRadius = UDim.new(0, 4)
 
@@ -611,27 +611,34 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 
     rebuildOptions(initialOptions)
 
-    local function openPopup()
-        isOpen = true
-        if not updatePopupPosition() then isOpen = false return end
-        popup.Visible = true
-        arrow.Text = "▶"
-        
-        local startPos = UDim2.new(popup.Position.X.Scale, popup.Position.X.Offset, popup.Position.Y.Scale, popup.Position.Y.Offset + 6)
-        popup.Position = startPos
-        S.Services.TS:Create(popup, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = UDim2.new(popup.Position.X.Scale, popup.Position.X.Offset, popup.Position.Y.Scale, popup.Position.Y.Offset - 6)
-        }):Play()
-    end
-
-    local function closePopup()
-        isOpen = false
-        popup.Visible = false
-        arrow.Text = "▼"
+    local function animatePopup(show)
+        if show then
+            popup.Visible = true
+            updatePopupPosition()
+            
+            popup.BackgroundTransparency = 1
+            local startY = popup.Position.Y.Offset + 6
+            popup.Position = UDim2.new(popup.Position.X.Scale, popup.Position.X.Offset, 0, startY)
+            
+            S.Services.TS:Create(popup, TweenInfo.new(0.15), {
+                BackgroundTransparency = 0,
+                Position = UDim2.new(popup.Position.X.Scale, popup.Position.X.Offset, 0, startY - 6)
+            }):Play()
+        else
+            S.Services.TS:Create(popup, TweenInfo.new(0.1), { BackgroundTransparency = 1 }):Play()
+            task.delay(0.1, function() popup.Visible = false end)
+        end
     end
 
     selected.MouseButton1Click:Connect(function()
-        if isOpen then closePopup() else openPopup() end
+        isOpen = not isOpen
+        if isOpen then
+            animatePopup(true)
+            arrow.Text = "▶"
+        else
+            animatePopup(false)
+            arrow.Text = "▼"
+        end
     end)
 
     S.Services.Run.RenderStepped:Connect(function()
@@ -646,7 +653,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             end
             anc = anc.Parent
         end
-        if not stillVisible then closePopup() return end
+        if not stillVisible then isOpen = false popup.Visible = false arrow.Text = "▼" return end
         updatePopupPosition()
     end)
 
@@ -661,7 +668,11 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             local inPopup = mousePos.X >= popPos.X and mousePos.X <= popPos.X + popSize.X and mousePos.Y >= popPos.Y and mousePos.Y <= popPos.Y + popSize.Y
             local inSelected = mousePos.X >= selPos.X and mousePos.X <= selPos.X + selSize.X and mousePos.Y >= selPos.Y and mousePos.Y <= selPos.Y + selSize.Y
 
-            if not inPopup and not inSelected then closePopup() end
+            if not inPopup and not inSelected then
+                isOpen = false
+                animatePopup(false)
+                arrow.Text = "▼"
+            end
         end
     end)
 
@@ -684,7 +695,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             selectedText.Text = v
         end,
         GetValue = function() return currentValue end,
-        ClosePopup = function() closePopup() end
+        ClosePopup = function() isOpen = false popup.Visible = false arrow.Text = "▼" end
     }
 end
 
