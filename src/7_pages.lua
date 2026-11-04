@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v3.2)
+  [7] PAGES — Command An Army (v3.3 + Resize)
 ============================================================
 ]]
 
@@ -672,4 +672,11 @@ if S.GUI.SearchBox then
             end
         end
     end)
+end
+
+-- ============================================================
+-- RESIZE UI (FITUR BARU)
+-- ============================================================
+if S.Comp and S.Comp.attachResizeHandle then
+    S.Comp.attachResizeHandle(S.GUI.MainFrame)
 end
