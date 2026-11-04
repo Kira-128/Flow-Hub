@@ -1,32 +1,22 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v3.6 - Xiaomi Theme)
-  - Warna Standalone (Hijau Mint + Dark Mode)
-  - Float Button: Kotak Solid (Tanpa Garis Stroke)
-  - Resize Handle: Busur (Arc) di Kanan Bawah
-  - Sidebar Scroll Support
-  - Anti-Lepas Drag
+  [5] GUI (Flow Hub v3.5)
+  - Size: 450x300 (Start)
+  - Float Button: Kotak Tumpul + Logo Full
+  - Tabs Sidebar: Support Scroll
+  - Anti-Lepas Drag (Global Input)
+  - Klik vs Drag Threshold
+  - PC & Mobile Detection
+  - Anti-Crash gethui
+  - Resize Automize (Scale-Based)
 ============================================================
 ]]
 
 local S = _G.STHAIN
-local UIS = game:GetService("UserInputService")
-
--- ============================================================
--- TEMA WARNA (DARI STANDALONE)
--- ============================================================
-local C = {
-    bg1 = Color3.fromRGB(17, 17, 22),
-    bg2 = Color3.fromRGB(23, 23, 29), -- Panel
-    bg3 = Color3.fromRGB(43, 43, 51), -- Border / Hover
-    bg4 = Color3.fromRGB(55, 55, 65),
-    accent = Color3.fromRGB(114, 240, 176), -- Hijau Mint
-    text = Color3.fromRGB(240, 240, 245),
-    textDim = Color3.fromRGB(145, 145, 155),
-    textDim2 = Color3.fromRGB(100, 100, 110),
-}
-local F = { norm = Enum.Font.Gotham, bold = Enum.Font.GothamBold }
+local C = S.Theme.Colors
 local I = S.Theme.Icons
+local F = S.Theme.Font
+local UIS = game:GetService("UserInputService")
 
 -- Deteksi Platform
 local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
@@ -46,7 +36,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parentGui
 
 -- ============================================================
--- FLOAT BUTTON (KOTAK SOLID TANPA GARIS)
+-- FLOAT BUTTON (KOTAK + LOGO FULL)
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Name = "FloatBtn"
@@ -63,31 +53,31 @@ floatBtn.Parent = gui
 local fBg = Instance.new("Frame")
 fBg.Name = "FloatBg"
 fBg.Size = UDim2.new(1, 0, 1, 0)
-fBg.BackgroundColor3 = C.bg2 -- Warna Kotak
+fBg.BackgroundColor3 = C.bg2
 fBg.BackgroundTransparency = 0.1
 fBg.BorderSizePixel = 0
 fBg.Active = false
 fBg.ZIndex = 100
 fBg.Parent = floatBtn
-Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12) -- Sudut Tumpul
+Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 8)
 
--- 🔥 GARIS STROKE DIHAPUS (Sesuai Request)
+-- 🔥 STROKE DIHAPUS (Sesuai Permintaan)
 
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
-fIcon.Size = UDim2.new(1, 0, 1, 0)
+fIcon.Size = UDim2.new(1, 0, 1, 0) -- Logo Full
 fIcon.Position = UDim2.new(0, 0, 0, 0) 
 fIcon.BackgroundTransparency = 1
 fIcon.BorderSizePixel = 0
 fIcon.Image = I.logo
-fIcon.ImageColor3 = C.accent -- Logo warna hijau
+fIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
 fIcon.ScaleType = Enum.ScaleType.Fit
 fIcon.Active = false
 fIcon.ZIndex = 101
 fIcon.Parent = fBg
 
 -- ============================================================
--- FLOAT BUTTON DRAG
+-- FLOAT BUTTON DRAG (UIS GLOBAL - ANTI PUTUS)
 -- ============================================================
 local dragging = false
 local dragStart, startPos
@@ -131,26 +121,91 @@ UIS.InputEnded:Connect(function(input)
 end)
 
 -- ============================================================
--- MAIN FRAME
+-- MAIN FRAME (450x300)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 450, 0, 300)
 mainFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
-mainFrame.BackgroundColor3 = C.bg1
+mainFrame.BackgroundColor3 = C.panel
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Visible = false
-mainFrame.ClipsDescendants = true
+mainFrame.ClipsDescendants = true -- Penting agar UI tidak bocor
 mainFrame.Parent = gui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
 local mStroke = Instance.new("UIStroke")
-mStroke.Color = C.bg3
+mStroke.Color = C.stroke
 mStroke.Thickness = 1
 mStroke.Transparency = 0.3
 mStroke.Parent = mainFrame
+
+-- ============================================================
+-- RESIZE HANDLE (GAYA BUSUR / ARC)
+-- ============================================================
+if not isMobile then
+    local resizeHandle = Instance.new("TextButton")
+    resizeHandle.Name = "ResizeHandle"
+    resizeHandle.Size = UDim2.new(0, 32, 0, 32)
+    resizeHandle.Position = UDim2.new(1, 0, 1, 0)
+    resizeHandle.AnchorPoint = Vector2.new(1, 1)
+    resizeHandle.BackgroundTransparency = 1
+    resizeHandle.Text = ""
+    resizeHandle.ZIndex = 100
+    resizeHandle.Parent = mainFrame
+    
+    -- Arc Container (Pemotong)
+    local arcContainer = Instance.new("Frame")
+    arcContainer.Size = UDim2.new(0, 16, 0, 16)
+    arcContainer.Position = UDim2.new(0, 16, 0, 16)
+    arcContainer.BackgroundTransparency = 1
+    arcContainer.ClipsDescendants = true
+    arcContainer.ZIndex = 101
+    arcContainer.Parent = resizeHandle
+    
+    -- Arc (Lingkaran)
+    local arc = Instance.new("Frame")
+    arc.Size = UDim2.new(0, 32, 0, 32)
+    arc.Position = UDim2.new(0, -16, 0, -16)
+    arc.BackgroundTransparency = 1
+    arc.ZIndex = 101
+    arc.Parent = arcContainer
+    
+    local arcCorner = Instance.new("UICorner")
+    arcCorner.CornerRadius = UDim.new(1, 0)
+    arcCorner.Parent = arc
+    
+    local arcStroke = Instance.new("UIStroke")
+    arcStroke.Color = C.textDim
+    arcStroke.Thickness = 2
+    arcStroke.Transparency = 0.2
+    arcStroke.Parent = arc
+
+    local resizing = false
+    local resizeStart, startSize
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = true
+            resizeStart = input.Position
+            startSize = mainFrame.Size
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - resizeStart
+            local newW = math.max(350, startSize.X.Offset + delta.X)
+            local newH = math.max(230, startSize.Y.Offset + delta.Y)
+            mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = false
+        end
+    end)
+end
 
 -- ============================================================
 -- HEADER
@@ -200,7 +255,7 @@ lIcon.Parent = header
 local sep = Instance.new("Frame")
 sep.Size = UDim2.new(0, 1, 0, 18)
 sep.Position = UDim2.new(0, 78, 0.5, -9)
-sep.BackgroundColor3 = C.bg3
+sep.BackgroundColor3 = C.stroke
 sep.BorderSizePixel = 0
 sep.Parent = header
 
@@ -235,7 +290,7 @@ local line1 = Instance.new("Frame")
 line1.Name = "HeaderLine"
 line1.Size = UDim2.new(1, 0, 0, 1)
 line1.Position = UDim2.new(0, 0, 0, HEADER_H)
-line1.BackgroundColor3 = C.bg3
+line1.BackgroundColor3 = C.stroke
 line1.BackgroundTransparency = 0.3
 line1.BorderSizePixel = 0
 line1.Parent = mainFrame
@@ -246,6 +301,7 @@ line1.Parent = mainFrame
 local ROW_Y = HEADER_H + 8
 
 local searchFrame = Instance.new("Frame")
+-- Menggunakan Scale agar responsif saat di-resize
 searchFrame.Size = UDim2.new(0.35, 0, 0, 26)
 searchFrame.Position = UDim2.new(0, 10, 0, ROW_Y)
 searchFrame.BackgroundColor3 = C.bg2
@@ -279,7 +335,7 @@ searchBox.Parent = searchFrame
 local vDivider = Instance.new("Frame")
 vDivider.Name = "TitleDivider"
 vDivider.Size = UDim2.new(0, 2, 0, 18)
-vDivider.Position = UDim2.new(0.35, 10, 0, ROW_Y + 4)
+vDivider.Position = UDim2.new(0.35, 10, 0, ROW_Y + 4) -- Mengikuti search box
 vDivider.BackgroundColor3 = C.accent
 vDivider.BorderSizePixel = 0
 vDivider.Parent = mainFrame
@@ -300,17 +356,17 @@ local line2 = Instance.new("Frame")
 line2.Name = "TitleLine"
 line2.Size = UDim2.new(1, -200, 0, 1)
 line2.Position = UDim2.new(0.35, 20, 0, ROW_Y + 28)
-line2.BackgroundColor3 = C.bg3
+line2.BackgroundColor3 = C.stroke
 line2.BackgroundTransparency = 0.3
 line2.BorderSizePixel = 0
 line2.Parent = mainFrame
 
 -- ============================================================
--- SIDEBAR (SCROLLABLE)
+-- SIDEBAR (DENGAN SCROLLING & POSISI FIX)
 -- ============================================================
 local SIDEBAR_Y = ROW_Y + 38
 
-local sidebar = Instance.new("ScrollingFrame")
+local sidebar = Instance.new("ScrollingFrame") -- Ubah ke ScrollingFrame
 sidebar.Name = "Sidebar"
 sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
 sidebar.Position = UDim2.new(0, 10, 0, SIDEBAR_Y)
@@ -319,7 +375,7 @@ sidebar.BorderSizePixel = 0
 sidebar.ScrollBarThickness = 2
 sidebar.ScrollBarImageColor3 = C.accent
 sidebar.CanvasSize = UDim2.new(0, 0, 0, 0)
-sidebar.AutomaticCanvasSize = Enum.AutomaticSize.Y
+sidebar.AutomaticCanvasSize = Enum.AutomaticSize.Y -- Agar scroll otomatis
 sidebar.ScrollingDirection = Enum.ScrollingDirection.Y
 sidebar.ClipsDescendants = true
 sidebar.Parent = mainFrame
@@ -337,11 +393,12 @@ sPad.PaddingBottom = UDim.new(0, 4)
 sPad.Parent = sidebar
 
 -- ============================================================
--- CONTENT PANEL
+-- CONTENT PANEL (RESPONSIF)
 -- ============================================================
 local contentPanel = Instance.new("Frame")
 contentPanel.Name = "ContentPanel"
-contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10))
+-- Menggunakan Scale agar ikut memanjang saat di-resize
+contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10)) 
 contentPanel.Position = UDim2.new(0, 130, 0, SIDEBAR_Y)
 contentPanel.BackgroundTransparency = 1
 contentPanel.BorderSizePixel = 0
@@ -356,71 +413,6 @@ contentScroll.BackgroundTransparency = 1
 contentScroll.BorderSizePixel = 0
 contentScroll.ClipsDescendants = true
 contentScroll.Parent = contentPanel
-
--- ============================================================
--- RESIZE HANDLE (GAYA BUSUR / ARC - DARI IDE ANDA)
--- ============================================================
-local ResizeButton = Instance.new("TextButton")
-ResizeButton.Name = "ResizeHandle"
-ResizeButton.Size = UDim2.fromOffset(32, 32)
-ResizeButton.Position = UDim2.new(1, 0, 1, 0)
-ResizeButton.AnchorPoint = Vector2.new(1, 1)
-ResizeButton.BackgroundTransparency = 1
-ResizeButton.Text = ""
-ResizeButton.AutoButtonColor = false
-ResizeButton.ZIndex = 110
-ResizeButton.Parent = mainFrame
-
-local ArcContainer = Instance.new("Frame")
-ArcContainer.Size = UDim2.fromOffset(16, 16)
-ArcContainer.Position = UDim2.fromOffset(16, 16)
-ArcContainer.BackgroundTransparency = 1
-ArcContainer.ClipsDescendants = true
-ArcContainer.ZIndex = 111
-ArcContainer.Parent = ResizeButton
-
-local Arc = Instance.new("Frame")
-Arc.Size = UDim2.fromOffset(32, 32)
-Arc.Position = UDim2.fromOffset(-16, -16)
-Arc.BackgroundTransparency = 1
-Arc.ZIndex = 111
-Arc.Parent = ArcContainer
-
-local ArcCorner = Instance.new("UICorner")
-ArcCorner.CornerRadius = UDim.new(1, 0)
-ArcCorner.Parent = Arc
-
-local ArcStroke = Instance.new("UIStroke")
-ArcStroke.Color = C.accent
-ArcStroke.Thickness = 2
-ArcStroke.Transparency = 0.2
-ArcStroke.Parent = Arc
-
-local resizing = false
-local resizeStart, startSize
-
-ResizeButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        resizing = true
-        resizeStart = input.Position
-        startSize = mainFrame.AbsoluteSize
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - resizeStart
-        local newW = math.clamp(startSize.X + delta.X, 350, 800)
-        local newH = math.clamp(startSize.Y + delta.Y, 230, 600)
-        mainFrame.Size = UDim2.new(0, newW, 0, newH)
-    end
-end)
-
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        resizing = false
-    end
-end)
 
 -- ============================================================
 -- EXPORT
