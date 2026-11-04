@@ -1,10 +1,10 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub - Components v4.2)
-  - SEMUA FUNGSI ASLI (Toggle, Input, TextInput, Slider, Button, Section, Dropdown)
-  - Font & Panah Kembali ke Default (F.norm / Teks)
+  [6] LIBRARY (Flow Hub - Components v4.3)
+  - Item Height: 30px
+  - Dropdown: Selalu ke Atas (Scroll jika melebihi batas)
+  - Font & Panah Kembali ke Default
   - Automize (AnchorPoint + Scale 0.48)
-  - Resize Handle
 ============================================================
 ]]
 
@@ -13,8 +13,8 @@ local C = S.Theme.Colors
 local F = S.Theme.Font
 
 local Comp = {}
-local ITEM_H = 33
-local HEADER_H = 32
+local ITEM_H = 30
+local HEADER_H = 30
 local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
 
@@ -194,7 +194,7 @@ function Comp.makeToggle(parent, name, default, callback)
 end
 
 -- ============================================================
--- INPUT (Angka)
+-- INPUT
 -- ============================================================
 function Comp.makeInput(parent, name, default, callback)
     local f = Instance.new("Frame")
@@ -279,7 +279,7 @@ function Comp.makeTextInput(parent, name, default, placeholder, callback)
 end
 
 -- ============================================================
--- SLIDER (KEMBALI DITAMBAHKAN)
+-- SLIDER
 -- ============================================================
 function Comp.makeSlider(parent, name, min, max, default, callback)
     local f = Instance.new("Frame")
@@ -368,7 +368,7 @@ function Comp.makeSlider(parent, name, min, max, default, callback)
 end
 
 -- ============================================================
--- BUTTON (KEMBALI LENGKAP DENGAN FLASH)
+-- BUTTON
 -- ============================================================
 function Comp.makeButton(parent, name, callback)
     local wrapper = Instance.new("Frame")
@@ -424,12 +424,12 @@ function Comp.makeButton(parent, name, callback)
 end
 
 -- ============================================================
--- DROPDOWN (KEMBALI LENGKAP)
+-- DROPDOWN (SELALU KE ATAS)
 -- ============================================================
 function Comp.makeDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
     f.Name = "Dropdown_" .. name
-    f.Size = UDim2.new(1, 0, 0, 34)
+    f.Size = UDim2.new(1, 0, 0, ITEM_H)
     f.BackgroundTransparency = 1
     f.BorderSizePixel = 0
     f.ClipsDescendants = false
@@ -544,8 +544,10 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 
         popup.Size = UDim2.new(0, size.X, 0, popupH)
         local localX = pos.X - mfPos.X
+        
+        -- 🔥 SELALU KE ATAS
         local localY = pos.Y - mfPos.Y - popupH - 4
-        if localY < 0 then localY = pos.Y - mfPos.Y + size.Y + 4 end
+
         if localX < 0 then localX = 0 end
         if localX + size.X > S.GUI.MainFrame.AbsoluteSize.X then localX = S.GUI.MainFrame.AbsoluteSize.X - size.X end
 
@@ -612,6 +614,8 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             popup.Visible = true
             updatePopupPosition()
             popup.BackgroundTransparency = 1
+            
+            -- Animasi dari bawah ke atas
             local startY = popup.Position.Y.Offset + 6
             popup.Position = UDim2.new(popup.Position.X.Scale, popup.Position.X.Offset, 0, startY)
             S.Services.TS:Create(popup, TweenInfo.new(0.15), {
