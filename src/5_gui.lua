@@ -1,12 +1,14 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v3.4)
-  - Size: 450x300
-  - Float Button: Kotak Tumpul + Logo di Tengah (Anti-kotak dalam kotak)
+  [5] GUI (Flow Hub v3.5)
+  - Size: 450x300 (Start)
+  - Float Button: Kotak Tumpul + Logo Full
+  - Tabs Sidebar: Support Scroll
   - Anti-Lepas Drag (Global Input)
   - Klik vs Drag Threshold
   - PC & Mobile Detection
   - Anti-Crash gethui
+  - Resize Automize (Scale-Based)
 ============================================================
 ]]
 
@@ -34,7 +36,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parentGui
 
 -- ============================================================
--- FLOAT BUTTON (KOTAK TUMPUL + LOGO TENGAH)
+-- FLOAT BUTTON (KOTAK + LOGO FULL)
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Name = "FloatBtn"
@@ -48,7 +50,6 @@ floatBtn.Active = true
 floatBtn.ZIndex = 100
 floatBtn.Parent = gui
 
--- 1. KOTAK BACKGROUND (SQUARE)
 local fBg = Instance.new("Frame")
 fBg.Name = "FloatBg"
 fBg.Size = UDim2.new(1, 0, 1, 0)
@@ -58,7 +59,7 @@ fBg.BorderSizePixel = 0
 fBg.Active = false
 fBg.ZIndex = 100
 fBg.Parent = floatBtn
-Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12) -- Sudut Tumpul
+Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 8)
 
 local fStroke = Instance.new("UIStroke")
 fStroke.Color = C.stroke
@@ -66,11 +67,10 @@ fStroke.Thickness = 1.5
 fStroke.Transparency = 0.3
 fStroke.Parent = fBg
 
--- 2. GAMBAR LOGO DI TENGAH
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
-fIcon.Size = UDim2.new(0.45, 0, 0.45, 0) -- 45% dari kotak
-fIcon.Position = UDim2.new(0.275, 0, 0.275, 0) -- Pas di tengah
+fIcon.Size = UDim2.new(1, 0, 1, 0) -- Logo Full
+fIcon.Position = UDim2.new(0, 0, 0, 0) 
 fIcon.BackgroundTransparency = 1
 fIcon.BorderSizePixel = 0
 fIcon.Image = I.logo
@@ -89,8 +89,7 @@ local hasMoved = false
 local DRAG_THRESHOLD = 5
 
 floatBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         hasMoved = false
         dragStart = input.Position
@@ -98,17 +97,13 @@ floatBtn.InputBegan:Connect(function(input)
     end
 end)
 
--- Pake UIS.InputChanged (Global) biar ga lepas kalau mouse keluar dari tombol
 UIS.InputChanged:Connect(function(input)
     if not dragging then return end
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         local delta = input.Position - dragStart
-        
         if math.abs(delta.X) > DRAG_THRESHOLD or math.abs(delta.Y) > DRAG_THRESHOLD then
             hasMoved = true
         end
-        
         if hasMoved then
             floatBtn.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
@@ -118,14 +113,10 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Pake UIS.InputEnded (Global) biar tetep kedeteksi
 UIS.InputEnded:Connect(function(input)
     if not dragging then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
-        
-        -- Kalau ga geser sama sekali (cuma klik), buka GUI
         if not hasMoved then
             S.GUI.FloatBtn.Visible = false
             S.GUI.MainFrame.Visible = true
@@ -145,6 +136,7 @@ mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Visible = false
+mainFrame.ClipsDescendants = true -- Penting agar UI tidak bocor
 mainFrame.Parent = gui
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
 
@@ -155,7 +147,7 @@ mStroke.Transparency = 0.3
 mStroke.Parent = mainFrame
 
 -- ============================================================
--- RESIZE HANDLE (Khusus PC)
+-- RESIZE HANDLE
 -- ============================================================
 if not isMobile then
     local resizeHandle = Instance.new("TextButton")
@@ -271,7 +263,7 @@ minBtn.Parent = header
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 4)
 
 -- ============================================================
--- GARIS 1 (Header Line)
+-- GARIS 1
 -- ============================================================
 local line1 = Instance.new("Frame")
 line1.Name = "HeaderLine"
@@ -288,7 +280,8 @@ line1.Parent = mainFrame
 local ROW_Y = HEADER_H + 8
 
 local searchFrame = Instance.new("Frame")
-searchFrame.Size = UDim2.new(0, 160, 0, 26)
+-- Menggunakan Scale agar responsif saat di-resize
+searchFrame.Size = UDim2.new(0.35, 0, 0, 26)
 searchFrame.Position = UDim2.new(0, 10, 0, ROW_Y)
 searchFrame.BackgroundColor3 = C.bg2
 searchFrame.BackgroundTransparency = 0.1
@@ -321,7 +314,7 @@ searchBox.Parent = searchFrame
 local vDivider = Instance.new("Frame")
 vDivider.Name = "TitleDivider"
 vDivider.Size = UDim2.new(0, 2, 0, 18)
-vDivider.Position = UDim2.new(0, 180, 0, ROW_Y + 4)
+vDivider.Position = UDim2.new(0.35, 10, 0, ROW_Y + 4) -- Mengikuti search box
 vDivider.BackgroundColor3 = C.accent
 vDivider.BorderSizePixel = 0
 vDivider.Parent = mainFrame
@@ -329,7 +322,7 @@ Instance.new("UICorner", vDivider).CornerRadius = UDim.new(1, 0)
 
 local cTitle = Instance.new("TextLabel")
 cTitle.Size = UDim2.new(1, -200, 0, 26)
-cTitle.Position = UDim2.new(0, 190, 0, ROW_Y)
+cTitle.Position = UDim2.new(0.35, 20, 0, ROW_Y)
 cTitle.Text = "Combat"
 cTitle.TextColor3 = C.text
 cTitle.TextSize = 12
@@ -341,22 +334,29 @@ cTitle.Parent = mainFrame
 local line2 = Instance.new("Frame")
 line2.Name = "TitleLine"
 line2.Size = UDim2.new(1, -200, 0, 1)
-line2.Position = UDim2.new(0, 190, 0, ROW_Y + 28)
+line2.Position = UDim2.new(0.35, 20, 0, ROW_Y + 28)
 line2.BackgroundColor3 = C.stroke
 line2.BackgroundTransparency = 0.3
 line2.BorderSizePixel = 0
 line2.Parent = mainFrame
 
 -- ============================================================
--- SIDEBAR (TRANSPARAN)
+-- SIDEBAR (DENGAN SCROLLING & POSISI FIX)
 -- ============================================================
 local SIDEBAR_Y = ROW_Y + 38
 
-local sidebar = Instance.new("Frame")
+local sidebar = Instance.new("ScrollingFrame") -- Ubah ke ScrollingFrame
+sidebar.Name = "Sidebar"
 sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
 sidebar.Position = UDim2.new(0, 10, 0, SIDEBAR_Y)
 sidebar.BackgroundTransparency = 1
 sidebar.BorderSizePixel = 0
+sidebar.ScrollBarThickness = 2
+sidebar.ScrollBarImageColor3 = C.accent
+sidebar.CanvasSize = UDim2.new(0, 0, 0, 0)
+sidebar.AutomaticCanvasSize = Enum.AutomaticSize.Y -- Agar scroll otomatis
+sidebar.ScrollingDirection = Enum.ScrollingDirection.Y
+sidebar.ClipsDescendants = true
 sidebar.Parent = mainFrame
 
 local sLayout = Instance.new("UIListLayout")
@@ -372,10 +372,12 @@ sPad.PaddingBottom = UDim.new(0, 4)
 sPad.Parent = sidebar
 
 -- ============================================================
--- CONTENT PANEL (TRANSPARAN) + CONTAINER
+-- CONTENT PANEL (RESPONSIF)
 -- ============================================================
 local contentPanel = Instance.new("Frame")
-contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10))
+contentPanel.Name = "ContentPanel"
+-- Menggunakan Scale agar ikut memanjang saat di-resize
+contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10)) 
 contentPanel.Position = UDim2.new(0, 130, 0, SIDEBAR_Y)
 contentPanel.BackgroundTransparency = 1
 contentPanel.BorderSizePixel = 0
