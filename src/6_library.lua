@@ -1,10 +1,6 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub - Components v4.3)
-  - Item Height: 30px
-  - Dropdown: Selalu ke Atas (Scroll jika melebihi batas)
-  - Font & Panah Kembali ke Default
-  - Automize (AnchorPoint + Scale 0.48)
+  [6] LIBRARY (Flow Hub - Components v4.4 + Resize Arc)
 ============================================================
 ]]
 
@@ -687,6 +683,72 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
         GetValue = function() return currentValue end,
         ClosePopup = function() isOpen = false; popup.Visible = false; arrow.Text = "▼" end
     }
+end
+
+-- ============================================================
+-- RESIZE HANDLE (GAYA BUSUR / ARC - STANDALONE)
+-- ============================================================
+function Comp.attachResizeHandle(mainFrame)
+    local resizeHandle = Instance.new("TextButton")
+    resizeHandle.Name = "ResizeHandle"
+    resizeHandle.Size = UDim2.fromOffset(32, 32)
+    resizeHandle.Position = UDim2.new(1, 0, 1, 0)
+    resizeHandle.AnchorPoint = Vector2.new(1, 1)
+    resizeHandle.BackgroundTransparency = 1
+    resizeHandle.Text = ""
+    resizeHandle.ZIndex = 110
+    resizeHandle.Parent = mainFrame
+
+    local arcContainer = Instance.new("Frame")
+    arcContainer.Size = UDim2.fromOffset(16, 16)
+    arcContainer.Position = UDim2.fromOffset(16, 16)
+    arcContainer.BackgroundTransparency = 1
+    arcContainer.ClipsDescendants = true
+    arcContainer.ZIndex = 111
+    arcContainer.Parent = resizeHandle
+
+    local arc = Instance.new("Frame")
+    arc.Size = UDim2.fromOffset(32, 32)
+    arc.Position = UDim2.fromOffset(-16, -16)
+    arc.BackgroundTransparency = 1
+    arc.ZIndex = 111
+    arc.Parent = arcContainer
+
+    local arcCorner = Instance.new("UICorner")
+    arcCorner.CornerRadius = UDim.new(1, 0)
+    arcCorner.Parent = arc
+
+    local arcStroke = Instance.new("UIStroke")
+    arcStroke.Color = C.textDim
+    arcStroke.Thickness = 2
+    arcStroke.Transparency = 0.2
+    arcStroke.Parent = arc
+
+    local resizing = false
+    local resizeStart, startSize
+
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = true
+            resizeStart = input.Position
+            startSize = mainFrame.AbsoluteSize
+        end
+    end)
+    S.Services.UIS.InputChanged:Connect(function(input)
+        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - resizeStart
+            local newW = math.clamp(startSize.X + delta.X, 380, 800)
+            local newH = math.clamp(startSize.Y + delta.Y, 250, 600)
+            mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        end
+    end)
+    S.Services.UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = false
+        end
+    end)
+
+    return resizeHandle
 end
 
 S.Comp = Comp
