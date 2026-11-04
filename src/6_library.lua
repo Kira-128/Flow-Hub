@@ -684,36 +684,55 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE (GAYA BUSUR / ARC - DI LUAR MAINFRAME)
+-- RESIZE HANDLE
 -- ============================================================
+
 function Comp.attachResizeHandle(mainFrame)
-    local parentGui = mainFrame.Parent 
-    if not parentGui then return end
+    if not mainFrame or not mainFrame.Parent then
+        return nil
+    end
+
+    local UIS = S.Services.UIS
+    local RunService = game:GetService("RunService")
+    local parentGui = mainFrame.Parent
 
     local oldHandle = parentGui:FindFirstChild("ResizeHandle")
-    if oldHandle then oldHandle:Destroy() end
+    if oldHandle then
+        oldHandle:Destroy()
+    end
+
+    if parentGui:IsA("GuiObject") then
+        parentGui.ClipsDescendants = false
+    end
 
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
-    resizeHandle.Size = UDim2.fromOffset(40, 40) 
-    resizeHandle.AnchorPoint = Vector2.new(0, 0) 
+    resizeHandle.Size = UDim2.fromOffset(40, 40)
+    resizeHandle.AnchorPoint = Vector2.zero
     resizeHandle.BackgroundTransparency = 1
+    resizeHandle.BorderSizePixel = 0
     resizeHandle.Text = ""
+    resizeHandle.AutoButtonColor = false
     resizeHandle.ZIndex = 1000
+    resizeHandle.Visible = false
     resizeHandle.Parent = parentGui
 
     local arcContainer = Instance.new("Frame")
-    arcContainer.Size = UDim2.fromOffset(20, 20) 
-    arcContainer.Position = UDim2.fromOffset(20, 20) 
+    arcContainer.Name = "ArcContainer"
+    arcContainer.Size = UDim2.fromOffset(20, 20)
+    arcContainer.Position = UDim2.fromOffset(20, 20)
     arcContainer.BackgroundTransparency = 1
+    arcContainer.BorderSizePixel = 0
     arcContainer.ClipsDescendants = true
     arcContainer.ZIndex = 1001
     arcContainer.Parent = resizeHandle
 
     local arc = Instance.new("Frame")
-    arc.Size = UDim2.fromOffset(40, 40) 
+    arc.Name = "Arc"
+    arc.Size = UDim2.fromOffset(40, 40)
     arc.Position = UDim2.fromOffset(-20, -20)
     arc.BackgroundTransparency = 1
+    arc.BorderSizePixel = 0
     arc.ZIndex = 1001
     arc.Parent = arcContainer
 
@@ -727,39 +746,180 @@ function Comp.attachResizeHandle(mainFrame)
     arcStroke.Transparency = 0.2
     arcStroke.Parent = arc
 
-    local function updateHandlePosition()
-        if mainFrame and mainFrame.Parent then
-            local absPos = mainFrame.AbsolutePosition
-            local absSize = mainFrame.AbsoluteSize
-            resizeHandle.Position = UDim2.fromOffset(absPos.X + absSize.X, absPos.Y + absSize.Y)
-        end
-    end
-
-    S.Services.Run.RenderStepped:Connect(updateHandlePosition)
-    task.defer(updateHandlePosition)
+    local MIN_WIDTH = 240
+    local MIN_HEIGHT = 180
+    local MAX_WIDTH = 800
+    local MAX_HEIGHT = 600
 
     local resizing = false
-    local resizeStart, startSize
+    local activeInput
+    local resizeStart
+    local startSize
+    local destroyed = false
+
+    local function checkVisibility()
+        local current = mainFrame
+
+        while current do
+            if current:IsA("GuiObject") and not current.Visible then
+                return false
+            end
+
+            if current:IsA("ScreenGui") and not current.Enabled then
+                return false
+            end
+
+            current = current.Parent
+        end
+
+        return true
+    end
+
+    local function updatePosition()
+        if destroyed or not mainFrame.Parent then
+            return
+        end
+
+        local mainPos = mainFrame.AbsolutePosition
+        local mainSize = mainFrame.AbsoluteSize
+        local parentPos = Vector2.zero
+
+        if parentGui:IsA("GuiObject") then
+            parentPos = parentGui.AbsolutePosition
+        end
+
+        resizeHandle.Position = UDim2.fromOffset(
+            mainPos.X + mainSize.X - parentPos.X,
+            mainPos.Y + mainSize.Y - parentPos.Y
+        )
+    end
 
     resizeHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if destroyed or not resizeHandle.Visible then
+            return
+        end
+
+        local inputType = input.UserInputType
+
+        if inputType == Enum.UserInputType.MouseButton1
+        or inputType == Enum.UserInputType.Touch then
             resizing = true
+            activeInput = input
             resizeStart = input.Position
             startSize = mainFrame.AbsoluteSize
         end
     end)
-    S.Services.UIS.InputChanged:Connect(function(input)
-        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - resizeStart
-            local newW = math.clamp(startSize.X + delta.X, 380, 800)
-            local newH = math.clamp(startSize.Y + delta.Y, 250, 600)
-            mainFrame.Size = UDim2.new(0, newW, 0, newH)
+
+    local inputChangedConnection = UIS.InputChanged:Connect(function(input)
+        if not resizing or not activeInput then
+            return
+        end
+
+        local isMouse =
+            activeInput.UserInputType == Enum.UserInputType.MouseButton1
+            and input.UserInputType == Enum.UserInputType.MouseMovement
+
+        local isTouch =
+            activeInput.UserInputType == Enum.UserInputType.Touch
+            and input == activeInput
+
+        if not isMouse and not isTouch then
+            return
+        end
+
+        local delta = input.Position - resizeStart
+
+        local width = math.clamp(
+            startSize.X + delta.X,
+            MIN_WIDTH,
+            MAX_WIDTH
+        )
+
+        local height = math.clamp(
+            startSize.Y + delta.Y,
+            MIN_HEIGHT,
+            MAX_HEIGHT
+        )
+
+        mainFrame.Size = UDim2.fromOffset(width, height)
+    end)
+
+    local inputEndedConnection = UIS.InputEnded:Connect(function(input)
+        if not resizing or not activeInput then
+            return
+        end
+
+        local isMouse =
+            activeInput.UserInputType == Enum.UserInputType.MouseButton1
+            and input.UserInputType == Enum.UserInputType.MouseButton1
+
+        local isTouch =
+            activeInput.UserInputType == Enum.UserInputType.Touch
+            and input == activeInput
+
+        if isMouse or isTouch then
+            resizing = false
+            activeInput = nil
+            resizeStart = nil
+            startSize = nil
         end
     end)
-    S.Services.UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            resizing = false
+
+    local renderConnection = RunService.RenderStepped:Connect(function()
+        if destroyed then
+            return
         end
+
+        if not mainFrame.Parent then
+            resizeHandle:Destroy()
+            return
+        end
+
+        local visible = checkVisibility()
+        resizeHandle.Visible = visible
+
+        if visible then
+            updatePosition()
+        else
+            resizing = false
+            activeInput = nil
+            resizeStart = nil
+            startSize = nil
+        end
+    end)
+
+    local function cleanup()
+        if destroyed then
+            return
+        end
+
+        destroyed = true
+        resizing = false
+        activeInput = nil
+
+        renderConnection:Disconnect()
+        inputChangedConnection:Disconnect()
+        inputEndedConnection:Disconnect()
+    end
+
+    resizeHandle.Destroying:Connect(cleanup)
+
+    mainFrame.Destroying:Connect(function()
+        if resizeHandle.Parent then
+            resizeHandle:Destroy()
+        end
+    end)
+
+    task.defer(function()
+        if not destroyed and mainFrame.Parent then
+            updatePosition()
+            resizeHandle.Visible = checkVisibility()
+        end
+    end)
+
+    return resizeHandle
+end
+
     end)
 
     return resizeHandle
