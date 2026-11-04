@@ -1,11 +1,13 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub - Components v4.4 + Resize Arc)
+  [6] LIBRARY (Flow Hub - Components v4.6)
+  - 100% Warna Asli (Tidak menimpa S.Theme)
+  - Resize Arc (Di Luar MainFrame - Tidak Terpotong)
 ============================================================
 ]]
 
 local S = _G.STHAIN
-local C = S.Theme.Colors
+local C = S.Theme.Colors -- Mengambil warna asli dari Theme
 local F = S.Theme.Font
 
 local Comp = {}
@@ -366,7 +368,7 @@ end
 -- ============================================================
 -- BUTTON
 -- ============================================================
-function Comp.makeButton(parent, name, callback)
+function Comp.makeButton(parent, name, callback, noHover)
     local wrapper = Instance.new("Frame")
     wrapper.Name = "BtnWrapper_" .. name
     wrapper.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -409,12 +411,14 @@ function Comp.makeButton(parent, name, callback)
 
     b.MouseButton1Click:Connect(function() pcall(callback) end)
     
-    b.MouseEnter:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3, BackgroundTransparency = 0.1 }):Play()
-    end)
-    b.MouseLeave:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg4, BackgroundTransparency = 0.3 }):Play()
-    end)
+    if not noHover then
+        b.MouseEnter:Connect(function()
+            S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3, BackgroundTransparency = 0.1 }):Play()
+        end)
+        b.MouseLeave:Connect(function()
+            S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg4, BackgroundTransparency = 0.3 }):Play()
+        end)
+    end
     
     return b
 end
@@ -686,32 +690,38 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE (GAYA BUSUR / ARC - STANDALONE)
+-- RESIZE HANDLE (GAYA BUSUR / ARC - DI LUAR MAINFRAME)
 -- ============================================================
 function Comp.attachResizeHandle(mainFrame)
+    -- 🔥 Ambil Parent dari MainFrame (ScreenGui)
+    local parentGui = mainFrame.Parent 
+    if not parentGui then return end
+
+    -- Hapus handle lama jika ada
+    local oldHandle = parentGui:FindFirstChild("ResizeHandle")
+    if oldHandle then oldHandle:Destroy() end
+
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
     resizeHandle.Size = UDim2.fromOffset(32, 32)
-    resizeHandle.Position = UDim2.new(1, 0, 1, 0)
-    resizeHandle.AnchorPoint = Vector2.new(1, 1)
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
-    resizeHandle.ZIndex = 110
-    resizeHandle.Parent = mainFrame
+    resizeHandle.ZIndex = 1000
+    resizeHandle.Parent = parentGui -- Tempel ke ScreenGui (Luar MainFrame)
 
     local arcContainer = Instance.new("Frame")
     arcContainer.Size = UDim2.fromOffset(16, 16)
     arcContainer.Position = UDim2.fromOffset(16, 16)
     arcContainer.BackgroundTransparency = 1
     arcContainer.ClipsDescendants = true
-    arcContainer.ZIndex = 111
+    arcContainer.ZIndex = 1001
     arcContainer.Parent = resizeHandle
 
     local arc = Instance.new("Frame")
     arc.Size = UDim2.fromOffset(32, 32)
     arc.Position = UDim2.fromOffset(-16, -16)
     arc.BackgroundTransparency = 1
-    arc.ZIndex = 111
+    arc.ZIndex = 1001
     arc.Parent = arcContainer
 
     local arcCorner = Instance.new("UICorner")
@@ -723,6 +733,21 @@ function Comp.attachResizeHandle(mainFrame)
     arcStroke.Thickness = 2
     arcStroke.Transparency = 0.2
     arcStroke.Parent = arc
+
+    -- Fungsi update posisi agar selalu menempel di pojok kanan bawah MainFrame
+    local function updateHandlePosition()
+        if mainFrame and mainFrame.Parent then
+            local absPos = mainFrame.AbsolutePosition
+            local absSize = mainFrame.AbsoluteSize
+            
+            -- Posisi ResizeHandle = sudut kanan bawah MainFrame
+            resizeHandle.Position = UDim2.fromOffset(absPos.X + absSize.X, absPos.Y + absSize.Y)
+        end
+    end
+
+    -- Update setiap frame
+    S.Services.Run.RenderStepped:Connect(updateHandlePosition)
+    task.defer(updateHandlePosition)
 
     local resizing = false
     local resizeStart, startSize
