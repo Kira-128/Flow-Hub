@@ -1,13 +1,7 @@
---[[
-============================================================
-  [6] LIBRARY (Flow Hub - Components v4.6)
-  - 100% Warna Asli (Tidak menimpa S.Theme)
-  - Resize Arc (Di Luar MainFrame - Tidak Terpotong)
-============================================================
-]]
+-- [6] LIBRARY (Flow Hub - Components v4.6) 
 
 local S = _G.STHAIN
-local C = S.Theme.Colors -- Mengambil warna asli dari Theme
+local C = S.Theme.Colors
 local F = S.Theme.Font
 
 local Comp = {}
@@ -690,27 +684,24 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE (GAYA BUSUR / ARC - BERJARAK DARI SUDUT)
+-- RESIZE HANDLE (GAYA BUSUR / ARC - DI LUAR MAINFRAME)
 -- ============================================================
 function Comp.attachResizeHandle(mainFrame)
-    -- Ambil Parent dari MainFrame (ScreenGui)
     local parentGui = mainFrame.Parent 
     if not parentGui then return end
 
-    -- Hapus handle lama jika ada
     local oldHandle = parentGui:FindFirstChild("ResizeHandle")
     if oldHandle then oldHandle:Destroy() end
 
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
     resizeHandle.Size = UDim2.fromOffset(40, 40) 
-    resizeHandle.AnchorPoint = Vector2.new(1, 1) -- Titik tumpu di kanan bawah
+    resizeHandle.AnchorPoint = Vector2.new(0, 0) 
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.ZIndex = 1000
     resizeHandle.Parent = parentGui
 
-    -- Container untuk memotong busur
     local arcContainer = Instance.new("Frame")
     arcContainer.Size = UDim2.fromOffset(20, 20) 
     arcContainer.Position = UDim2.fromOffset(20, 20) 
@@ -719,7 +710,6 @@ function Comp.attachResizeHandle(mainFrame)
     arcContainer.ZIndex = 1001
     arcContainer.Parent = resizeHandle
 
-    -- Busur (Lingkaran)
     local arc = Instance.new("Frame")
     arc.Size = UDim2.fromOffset(40, 40) 
     arc.Position = UDim2.fromOffset(-20, -20)
@@ -737,22 +727,17 @@ function Comp.attachResizeHandle(mainFrame)
     arcStroke.Transparency = 0.2
     arcStroke.Parent = arc
 
-    -- 🔥 Fungsi update posisi agar ADA JARAK dari sudut
     local function updateHandlePosition()
         if mainFrame and mainFrame.Parent then
             local absPos = mainFrame.AbsolutePosition
             local absSize = mainFrame.AbsoluteSize
-            
-            -- Dikurangi 12 pixel agar tidak menempel di sudut
-            resizeHandle.Position = UDim2.fromOffset((absPos.X + absSize.X) - 12, (absPos.Y + absSize.Y) - 12)
+            resizeHandle.Position = UDim2.fromOffset(absPos.X + absSize.X, absPos.Y + absSize.Y)
         end
     end
 
-    -- Update setiap frame
     S.Services.Run.RenderStepped:Connect(updateHandlePosition)
     task.defer(updateHandlePosition)
 
-    -- Logika Drag Resize
     local resizing = false
     local resizeStart, startSize
 
@@ -779,5 +764,6 @@ function Comp.attachResizeHandle(mainFrame)
 
     return resizeHandle
 end
+  
 
 S.Comp = Comp
