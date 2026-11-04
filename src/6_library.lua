@@ -693,7 +693,7 @@ function Comp.attachResizeHandle(mainFrame)
     resizeHandle.Name = "ResizeHandle"
     resizeHandle.Size = UDim2.fromOffset(32, 32)
     resizeHandle.Position = UDim2.new(1, 0, 1, 0)
-    resizeHandle.AnchorPoint = Vector2.new(1, 1)
+    resizeHandle.AnchorPoint = Vector2.new(0, 0)
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.ZIndex = 110
