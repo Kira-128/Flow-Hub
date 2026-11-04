@@ -1,10 +1,10 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub - Components v4.4 - Xiaomi Theme)
-  - Warna Senada dengan 5_gui.lua (Hijau Mint)
+  [6] LIBRARY (Flow Hub - Components v4.3)
   - Item Height: 30px
-  - Dropdown: Selalu ke Atas
-  - Tombol: Support noHover (Untuk Reset/Delete)
+  - Dropdown: Selalu ke Atas (Scroll jika melebihi batas)
+  - Font & Panah Kembali ke Default
+  - Automize (AnchorPoint + Scale 0.48)
 ============================================================
 ]]
 
@@ -15,8 +15,8 @@ local F = S.Theme.Font
 local Comp = {}
 local ITEM_H = 30
 local HEADER_H = 30
-local CARD_BG = C.bg2       -- Panel gelap
-local CARD_TRANS = 0.1
+local CARD_BG = C.bg3
+local CARD_TRANS = 0.15
 
 -- ============================================================
 -- HELPER: Recalculate section height
@@ -165,7 +165,7 @@ function Comp.makeToggle(parent, name, default, callback)
     b.AnchorPoint = Vector2.new(1, 0.5)
     b.Position = UDim2.new(1, -12, 0.5, 0)
     b.Text = ""
-    b.BackgroundColor3 = default and C.accent or C.bg3
+    b.BackgroundColor3 = default and C.accent or C.bg4
     b.BorderSizePixel = 0
     b.AutoButtonColor = false
     b.Parent = f
@@ -174,7 +174,7 @@ function Comp.makeToggle(parent, name, default, callback)
     local knob = Instance.new("Frame")
     knob.Size = UDim2.new(0, 12, 0, 12)
     knob.Position = default and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
-    knob.BackgroundColor3 = default and C.bg1 or C.textDim
+    knob.BackgroundColor3 = C.text
     knob.BorderSizePixel = 0
     knob.Parent = b
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
@@ -184,11 +184,8 @@ function Comp.makeToggle(parent, name, default, callback)
     local function setState(newState, skipCallback)
         if state == newState then return end
         state = newState
-        S.Services.TS:Create(b, TweenInfo.new(0.2), { BackgroundColor3 = state and C.accent or C.bg3 }):Play()
-        S.Services.TS:Create(knob, TweenInfo.new(0.2), { 
-            Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6),
-            BackgroundColor3 = state and C.bg1 or C.textDim
-        }):Play()
+        S.Services.TS:Create(b, TweenInfo.new(0.2), { BackgroundColor3 = state and C.accent or C.bg4 }):Play()
+        S.Services.TS:Create(knob, TweenInfo.new(0.2), { Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6) }):Play()
         if not skipCallback then pcall(callback, state) end
     end
 
@@ -226,7 +223,7 @@ function Comp.makeInput(parent, name, default, callback)
     b.TextColor3 = C.text
     b.TextSize = 11
     b.Font = F.norm
-    b.BackgroundColor3 = C.bg3
+    b.BackgroundColor3 = C.bg4
     b.BorderSizePixel = 0
     b.ClearTextOnFocus = false
     b.Parent = f
@@ -271,7 +268,7 @@ function Comp.makeTextInput(parent, name, default, placeholder, callback)
     b.TextColor3 = C.text
     b.TextSize = 11
     b.Font = F.norm
-    b.BackgroundColor3 = C.bg3
+    b.BackgroundColor3 = C.bg4
     b.BorderSizePixel = 0
     b.ClearTextOnFocus = false
     b.Parent = f
@@ -319,7 +316,7 @@ function Comp.makeSlider(parent, name, min, max, default, callback)
     barBG.AnchorPoint = Vector2.new(1, 0.5)
     barBG.Position = UDim2.new(1, -50, 0.5, 0)
     barBG.Size = UDim2.new(0.4, 0, 0, 6)
-    barBG.BackgroundColor3 = C.bg3
+    barBG.BackgroundColor3 = C.bg4
     barBG.BorderSizePixel = 0
     barBG.Parent = f
     Instance.new("UICorner", barBG).CornerRadius = UDim.new(1, 0)
@@ -371,9 +368,9 @@ function Comp.makeSlider(parent, name, min, max, default, callback)
 end
 
 -- ============================================================
--- BUTTON (Support noHover)
+-- BUTTON
 -- ============================================================
-function Comp.makeButton(parent, name, callback, noHover)
+function Comp.makeButton(parent, name, callback)
     local wrapper = Instance.new("Frame")
     wrapper.Name = "BtnWrapper_" .. name
     wrapper.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -388,7 +385,7 @@ function Comp.makeButton(parent, name, callback, noHover)
     b.TextColor3 = C.text
     b.TextSize = 11
     b.Font = F.norm
-    b.BackgroundColor3 = C.bg3
+    b.BackgroundColor3 = C.bg4
     b.BackgroundTransparency = 0.3
     b.BorderSizePixel = 0
     b.AutoButtonColor = false
@@ -416,14 +413,12 @@ function Comp.makeButton(parent, name, callback, noHover)
 
     b.MouseButton1Click:Connect(function() pcall(callback) end)
     
-    if not noHover then
-        b.MouseEnter:Connect(function()
-            S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg2, BackgroundTransparency = 0.1 }):Play()
-        end)
-        b.MouseLeave:Connect(function()
-            S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3, BackgroundTransparency = 0.3 }):Play()
-        end)
-    end
+    b.MouseEnter:Connect(function()
+        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3, BackgroundTransparency = 0.1 }):Play()
+    end)
+    b.MouseLeave:Connect(function()
+        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg4, BackgroundTransparency = 0.3 }):Play()
+    end)
     
     return b
 end
@@ -457,7 +452,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
     selected.Position = UDim2.new(1, -12, 0.5, 0)
     selected.Size = UDim2.new(0.48, 0, 0, 22)
     selected.Text = ""
-    selected.BackgroundColor3 = C.bg3
+    selected.BackgroundColor3 = C.bg4
     selected.BackgroundTransparency = 0
     selected.BorderSizePixel = 0
     selected.AutoButtonColor = false
@@ -508,7 +503,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 
     local popup = Instance.new("ScrollingFrame")
     popup.Name = "DropdownPopup_" .. name
-    popup.BackgroundColor3 = C.bg3
+    popup.BackgroundColor3 = C.bg4
     popup.BackgroundTransparency = 0
     popup.BorderSizePixel = 0
     popup.Visible = false
@@ -549,7 +544,8 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 
         popup.Size = UDim2.new(0, size.X, 0, popupH)
         local localX = pos.X - mfPos.X
-        -- PAKSA SELALU KE ATAS
+        
+        -- 🔥 SELALU KE ATAS
         local localY = pos.Y - mfPos.Y - popupH - 4
 
         if localX < 0 then localX = 0 end
@@ -572,7 +568,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             optBtn.TextSize = 11
             optBtn.Font = F.norm
             optBtn.TextStrokeTransparency = 1
-            optBtn.BackgroundColor3 = C.bg2
+            optBtn.BackgroundColor3 = C.bg4
             optBtn.BorderSizePixel = 0
             optBtn.ZIndex = 501
             optBtn.AutoButtonColor = false
@@ -619,6 +615,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
             updatePopupPosition()
             popup.BackgroundTransparency = 1
             
+            -- Animasi dari bawah ke atas
             local startY = popup.Position.Y.Offset + 6
             popup.Position = UDim2.new(popup.Position.X.Scale, popup.Position.X.Offset, 0, startY)
             S.Services.TS:Create(popup, TweenInfo.new(0.15), {
