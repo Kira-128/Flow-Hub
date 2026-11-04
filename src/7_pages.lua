@@ -695,3 +695,10 @@ if S.GUI.SearchBox then
         end
     end)
 end
+
+-- ============================================================
+-- RESIZE UI (FITUR BARU)
+-- ============================================================
+if S.Comp and S.Comp.attachResizeHandle then
+    S.Comp.attachResizeHandle(S.GUI.MainFrame)
+end
