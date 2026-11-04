@@ -919,11 +919,5 @@ function Comp.attachResizeHandle(mainFrame)
 
     return resizeHandle
 end
-
-    end)
-
-    return resizeHandle
-end
   
-
 S.Comp = Comp
