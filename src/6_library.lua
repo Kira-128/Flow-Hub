@@ -1,11 +1,13 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub - Components v4.4 + Resize Arc)
+  [6] LIBRARY (Flow Hub - Components v4.5)
+  - 100% Warna Asli (Tidak Menimpa S.Theme)
+  - + Resize Arc (Abu-abu)
 ============================================================
 ]]
 
 local S = _G.STHAIN
-local C = S.Theme.Colors
+local C = S.Theme.Colors -- Mengambil warna asli
 local F = S.Theme.Font
 
 local Comp = {}
@@ -366,7 +368,7 @@ end
 -- ============================================================
 -- BUTTON
 -- ============================================================
-function Comp.makeButton(parent, name, callback)
+function Comp.makeButton(parent, name, callback, noHover)
     local wrapper = Instance.new("Frame")
     wrapper.Name = "BtnWrapper_" .. name
     wrapper.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -409,12 +411,14 @@ function Comp.makeButton(parent, name, callback)
 
     b.MouseButton1Click:Connect(function() pcall(callback) end)
     
-    b.MouseEnter:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3, BackgroundTransparency = 0.1 }):Play()
-    end)
-    b.MouseLeave:Connect(function()
-        S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg4, BackgroundTransparency = 0.3 }):Play()
-    end)
+    if not noHover then
+        b.MouseEnter:Connect(function()
+            S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3, BackgroundTransparency = 0.1 }):Play()
+        end)
+        b.MouseLeave:Connect(function()
+            S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg4, BackgroundTransparency = 0.3 }):Play()
+        end)
+    end
     
     return b
 end
@@ -693,7 +697,7 @@ function Comp.attachResizeHandle(mainFrame)
     resizeHandle.Name = "ResizeHandle"
     resizeHandle.Size = UDim2.fromOffset(32, 32)
     resizeHandle.Position = UDim2.new(1, 0, 1, 0)
-    resizeHandle.AnchorPoint = Vector2.new(0, 0)
+    resizeHandle.AnchorPoint = Vector2.new(1, 1)
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.ZIndex = 110
@@ -719,7 +723,7 @@ function Comp.attachResizeHandle(mainFrame)
     arcCorner.Parent = arc
 
     local arcStroke = Instance.new("UIStroke")
-    arcStroke.Color = C.textDim
+    arcStroke.Color = C.textDim -- 🔥 Warna Abu-abu (Sesuai Standalone)
     arcStroke.Thickness = 2
     arcStroke.Transparency = 0.2
     arcStroke.Parent = arc
