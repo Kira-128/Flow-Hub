@@ -684,55 +684,45 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE
+-- RESIZE HANDLE (GAYA BUSUR / ARC - MENEMPEL DI SUDUT LUAR)
 -- ============================================================
 
 function Comp.attachResizeHandle(mainFrame)
     if not mainFrame or not mainFrame.Parent then
-        return nil
+        return
     end
 
-    local UIS = S.Services.UIS
-    local RunService = game:GetService("RunService")
     local parentGui = mainFrame.Parent
+    local UIS = S.Services.UIS
+    local RunService = S.Services.Run
 
     local oldHandle = parentGui:FindFirstChild("ResizeHandle")
     if oldHandle then
         oldHandle:Destroy()
     end
 
-    if parentGui:IsA("GuiObject") then
-        parentGui.ClipsDescendants = false
-    end
-
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
     resizeHandle.Size = UDim2.fromOffset(40, 40)
-    resizeHandle.AnchorPoint = Vector2.zero
+    resizeHandle.AnchorPoint = Vector2.new(0.5, 0.5)
     resizeHandle.BackgroundTransparency = 1
-    resizeHandle.BorderSizePixel = 0
     resizeHandle.Text = ""
-    resizeHandle.AutoButtonColor = false
     resizeHandle.ZIndex = 1000
     resizeHandle.Visible = false
     resizeHandle.Parent = parentGui
 
     local arcContainer = Instance.new("Frame")
-    arcContainer.Name = "ArcContainer"
     arcContainer.Size = UDim2.fromOffset(20, 20)
     arcContainer.Position = UDim2.fromOffset(20, 20)
     arcContainer.BackgroundTransparency = 1
-    arcContainer.BorderSizePixel = 0
     arcContainer.ClipsDescendants = true
     arcContainer.ZIndex = 1001
     arcContainer.Parent = resizeHandle
 
     local arc = Instance.new("Frame")
-    arc.Name = "Arc"
     arc.Size = UDim2.fromOffset(40, 40)
     arc.Position = UDim2.fromOffset(-20, -20)
     arc.BackgroundTransparency = 1
-    arc.BorderSizePixel = 0
     arc.ZIndex = 1001
     arc.Parent = arcContainer
 
@@ -746,17 +736,7 @@ function Comp.attachResizeHandle(mainFrame)
     arcStroke.Transparency = 0.2
     arcStroke.Parent = arc
 
-    local MIN_WIDTH = 240
-    local MIN_HEIGHT = 180
-    local MAX_WIDTH = 800
-    local MAX_HEIGHT = 600
-
-    local resizing = false
-    local activeInput
-    local resizeStart
-    local startSize
-    local destroyed = false
-
+    -- VISIBILITY CHECK
     local function checkVisibility()
         local current = mainFrame
 
@@ -775,13 +755,15 @@ function Comp.attachResizeHandle(mainFrame)
         return true
     end
 
-    local function updatePosition()
-        if destroyed or not mainFrame.Parent then
+    -- UPDATE POSITION
+    local function updateHandlePosition()
+        if not mainFrame.Parent or not resizeHandle.Parent then
             return
         end
 
-        local mainPos = mainFrame.AbsolutePosition
-        local mainSize = mainFrame.AbsoluteSize
+        local absPos = mainFrame.AbsolutePosition
+        local absSize = mainFrame.AbsoluteSize
+
         local parentPos = Vector2.zero
 
         if parentGui:IsA("GuiObject") then
@@ -789,11 +771,19 @@ function Comp.attachResizeHandle(mainFrame)
         end
 
         resizeHandle.Position = UDim2.fromOffset(
-            mainPos.X + mainSize.X - parentPos.X,
-            mainPos.Y + mainSize.Y - parentPos.Y
+            absPos.X + absSize.X - parentPos.X,
+            absPos.Y + absSize.Y - parentPos.Y
         )
     end
 
+    -- RESIZE STATE
+    local resizing = false
+    local activeInput = nil
+    local resizeStart = nil
+    local startSize = nil
+    local destroyed = false
+
+    -- START RESIZE
     resizeHandle.InputBegan:Connect(function(input)
         if destroyed or not resizeHandle.Visible then
             return
@@ -803,6 +793,7 @@ function Comp.attachResizeHandle(mainFrame)
 
         if inputType == Enum.UserInputType.MouseButton1
         or inputType == Enum.UserInputType.Touch then
+
             resizing = true
             activeInput = input
             resizeStart = input.Position
@@ -810,14 +801,17 @@ function Comp.attachResizeHandle(mainFrame)
         end
     end)
 
+    -- INPUT CHANGED
     local inputChangedConnection = UIS.InputChanged:Connect(function(input)
         if not resizing or not activeInput then
             return
         end
 
+        local inputType = input.UserInputType
+
         local isMouse =
             activeInput.UserInputType == Enum.UserInputType.MouseButton1
-            and input.UserInputType == Enum.UserInputType.MouseMovement
+            and inputType == Enum.UserInputType.MouseMovement
 
         local isTouch =
             activeInput.UserInputType == Enum.UserInputType.Touch
@@ -829,21 +823,22 @@ function Comp.attachResizeHandle(mainFrame)
 
         local delta = input.Position - resizeStart
 
-        local width = math.clamp(
+        local newW = math.clamp(
             startSize.X + delta.X,
-            MIN_WIDTH,
-            MAX_WIDTH
+            380,
+            800
         )
 
-        local height = math.clamp(
+        local newH = math.clamp(
             startSize.Y + delta.Y,
-            MIN_HEIGHT,
-            MAX_HEIGHT
+            250,
+            600
         )
 
-        mainFrame.Size = UDim2.fromOffset(width, height)
+        mainFrame.Size = UDim2.new(0, newW, 0, newH)
     end)
 
+    -- INPUT ENDED
     local inputEndedConnection = UIS.InputEnded:Connect(function(input)
         if not resizing or not activeInput then
             return
@@ -865,6 +860,7 @@ function Comp.attachResizeHandle(mainFrame)
         end
     end)
 
+    -- VISIBILITY + POSITION UPDATE
     local renderConnection = RunService.RenderStepped:Connect(function()
         if destroyed then
             return
@@ -879,7 +875,7 @@ function Comp.attachResizeHandle(mainFrame)
         resizeHandle.Visible = visible
 
         if visible then
-            updatePosition()
+            updateHandlePosition()
         else
             resizing = false
             activeInput = nil
@@ -888,12 +884,14 @@ function Comp.attachResizeHandle(mainFrame)
         end
     end)
 
+    -- CLEANUP CONNECTIONS
     local function cleanup()
         if destroyed then
             return
         end
 
         destroyed = true
+
         resizing = false
         activeInput = nil
 
@@ -912,7 +910,7 @@ function Comp.attachResizeHandle(mainFrame)
 
     task.defer(function()
         if not destroyed and mainFrame.Parent then
-            updatePosition()
+            updateHandlePosition()
             resizeHandle.Visible = checkVisibility()
         end
     end)
@@ -920,4 +918,5 @@ function Comp.attachResizeHandle(mainFrame)
     return resizeHandle
 end
   
+
 S.Comp = Comp
