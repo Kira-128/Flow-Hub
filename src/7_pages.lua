@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v3.3 + Resize)
+  [7] PAGES — Command An Army (v3.4 + Resize + Confirmed)
 ============================================================
 ]]
 
@@ -495,7 +495,9 @@ task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 
--- Tombol Reset (Oranye + Confirm)
+-- ============================================================
+-- TOMBOL RESET (DENGAN CONFIRMED!)
+-- ============================================================
 local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
@@ -515,14 +517,25 @@ local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
         if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
             _G.STHAIN.Utils.DeleteConfig()
         end
-        resetBtn.Text = "Reset to Default"
-        resetBtn.BackgroundColor3 = C.bg4
-        resetBtn.BackgroundTransparency = 0.3
-        resetBtn.TextColor3 = C.text
+        
+        -- 🔥 Ubah teks jadi Confirmed!
+        resetBtn.Text = "Confirmed!"
+        resetBtn.BackgroundColor3 = C.accent
+        resetBtn.BackgroundTransparency = 0.1
+        
+        -- Kembalikan setelah 1.5 detik
+        task.delay(1.5, function()
+            resetBtn.Text = "Reset to Default"
+            resetBtn.BackgroundColor3 = C.bg4
+            resetBtn.BackgroundTransparency = 0.3
+            resetBtn.TextColor3 = C.text
+        end)
     end
 end)
 
--- Tombol Delete (Merah + Confirm)
+-- ============================================================
+-- TOMBOL DELETE (DENGAN CONFIRMED!)
+-- ============================================================
 local deleteBtn = S.Comp.makeButton(configMgmt, "Delete Config File", function()
     if deleteBtn.Text == "Delete Config File" then
         deleteBtn.Text = "Click Again to Confirm"
@@ -542,10 +555,19 @@ local deleteBtn = S.Comp.makeButton(configMgmt, "Delete Config File", function()
         if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
             _G.STHAIN.Utils.DeleteConfig()
         end
-        deleteBtn.Text = "Delete Config File"
-        deleteBtn.BackgroundColor3 = C.bg4
-        deleteBtn.BackgroundTransparency = 0.3
-        deleteBtn.TextColor3 = C.text
+        
+        -- 🔥 Ubah teks jadi Confirmed!
+        deleteBtn.Text = "Confirmed!"
+        deleteBtn.BackgroundColor3 = C.accent
+        deleteBtn.BackgroundTransparency = 0.1
+        
+        -- Kembalikan setelah 1.5 detik
+        task.delay(1.5, function()
+            deleteBtn.Text = "Delete Config File"
+            deleteBtn.BackgroundColor3 = C.bg4
+            deleteBtn.BackgroundTransparency = 0.3
+            deleteBtn.TextColor3 = C.text
+        end)
     end
 end)
 
@@ -672,11 +694,4 @@ if S.GUI.SearchBox then
             end
         end
     end)
-end
-
--- ============================================================
--- RESIZE UI (FITUR BARU)
--- ============================================================
-if S.Comp and S.Comp.attachResizeHandle then
-    S.Comp.attachResizeHandle(S.GUI.MainFrame)
 end
