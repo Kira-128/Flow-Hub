@@ -690,10 +690,10 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE (GAYA BUSUR / ARC - DI LUAR MAINFRAME)
+-- RESIZE HANDLE (GAYA BUSUR / ARC - BERJARAK DARI SUDUT)
 -- ============================================================
 function Comp.attachResizeHandle(mainFrame)
-    -- 🔥 Ambil Parent dari MainFrame (ScreenGui)
+    -- Ambil Parent dari MainFrame (ScreenGui)
     local parentGui = mainFrame.Parent 
     if not parentGui then return end
 
@@ -703,23 +703,26 @@ function Comp.attachResizeHandle(mainFrame)
 
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
-    resizeHandle.Size = UDim2.fromOffset(32, 32)
+    resizeHandle.Size = UDim2.fromOffset(40, 40) 
+    resizeHandle.AnchorPoint = Vector2.new(1, 1) -- Titik tumpu di kanan bawah
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.ZIndex = 1000
-    resizeHandle.Parent = parentGui -- Tempel ke ScreenGui (Luar MainFrame)
+    resizeHandle.Parent = parentGui
 
+    -- Container untuk memotong busur
     local arcContainer = Instance.new("Frame")
-    arcContainer.Size = UDim2.fromOffset(16, 16)
-    arcContainer.Position = UDim2.fromOffset(16, 16)
+    arcContainer.Size = UDim2.fromOffset(20, 20) 
+    arcContainer.Position = UDim2.fromOffset(20, 20) 
     arcContainer.BackgroundTransparency = 1
     arcContainer.ClipsDescendants = true
     arcContainer.ZIndex = 1001
     arcContainer.Parent = resizeHandle
 
+    -- Busur (Lingkaran)
     local arc = Instance.new("Frame")
-    arc.Size = UDim2.fromOffset(32, 32)
-    arc.Position = UDim2.fromOffset(-16, -16)
+    arc.Size = UDim2.fromOffset(40, 40) 
+    arc.Position = UDim2.fromOffset(-20, -20)
     arc.BackgroundTransparency = 1
     arc.ZIndex = 1001
     arc.Parent = arcContainer
@@ -734,14 +737,14 @@ function Comp.attachResizeHandle(mainFrame)
     arcStroke.Transparency = 0.2
     arcStroke.Parent = arc
 
-    -- Fungsi update posisi agar selalu menempel di pojok kanan bawah MainFrame
+    -- 🔥 Fungsi update posisi agar ADA JARAK dari sudut
     local function updateHandlePosition()
         if mainFrame and mainFrame.Parent then
             local absPos = mainFrame.AbsolutePosition
             local absSize = mainFrame.AbsoluteSize
             
-            -- Posisi ResizeHandle = sudut kanan bawah MainFrame
-            resizeHandle.Position = UDim2.fromOffset(absPos.X + absSize.X, absPos.Y + absSize.Y)
+            -- Dikurangi 12 pixel agar tidak menempel di sudut
+            resizeHandle.Position = UDim2.fromOffset((absPos.X + absSize.X) - 12, (absPos.Y + absSize.Y) - 12)
         end
     end
 
@@ -749,6 +752,7 @@ function Comp.attachResizeHandle(mainFrame)
     S.Services.Run.RenderStepped:Connect(updateHandlePosition)
     task.defer(updateHandlePosition)
 
+    -- Logika Drag Resize
     local resizing = false
     local resizeStart, startSize
 
