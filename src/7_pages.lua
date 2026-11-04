@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v3.4 + Resize + Confirmed)
+  [7] PAGES — Command An Army (v3.5 + Resize + Confirmed)
 ============================================================
 ]]
 
@@ -363,12 +363,10 @@ task.defer(function() task.wait(0.1) forceFixSection(rewardSection) end)
 -- 5. CLAIM CODE SECTION
 local codeSection = S.Comp.makeSection(pages["Automation"], "Claim Code", false)
 
--- TextBox pake makeTextInput (Simetris sama Dropdown)
 local codeBox = S.Comp.makeTextInput(codeSection, "Enter Code", "", "Enter A Code...", function(v)
     -- callback opsional kalau user selesai ngetik
 end)
 
--- Dropdown
 local codeDropdown = S.Comp.makeDropdown(codeSection, "Available Codes", {"Fetching..."}, function(val)
     if val ~= "Fetching..." and val ~= "None" and val ~= "No Codes" then
         codeBox.Text = val
@@ -387,7 +385,6 @@ task.spawn(function()
     end
 end)
 
--- Tombol Claim Code (reset TextBox setelah claim)
 S.Comp.makeButton(codeSection, "Claim Code", function()
     local code = codeBox.Text
     if code ~= "" and code ~= "Enter A Code..." and code ~= "Fetching..." and code ~= "None" and code ~= "No Codes" then
@@ -396,7 +393,7 @@ S.Comp.makeButton(codeSection, "Claim Code", function()
         if RedeemCode then
             pcall(function() RedeemCode:InvokeServer(code) end)
         end
-        codeBox.Text = "" -- Reset ke placeholder
+        codeBox.Text = "" 
     end
 end)
 task.defer(function() task.wait(0.1) forceFixSection(codeSection) end)
@@ -496,77 +493,63 @@ task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 
 -- ============================================================
--- TOMBOL RESET (DENGAN CONFIRMED!)
+-- TOMBOL RESET (CONFIRMED! 3 DETIK)
 -- ============================================================
-local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function()
+local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function() end, true)
+local resetTimer = nil
+
+resetBtn.MouseButton1Click:Connect(function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
-        resetBtn.BackgroundColor3 = Color3.fromRGB(255, 136, 0)
-        resetBtn.BackgroundTransparency = 0.1
-        resetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         
-        task.delay(3, function()
-            if resetBtn.Text == "Click Again to Confirm" then
-                resetBtn.Text = "Reset to Default"
-                resetBtn.BackgroundColor3 = C.bg4
-                resetBtn.BackgroundTransparency = 0.3
-                resetBtn.TextColor3 = C.text
-            end
+        if resetTimer then task.cancel(resetTimer) end
+        resetTimer = task.delay(3, function()
+            resetBtn.Text = "Reset to Default"
+            resetTimer = nil
         end)
     elseif resetBtn.Text == "Click Again to Confirm" then
         if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
-            _G.STHAIN.Utils.DeleteConfig()
+            pcall(_G.STHAIN.Utils.DeleteConfig)
         end
         
-        -- 🔥 Ubah teks jadi Confirmed!
+        -- 🔥 Tampilkan Confirmed! selama 3 detik
         resetBtn.Text = "Confirmed!"
-        resetBtn.BackgroundColor3 = C.accent
-        resetBtn.BackgroundTransparency = 0.1
+        if resetTimer then task.cancel(resetTimer) end
         
-        -- Kembalikan setelah 1.5 detik
-        task.delay(1.5, function()
+        resetTimer = task.delay(3, function()
             resetBtn.Text = "Reset to Default"
-            resetBtn.BackgroundColor3 = C.bg4
-            resetBtn.BackgroundTransparency = 0.3
-            resetBtn.TextColor3 = C.text
+            resetTimer = nil
         end)
     end
 end)
 
 -- ============================================================
--- TOMBOL DELETE (DENGAN CONFIRMED!)
+-- TOMBOL DELETE (CONFIRMED! 3 DETIK)
 -- ============================================================
-local deleteBtn = S.Comp.makeButton(configMgmt, "Delete Config File", function()
+local deleteBtn = S.Comp.makeButton(configMgmt, "Delete Config File", function() end, true)
+local deleteTimer = nil
+
+deleteBtn.MouseButton1Click:Connect(function()
     if deleteBtn.Text == "Delete Config File" then
         deleteBtn.Text = "Click Again to Confirm"
-        deleteBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-        deleteBtn.BackgroundTransparency = 0.1
-        deleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         
-        task.delay(3, function()
-            if deleteBtn.Text == "Click Again to Confirm" then
-                deleteBtn.Text = "Delete Config File"
-                deleteBtn.BackgroundColor3 = C.bg4
-                deleteBtn.BackgroundTransparency = 0.3
-                deleteBtn.TextColor3 = C.text
-            end
+        if deleteTimer then task.cancel(deleteTimer) end
+        deleteTimer = task.delay(3, function()
+            deleteBtn.Text = "Delete Config File"
+            deleteTimer = nil
         end)
     elseif deleteBtn.Text == "Click Again to Confirm" then
         if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
-            _G.STHAIN.Utils.DeleteConfig()
+            pcall(_G.STHAIN.Utils.DeleteConfig)
         end
         
-        -- 🔥 Ubah teks jadi Confirmed!
+        -- 🔥 Tampilkan Confirmed! selama 3 detik
         deleteBtn.Text = "Confirmed!"
-        deleteBtn.BackgroundColor3 = C.accent
-        deleteBtn.BackgroundTransparency = 0.1
+        if deleteTimer then task.cancel(deleteTimer) end
         
-        -- Kembalikan setelah 1.5 detik
-        task.delay(1.5, function()
+        deleteTimer = task.delay(3, function()
             deleteBtn.Text = "Delete Config File"
-            deleteBtn.BackgroundColor3 = C.bg4
-            deleteBtn.BackgroundTransparency = 0.3
-            deleteBtn.TextColor3 = C.text
+            deleteTimer = nil
         end)
     end
 end)
