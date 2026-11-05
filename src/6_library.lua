@@ -1,12 +1,12 @@
--- [6] LIBRARY (Flow Hub - Components v5.0 FINAL)
--- Fixes: Slider Knob, Callback Lag, Section Height, ITEM_H 34, Resize Handle Xiaomi Style
+-- [6] LIBRARY (Flow Hub - Components v5.1 FINAL)
+-- Fixes: Resize Handle Varian 1 (Dalam Frame + Auto-Hide), Slider, Section, ITEM_H 34
 
 local S = _G.STHAIN
 local C = S.Theme.Colors
 local F = S.Theme.Font
 
 local Comp = {}
-local ITEM_H = 34 -- 🔥 Dinaikin dari 30 ke 34 biar ga tumpang tindih
+local ITEM_H = 34 -- Dinaikin dari 30 ke 34 biar ga tumpang tindih
 local HEADER_H = 30
 local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
@@ -99,13 +99,12 @@ function Comp.makeSection(parent, title, defaultOpen)
     content.Position = UDim2.new(0, 0, 0, HEADER_H)
     content.BackgroundTransparency = 1
     content.ClipsDescendants = false
-    -- 🔥 FIX BUG #1: Set Visible SEBELUM hookAutoRecalc
     content.Visible = defaultOpen 
     content.ZIndex = 2
     content.Parent = card
 
     local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 3)
+    contentLayout.Padding = UDim.new(0, 2)
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = content
 
@@ -324,8 +323,8 @@ function Comp.makeSlider(parent, name, min, max, default, callback)
 
     local knob = Instance.new("Frame")
     knob.Size = UDim2.new(0, 14, 0, 14)
-    knob.AnchorPoint = Vector2.new(0.5, 0.5) -- 🔥 FIX BUG #2: AnchorPoint ditengah
-    knob.Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, 0) -- 🔥 FIX BUG #2: Offset Y jadi 0
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, 0)
     knob.BackgroundColor3 = C.text
     knob.BorderSizePixel = 0
     knob.ZIndex = 2
@@ -349,7 +348,6 @@ function Comp.makeSlider(parent, name, min, max, default, callback)
         fill.Size = UDim2.new(relX, 0, 1, 0)
         knob.Position = UDim2.new(relX, 0, 0.5, 0)
         currentVal = val
-        -- 🔥 FIX BUG #3: Callback cuma jalan pas lepas klik (triggerCallback)
         if triggerCallback then pcall(callback, val) end
     end
 
@@ -360,7 +358,7 @@ function Comp.makeSlider(parent, name, min, max, default, callback)
     
     sliderBtn.MouseButton1Up:Connect(function() 
         isDragging = false 
-        pcall(callback, currentVal) -- Panggil callback pas lepas
+        pcall(callback, currentVal) 
     end)
     
     S.Services.UIS.InputChanged:Connect(function(input)
@@ -648,7 +646,7 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
         if isOpen then animatePopup(true) else animatePopup(false) end
     end)
 
-    -- Optimasi RenderStepped: Hanya update posisi kalau lagi kebuka
+    -- Optimasi RenderStepped
     local renderConn = S.Services.Run.RenderStepped:Connect(function()
         if not isOpen then return end
         local anc = f
@@ -709,134 +707,88 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE (XIAOMI STYLE - BRACKET + AUTO HIDE)
+-- RESIZE HANDLE (VARIAN 1: SIKU TEBAL DALAM FRAME + AUTO HIDE)
 -- ============================================================
 function Comp.attachResizeHandle(mainFrame)
     if not mainFrame or not mainFrame.Parent then return end
 
-    local parentGui = mainFrame.Parent
     local UIS = S.Services.UIS
     local RunService = S.Services.Run
+    local TS = S.Services.TS
 
-    local oldHandle = parentGui:FindFirstChild("ResizeHandle")
+    local oldHandle = mainFrame:FindFirstChild("ResizeHandle")
     if oldHandle then oldHandle:Destroy() end
+
+    local COLOR_HANDLE = C.textDim
 
     -- CONTAINER HANDLE (Area Klik)
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
-    resizeHandle.Size = UDim2.fromOffset(32, 32)
-    resizeHandle.AnchorPoint = Vector2.new(0, 0) -- (0,0) biar ga narik ke dalam
+    resizeHandle.Size = UDim2.fromOffset(20, 20)
+    resizeHandle.Position = UDim2.new(1, 0, 1, 0) -- 🔥 Nempel di ujung dalam
+    resizeHandle.AnchorPoint = Vector2.new(1, 1)
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.ZIndex = 9999
     resizeHandle.Visible = false
-    resizeHandle.Parent = parentGui
+    resizeHandle.Parent = mainFrame
 
-    -- ============================================================
-    -- VISUAL: BRACKET SUDUT (GARIS LURUS + MELENGKUNG)
-    -- ============================================================
+    -- VISUAL (Siku / Bracket Varian 1)
     local bracket = Instance.new("Frame")
-    bracket.Name = "Bracket"
-    bracket.Size = UDim2.fromOffset(16, 16) -- Ukuran bracket
-    bracket.Position = UDim2.new(1, -16, 1, -16) -- Nempel pojok kanan-bawah container
+    bracket.Size = UDim2.fromOffset(16, 16)
+    bracket.AnchorPoint = Vector2.new(1, 1)
+    bracket.Position = UDim2.new(1, -2, 1, -2) -- Jarak dikit dari ujung
     bracket.BackgroundTransparency = 1
     bracket.ZIndex = 10000
     bracket.Parent = resizeHandle
 
-    -- Garis Horizontal (bawah)
+    -- Garis Horizontal
     local lineH = Instance.new("Frame")
-    lineH.Size = UDim2.new(1, -6, 0, 2) -- Lebar ngikutin bracket
-    lineH.Position = UDim2.new(0, 6, 1, -2) -- Di bawah
-    lineH.BackgroundColor3 = C.textDim
+    lineH.Size = UDim2.new(1, -4, 0, 2)
+    lineH.Position = UDim2.new(0, 4, 1, -2)
+    lineH.BackgroundColor3 = COLOR_HANDLE
     lineH.BorderSizePixel = 0
     lineH.ZIndex = 10000
     lineH.Parent = bracket
     Instance.new("UICorner", lineH).CornerRadius = UDim.new(1, 0)
 
-    -- Garis Vertikal (kanan)
+    -- Garis Vertikal
     local lineV = Instance.new("Frame")
-    lineV.Size = UDim2.new(0, 2, 1, -6) -- Tinggi ngikutin bracket
-    lineV.Position = UDim2.new(1, -2, 0, 6) -- Di kanan
-    lineV.BackgroundColor3 = C.textDim
+    lineV.Size = UDim2.new(0, 2, 1, -4)
+    lineV.Position = UDim2.new(1, -2, 0, 4)
+    lineV.BackgroundColor3 = COLOR_HANDLE
     lineV.BorderSizePixel = 0
     lineV.ZIndex = 10000
     lineV.Parent = bracket
     Instance.new("UICorner", lineV).CornerRadius = UDim.new(1, 0)
 
-    -- Lengkungan (Sudut)
-    local corner = Instance.new("Frame")
-    corner.Size = UDim2.fromOffset(16, 16) -- Kotak buat sudut
-    corner.Position = UDim2.new(1, -16, 1, -16) -- Nempel pojok
-    corner.BackgroundTransparency = 1
-    corner.ZIndex = 10000
-    corner.Parent = resizeHandle
-
-    local cornerRadius = Instance.new("UICorner")
-    cornerRadius.CornerRadius = UDim.new(0, 12) -- Radius lengkungan
-    cornerRadius.Parent = corner
-
-    local cornerStroke = Instance.new("UIStroke")
-    cornerStroke.Color = C.textDim
-    cornerStroke.Thickness = 2
-    cornerStroke.Transparency = 0.2
-    cornerStroke.Parent = corner
-    
-    corner.ClipsDescendants = true 
-
-    -- LOGIKA VISIBILITY
-    local function checkVisibility()
-        local current = mainFrame
-        while current do
-            if current:IsA("GuiObject") and not current.Visible then return false end
-            if current:IsA("ScreenGui") and not current.Enabled then return false end
-            current = current.Parent
-        end
-        return true
-    end
-
-    -- UPDATE POSITION
-    local OFFSET = 4 -- Jarak melayang dari frame
-    local function updateHandlePosition()
-        if not mainFrame.Parent or not resizeHandle.Parent then return end
-        local absPos = mainFrame.AbsolutePosition
-        local absSize = mainFrame.AbsoluteSize
-        local parentPos = Vector2.zero
-        if parentGui:IsA("GuiObject") then parentPos = parentGui.AbsolutePosition end
-
-        resizeHandle.Position = UDim2.fromOffset(
-            absPos.X + absSize.X - parentPos.X + OFFSET,
-            absPos.Y + absSize.Y - parentPos.Y + OFFSET
-        )
-    end
-
+    -- ============================================================
     -- AUTO-HIDE LOGIC
+    -- ============================================================
     local isShowing = false
     local hideTimer = nil
+    local resizing = false
     local IDLE_TIME = 5
 
     local function applyVisualState(show)
         isShowing = show
         if show then
             resizeHandle.Visible = true
-            S.Services.TS:Create(cornerStroke, TweenInfo.new(0.2), { Transparency = 0.2 }):Play()
-            S.Services.TS:Create(lineH, TweenInfo.new(0.2), { BackgroundTransparency = 0 }):Play()
-            S.Services.TS:Create(lineV, TweenInfo.new(0.2), { BackgroundTransparency = 0 }):Play()
+            TS:Create(lineH, TweenInfo.new(0.2), { BackgroundTransparency = 0 }):Play()
+            TS:Create(lineV, TweenInfo.new(0.2), { BackgroundTransparency = 0 }):Play()
         else
-            local tween1 = S.Services.TS:Create(cornerStroke, TweenInfo.new(0.3), { Transparency = 1 })
-            local tween2 = S.Services.TS:Create(lineH, TweenInfo.new(0.3), { BackgroundTransparency = 1 })
-            local tween3 = S.Services.TS:Create(lineV, TweenInfo.new(0.3), { BackgroundTransparency = 1 })
-            tween1:Play() tween2:Play() tween3:Play()
-            
-            tween1.Completed:Connect(function()
+            local tw1 = TS:Create(lineH, TweenInfo.new(0.3), { BackgroundTransparency = 1 })
+            local tw2 = TS:Create(lineV, TweenInfo.new(0.3), { BackgroundTransparency = 1 })
+            tw1:Play() tw2:Play()
+            tw1.Completed:Connect(function()
                 if not isShowing then resizeHandle.Visible = false end
             end)
         end
     end
 
     local function showHandle()
-        if not checkVisibility() then return end
+        if not mainFrame.Visible then return end
         if not isShowing then applyVisualState(true) end
-        
         if hideTimer then pcall(task.cancel, hideTimer) end
         hideTimer = task.delay(IDLE_TIME, function()
             if not resizing and isShowing then applyVisualState(false) end
@@ -851,14 +803,13 @@ function Comp.attachResizeHandle(mainFrame)
     end)
 
     -- RESIZE STATE
-    local resizing = false
     local activeInput = nil
     local resizeStart = nil
     local startSize = nil
     local destroyed = false
 
     resizeHandle.InputBegan:Connect(function(input)
-        if destroyed or not checkVisibility() then return end
+        if destroyed or not mainFrame.Visible then return end
         local it = input.UserInputType
         if it == Enum.UserInputType.MouseButton1 or it == Enum.UserInputType.Touch then
             resizing = true
@@ -879,7 +830,7 @@ function Comp.attachResizeHandle(mainFrame)
         local newW = math.clamp(startSize.X + delta.X, 380, 800)
         local newH = math.clamp(startSize.Y + delta.Y, 250, 600)
         mainFrame.Size = UDim2.new(0, newW, 0, newH)
-        updateHandlePosition()
+        showHandle()
     end)
 
     local inputEndedConnection = UIS.InputEnded:Connect(function(input)
@@ -895,20 +846,17 @@ function Comp.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- RENDER LOOP
+    -- RENDER LOOP (Cek Visibility)
     local renderConnection = RunService.RenderStepped:Connect(function()
         if destroyed then return end
-        if not mainFrame.Parent then resizeHandle:Destroy() return end
-
-        local visible = checkVisibility()
-        if not visible then
+        if not mainFrame.Parent then
+            resizeHandle:Destroy()
+            return
+        end
+        if not mainFrame.Visible then
             resizeHandle.Visible = false
             isShowing = false
             if hideTimer then pcall(task.cancel, hideTimer) hideTimer = nil end
-            resizing = false
-            activeInput = nil
-        else
-            updateHandlePosition()
         end
     end)
 
@@ -933,7 +881,6 @@ function Comp.attachResizeHandle(mainFrame)
 
     task.defer(function()
         if not destroyed and mainFrame.Parent then
-            updateHandlePosition()
             showHandle()
         end
     end)
