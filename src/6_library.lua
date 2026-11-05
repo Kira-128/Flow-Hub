@@ -707,68 +707,64 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE (VARIAN 1: SIKU TEBAL DALAM FRAME + AUTO HIDE)
+-- RESIZE HANDLE (NEMPEL PAS DI PINGGIRAN)
 -- ============================================================
 function Comp.attachResizeHandle(mainFrame)
     if not mainFrame or not mainFrame.Parent then return end
 
     local UIS = S.Services.UIS
-    local RunService = S.Services.Run
     local TS = S.Services.TS
+    local RunService = S.Services.Run
 
     local oldHandle = mainFrame:FindFirstChild("ResizeHandle")
     if oldHandle then oldHandle:Destroy() end
 
     local COLOR_HANDLE = C.textDim
 
-    -- CONTAINER HANDLE (Area Klik)
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
-    resizeHandle.Size = UDim2.fromOffset(20, 20)
-    resizeHandle.Position = UDim2.new(1, 0, 1, 0) -- 🔥 Nempel di ujung dalam
-    resizeHandle.AnchorPoint = Vector2.new(1, 1)
+    resizeHandle.Size = UDim2.fromOffset(24, 24)
+    -- 🔥 KUNCI: Digeser 8px dari ujung biar pas di garis lurusnya
+    resizeHandle.Position = UDim2.new(1, -32, 1, -32) 
+    resizeHandle.AnchorPoint = Vector2.new(0, 0) 
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.ZIndex = 9999
     resizeHandle.Visible = false
     resizeHandle.Parent = mainFrame
 
-    -- VISUAL (Siku / Bracket Varian 1)
+    -- Wadah visual
     local bracket = Instance.new("Frame")
-    bracket.Size = UDim2.fromOffset(16, 16)
-    bracket.AnchorPoint = Vector2.new(1, 1)
-    bracket.Position = UDim2.new(1, -2, 1, -2) -- Jarak dikit dari ujung
+    bracket.Size = UDim2.new(1, 0, 1, 0)
     bracket.BackgroundTransparency = 1
     bracket.ZIndex = 10000
     bracket.Parent = resizeHandle
 
-    -- Garis Horizontal
+    -- Garis Horizontal (nempel di kanan)
     local lineH = Instance.new("Frame")
-    lineH.Size = UDim2.new(1, -4, 0, 2)
-    lineH.Position = UDim2.new(0, 4, 1, -2)
+    lineH.Size = UDim2.new(1, 0, 0, 2) 
+    lineH.Position = UDim2.new(0, 0, 1, -2) 
     lineH.BackgroundColor3 = COLOR_HANDLE
     lineH.BorderSizePixel = 0
     lineH.ZIndex = 10000
     lineH.Parent = bracket
     Instance.new("UICorner", lineH).CornerRadius = UDim.new(1, 0)
 
-    -- Garis Vertikal
+    -- Garis Vertikal (nempel di bawah)
     local lineV = Instance.new("Frame")
-    lineV.Size = UDim2.new(0, 2, 1, -4)
-    lineV.Position = UDim2.new(1, -2, 0, 4)
+    lineV.Size = UDim2.new(0, 2, 1, 0) 
+    lineV.Position = UDim2.new(1, -2, 0, 0)
     lineV.BackgroundColor3 = COLOR_HANDLE
     lineV.BorderSizePixel = 0
     lineV.ZIndex = 10000
     lineV.Parent = bracket
     Instance.new("UICorner", lineV).CornerRadius = UDim.new(1, 0)
 
-    -- ============================================================
     -- AUTO-HIDE LOGIC
-    -- ============================================================
     local isShowing = false
     local hideTimer = nil
-    local resizing = false
     local IDLE_TIME = 5
+    local resizing = false
 
     local function applyVisualState(show)
         isShowing = show
@@ -794,13 +790,6 @@ function Comp.attachResizeHandle(mainFrame)
             if not resizing and isShowing then applyVisualState(false) end
         end)
     end
-
-    -- Pantau pergerakan mouse
-    local moveConn = UIS.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            showHandle()
-        end
-    end)
 
     -- RESIZE STATE
     local activeInput = nil
@@ -829,6 +818,7 @@ function Comp.attachResizeHandle(mainFrame)
         local delta = input.Position - resizeStart
         local newW = math.clamp(startSize.X + delta.X, 380, 800)
         local newH = math.clamp(startSize.Y + delta.Y, 250, 600)
+        
         mainFrame.Size = UDim2.new(0, newW, 0, newH)
         showHandle()
     end)
@@ -846,7 +836,13 @@ function Comp.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- RENDER LOOP (Cek Visibility)
+    -- DETEKSI PERGERAKAN (PC & MOBILE)
+    local moveConn = UIS.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            showHandle()
+        end
+    end)
+
     local renderConnection = RunService.RenderStepped:Connect(function()
         if destroyed then return end
         if not mainFrame.Parent then
@@ -860,7 +856,6 @@ function Comp.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- CLEANUP
     local function cleanup()
         if destroyed then return end
         destroyed = true
