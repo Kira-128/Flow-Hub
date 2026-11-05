@@ -686,215 +686,207 @@ end
 -- ============================================================
 -- RESIZE HANDLE (GAYA BUSUR / ARC - MENEMPEL DI SUDUT LUAR)
 -- ============================================================
-
 function Comp.attachResizeHandle(mainFrame)
-    if not mainFrame or not mainFrame.Parent then
-        return
-    end
+    if not mainFrame or not mainFrame.Parent then return end
 
     local parentGui = mainFrame.Parent
     local UIS = S.Services.UIS
     local RunService = S.Services.Run
 
     local oldHandle = parentGui:FindFirstChild("ResizeHandle")
-    if oldHandle then
-        oldHandle:Destroy()
-    end
+    if oldHandle then oldHandle:Destroy() end
 
+    -- CONTAINER HANDLE
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
-    resizeHandle.Size = UDim2.fromOffset(40, 40)
-    resizeHandle.AnchorPoint = Vector2.new(0.5, 0.5)
+    resizeHandle.Size = UDim2.fromOffset(32, 32)
+    resizeHandle.AnchorPoint = Vector2.new(1, 1)
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.ZIndex = 1000
     resizeHandle.Visible = false
     resizeHandle.Parent = parentGui
 
-    local arcContainer = Instance.new("Frame")
-    arcContainer.Size = UDim2.fromOffset(20, 20)
-    arcContainer.Position = UDim2.fromOffset(20, 20)
-    arcContainer.BackgroundTransparency = 1
-    arcContainer.ClipsDescendants = true
-    arcContainer.ZIndex = 1001
-    arcContainer.Parent = resizeHandle
-
+    -- VISUAL (GARIS MELENGKUNG)
     local arc = Instance.new("Frame")
-    arc.Size = UDim2.fromOffset(40, 40)
-    arc.Position = UDim2.fromOffset(-20, -20)
+    arc.Name = "Arc"
+    arc.Size = UDim2.fromOffset(22, 22)
+    arc.AnchorPoint = Vector2.new(1, 1)
+    arc.Position = UDim2.new(1, 0, 1, 0)
     arc.BackgroundTransparency = 1
+    arc.ClipsDescendants = true
     arc.ZIndex = 1001
-    arc.Parent = arcContainer
+    arc.Parent = resizeHandle
 
-    local arcCorner = Instance.new("UICorner")
-    arcCorner.CornerRadius = UDim.new(1, 0)
-    arcCorner.Parent = arc
+    local curve = Instance.new("Frame")
+    curve.Name = "Curve"
+    curve.Size = UDim2.fromOffset(30, 30)
+    curve.Position = UDim2.fromOffset(0, 0)
+    curve.BackgroundTransparency = 1
+    curve.ZIndex = 1001
+    curve.Parent = arc
 
-    local arcStroke = Instance.new("UIStroke")
-    arcStroke.Color = C.textDim
-    arcStroke.Thickness = 2
-    arcStroke.Transparency = 0.2
-    arcStroke.Parent = arc
+    local curveCorner = Instance.new("UICorner")
+    curveCorner.CornerRadius = UDim.new(0, 22)
+    curveCorner.Parent = curve
 
-    -- VISIBILITY CHECK
+    local curveStroke = Instance.new("UIStroke")
+    curveStroke.Color = C.textDim
+    curveStroke.Thickness = 2
+    curveStroke.Transparency = 0.2
+    curveStroke.Parent = curve
+
+    -- LOGIKA VISIBILITY
     local function checkVisibility()
         local current = mainFrame
-
         while current do
-            if current:IsA("GuiObject") and not current.Visible then
-                return false
-            end
-
-            if current:IsA("ScreenGui") and not current.Enabled then
-                return false
-            end
-
+            if current:IsA("GuiObject") and not current.Visible then return false end
+            if current:IsA("ScreenGui") and not current.Enabled then return false end
             current = current.Parent
         end
-
         return true
     end
 
     -- UPDATE POSITION
+    local OFFSET = 10
     local function updateHandlePosition()
-        if not mainFrame.Parent or not resizeHandle.Parent then
-            return
-        end
-
+        if not mainFrame.Parent or not resizeHandle.Parent then return end
         local absPos = mainFrame.AbsolutePosition
         local absSize = mainFrame.AbsoluteSize
-
         local parentPos = Vector2.zero
-
-        if parentGui:IsA("GuiObject") then
-            parentPos = parentGui.AbsolutePosition
-        end
+        if parentGui:IsA("GuiObject") then parentPos = parentGui.AbsolutePosition end
 
         resizeHandle.Position = UDim2.fromOffset(
-            absPos.X + absSize.X - parentPos.X,
-            absPos.Y + absSize.Y - parentPos.Y
+            absPos.X + absSize.X - parentPos.X + OFFSET,
+            absPos.Y + absSize.Y - parentPos.Y + OFFSET
         )
     end
 
-    -- RESIZE STATE
+    -- ============================================================
+    -- AUTO-HIDE LOGIC (XIAOMI STYLE)
+    -- ============================================================
+    local isShowing = false
+    local hideTimer = nil
+    local IDLE_TIME = 5 -- Detik sebelum hilang
+
+    local function applyVisualState(show)
+        isShowing = show
+        if show then
+            resizeHandle.Visible = true
+            -- Fade in halus
+            S.Services.TS:Create(curveStroke, TweenInfo.new(0.2), { Transparency = 0.2 }):Play()
+        else
+            -- Fade out halus
+            local tween = S.Services.TS:Create(curveStroke, TweenInfo.new(0.3), { Transparency = 1 })
+            tween:Play()
+            tween.Completed:Connect(function()
+                if not isShowing then resizeHandle.Visible = false end
+            end)
+        end
+    end
+
+    local function showHandle()
+        if not checkVisibility() then return end
+        
+        if not isShowing then
+            applyVisualState(true)
+        end
+        
+        -- Reset timer tiap kali ada pergerakan
+        if hideTimer then task.cancel(hideTimer) end
+        hideTimer = task.delay(IDLE_TIME, function()
+            -- Jangan sembunyiin kalau lagi di-klik (resize)
+            if not resizing and isShowing then
+                applyVisualState(false)
+            end
+        end)
+    end
+
+    -- Pantau pergerakan mouse / sentuhan layar
+    UIS.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            showHandle()
+        end
+    end)
+
+    -- ============================================================
+    -- RESIZE STATE & INPUT
+    -- ============================================================
     local resizing = false
     local activeInput = nil
     local resizeStart = nil
     local startSize = nil
     local destroyed = false
 
-    -- START RESIZE
     resizeHandle.InputBegan:Connect(function(input)
-        if destroyed or not resizeHandle.Visible then
-            return
-        end
-
-        local inputType = input.UserInputType
-
-        if inputType == Enum.UserInputType.MouseButton1
-        or inputType == Enum.UserInputType.Touch then
-
+        if destroyed or not checkVisibility() then return end
+        local it = input.UserInputType
+        if it == Enum.UserInputType.MouseButton1 or it == Enum.UserInputType.Touch then
             resizing = true
             activeInput = input
             resizeStart = input.Position
             startSize = mainFrame.AbsoluteSize
+            showHandle() -- Munculin & reset timer pas mulai resize
         end
     end)
 
-    -- INPUT CHANGED
     local inputChangedConnection = UIS.InputChanged:Connect(function(input)
-        if not resizing or not activeInput then
-            return
-        end
-
-        local inputType = input.UserInputType
-
-        local isMouse =
-            activeInput.UserInputType == Enum.UserInputType.MouseButton1
-            and inputType == Enum.UserInputType.MouseMovement
-
-        local isTouch =
-            activeInput.UserInputType == Enum.UserInputType.Touch
-            and input == activeInput
-
-        if not isMouse and not isTouch then
-            return
-        end
+        if not resizing or not activeInput then return end
+        local isMouse = activeInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement
+        local isTouch = activeInput.UserInputType == Enum.UserInputType.Touch and input == activeInput
+        if not isMouse and not isTouch then return end
 
         local delta = input.Position - resizeStart
-
-        local newW = math.clamp(
-            startSize.X + delta.X,
-            380,
-            800
-        )
-
-        local newH = math.clamp(
-            startSize.Y + delta.Y,
-            250,
-            600
-        )
-
+        local newW = math.clamp(startSize.X + delta.X, 380, 800)
+        local newH = math.clamp(startSize.Y + delta.Y, 250, 600)
         mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        updateHandlePosition()
     end)
 
-    -- INPUT ENDED
     local inputEndedConnection = UIS.InputEnded:Connect(function(input)
-        if not resizing or not activeInput then
-            return
-        end
-
-        local isMouse =
-            activeInput.UserInputType == Enum.UserInputType.MouseButton1
-            and input.UserInputType == Enum.UserInputType.MouseButton1
-
-        local isTouch =
-            activeInput.UserInputType == Enum.UserInputType.Touch
-            and input == activeInput
-
+        if not resizing or not activeInput then return end
+        local isMouse = activeInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1
+        local isTouch = activeInput.UserInputType == Enum.UserInputType.Touch and input == activeInput
         if isMouse or isTouch then
             resizing = false
             activeInput = nil
             resizeStart = nil
             startSize = nil
+            showHandle() -- Reset timer 5 detik setelah selesai resize
         end
     end)
 
-    -- VISIBILITY + POSITION UPDATE
+    -- ============================================================
+    -- RENDER LOOP
+    -- ============================================================
     local renderConnection = RunService.RenderStepped:Connect(function()
-        if destroyed then
-            return
-        end
-
-        if not mainFrame.Parent then
-            resizeHandle:Destroy()
-            return
-        end
+        if destroyed then return end
+        if not mainFrame.Parent then resizeHandle:Destroy() return end
 
         local visible = checkVisibility()
-        resizeHandle.Visible = visible
-
-        if visible then
-            updateHandlePosition()
-        else
+        -- Kalau MainFrame ga visible, paksa handle ilang & reset state
+        if not visible then
+            resizeHandle.Visible = false
+            isShowing = false
+            if hideTimer then task.cancel(hideTimer) hideTimer = nil end
             resizing = false
             activeInput = nil
             resizeStart = nil
             startSize = nil
+        else
+            updateHandlePosition()
         end
     end)
 
-    -- CLEANUP CONNECTIONS
+    -- ============================================================
+    -- CLEANUP & INIT
+    -- ============================================================
     local function cleanup()
-        if destroyed then
-            return
-        end
-
+        if destroyed then return end
         destroyed = true
-
         resizing = false
         activeInput = nil
-
+        if hideTimer then task.cancel(hideTimer) end
         renderConnection:Disconnect()
         inputChangedConnection:Disconnect()
         inputEndedConnection:Disconnect()
@@ -903,20 +895,17 @@ function Comp.attachResizeHandle(mainFrame)
     resizeHandle.Destroying:Connect(cleanup)
 
     mainFrame.Destroying:Connect(function()
-        if resizeHandle.Parent then
-            resizeHandle:Destroy()
-        end
+        if resizeHandle.Parent then resizeHandle:Destroy() end
     end)
 
+    -- Munculin pertama kali pas script jalan
     task.defer(function()
         if not destroyed and mainFrame.Parent then
             updateHandlePosition()
-            resizeHandle.Visible = checkVisibility()
+            showHandle()
         end
     end)
 
     return resizeHandle
 end
-  
-
 S.Comp = Comp
