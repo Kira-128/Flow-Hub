@@ -707,29 +707,35 @@ function Lib.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE (POCO/HYPEROS STYLE + AUTO HIDE)
+-- RESIZE HANDLE (VISUAL & POSISI DARI LU, LOGIKA ASLI FLOW HUB)
 -- ============================================================
 function Lib.attachResizeHandle(mainFrame)
     if not mainFrame or not mainFrame.Parent then return end
 
     local UIS = S.Services.UIS
     local TS = S.Services.TS
+    local RunService = S.Services.Run
 
     local oldHandle = mainFrame:FindFirstChild("ResizeHandle")
     if oldHandle then oldHandle:Destroy() end
 
-    -- 1. CONTAINER HANDLE (Nempel di luar frame)
-    local resizeHandle = Instance.new("TextButton")
+    -- ============================================================
+    -- 1. CONTAINER & POSISI (DARI KODE LU)
+    -- ============================================================
+    local resizeHandle = Instance.new("TextButton") -- TextButton biar gampang diklik
     resizeHandle.Name = "ResizeHandle"
-    resizeHandle.Size = UDim2.new(0, 44, 0, 44)
+    resizeHandle.Size = UDim2.new(0, 44, 0, 44) -- Ukuran dari lu
     resizeHandle.AnchorPoint = Vector2.new(1, 1)
-    resizeHandle.Position = UDim2.new(1, 14, 1, 14) 
+    resizeHandle.Position = UDim2.new(1, 14, 1, 14) -- Posisi dari lu
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.ZIndex = 9999
+    resizeHandle.Visible = false
     resizeHandle.Parent = mainFrame
 
-    -- 2. VISUAL KURVA
+    -- ============================================================
+    -- 2. VISUAL (DARI KODE LU)
+    -- ============================================================
     local arcContainer = Instance.new("Frame")
     arcContainer.Size = UDim2.new(0, 22, 0, 22)
     arcContainer.AnchorPoint = Vector2.new(1, 1)
@@ -757,8 +763,10 @@ function Lib.attachResizeHandle(mainFrame)
     ringCorner.CornerRadius = UDim.new(1, 0)
     ringCorner.Parent = curvedRing
 
-    -- 3. LOGIKA AUTO-HIDE
-    local isShowing = true
+    -- ============================================================
+    -- 3. LOGIKA AUTO-HIDE (ASLI FLOW HUB)
+    -- ============================================================
+    local isShowing = false
     local hideTimer = nil
     local IDLE_TIME = 5
     local resizing = false
@@ -787,15 +795,18 @@ function Lib.attachResizeHandle(mainFrame)
         end)
     end
 
-    -- 4. LOGIKA DRAG & RESIZE
+    -- ============================================================
+    -- 4. LOGIKA RESIZE (ASLI FLOW HUB)
+    -- ============================================================
     local activeInput = nil
     local resizeStart = nil
     local startSize = nil
-    local MIN_WIDTH = 200
-    local MIN_HEIGHT = 120
+    local destroyed = false
 
     resizeHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if destroyed or not mainFrame.Visible then return end
+        local it = input.UserInputType
+        if it == Enum.UserInputType.MouseButton1 or it == Enum.UserInputType.Touch then
             resizing = true
             activeInput = input
             resizeStart = input.Position
@@ -804,21 +815,21 @@ function Lib.attachResizeHandle(mainFrame)
         end
     end)
 
-    local inputChangedConn = UIS.InputChanged:Connect(function(input)
+    local inputChangedConnection = UIS.InputChanged:Connect(function(input)
         if not resizing or not activeInput then return end
         local isMouse = activeInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement
         local isTouch = activeInput.UserInputType == Enum.UserInputType.Touch and input == activeInput
         if not isMouse and not isTouch then return end
 
         local delta = input.Position - resizeStart
-        local newWidth = math.max(MIN_WIDTH, startSize.X + delta.X)
-        local newHeight = math.max(MIN_HEIGHT, startSize.Y + delta.Y)
+        local newW = math.clamp(startSize.X + delta.X, 380, 800)
+        local newH = math.clamp(startSize.Y + delta.Y, 250, 600)
         
-        mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
+        mainFrame.Size = UDim2.new(0, newW, 0, newH)
         showHandle()
     end)
 
-    local inputEndedConn = UIS.InputEnded:Connect(function(input)
+    local inputEndedConnection = UIS.InputEnded:Connect(function(input)
         if not resizing or not activeInput then return end
         local isMouse = activeInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1
         local isTouch = activeInput.UserInputType == Enum.UserInputType.Touch and input == activeInput
@@ -831,15 +842,16 @@ function Lib.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- 5. DETEKSI GERAK MOUSE / TOUCH
+    -- DETEKSI PERGERAKAN (PC & MOBILE)
     local moveConn = UIS.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             showHandle()
         end
     end)
 
-    -- 6. CEK VISIBILITY MAINFRAME
-    local renderConn = S.Services.Run.RenderStepped:Connect(function()
+    -- RENDER LOOP (Cek Visibility MainFrame)
+    local renderConnection = RunService.RenderStepped:Connect(function()
+        if destroyed then return end
         if not mainFrame.Parent then
             resizeHandle:Destroy()
             return
@@ -851,17 +863,31 @@ function Lib.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- 7. CLEANUP
-    resizeHandle.Destroying:Connect(function()
+    -- CLEANUP
+    local function cleanup()
+        if destroyed then return end
+        destroyed = true
+        resizing = false
+        activeInput = nil
         if hideTimer then pcall(task.cancel, hideTimer) end
-        inputChangedConn:Disconnect()
-        inputEndedConn:Disconnect()
+        renderConnection:Disconnect()
+        inputChangedConnection:Disconnect()
+        inputEndedConnection:Disconnect()
         moveConn:Disconnect()
-        renderConn:Disconnect()
+    end
+
+    resizeHandle.Destroying:Connect(cleanup)
+
+    mainFrame.Destroying:Connect(function()
+        if resizeHandle.Parent then resizeHandle:Destroy() end
     end)
 
-    task.defer(showHandle)
-    
+    task.defer(function()
+        if not destroyed and mainFrame.Parent then
+            showHandle()
+        end
+    end)
+
     return resizeHandle
 end
 
