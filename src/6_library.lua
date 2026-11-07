@@ -1,12 +1,12 @@
--- [6] LIBRARY (Flow Hub - Components v5.1 FINAL)
--- Fixes: Resize Handle Varian 1 (Dalam Frame + Auto-Hide), Slider, Section, ITEM_H 34
+-- [6] LIBRARY (Flow Hub - Components v6.0 FINAL)
+-- Fixes: Renamed to Lib, Poco Resize Handle, Slider Lag, Section Height
 
 local S = _G.STHAIN
 local C = S.Theme.Colors
 local F = S.Theme.Font
 
-local Comp = {}
-local ITEM_H = 34 -- Dinaikin dari 30 ke 34 biar ga tumpang tindih
+local Lib = {}
+local ITEM_H = 34 
 local HEADER_H = 30
 local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
@@ -47,7 +47,7 @@ end
 -- ============================================================
 -- SECTION
 -- ============================================================
-function Comp.makeSection(parent, title, defaultOpen)
+function Lib.makeSection(parent, title, defaultOpen)
     local card = Instance.new("Frame")
     card.Name = "Section_" .. title
     card.Size = UDim2.new(1, 0, 0, HEADER_H)
@@ -104,7 +104,7 @@ function Comp.makeSection(parent, title, defaultOpen)
     content.Parent = card
 
     local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 2)
+    contentLayout.Padding = UDim.new(0, 3)
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = content
 
@@ -134,7 +134,7 @@ end
 -- ============================================================
 -- TOGGLE
 -- ============================================================
-function Comp.makeToggle(parent, name, default, callback)
+function Lib.makeToggle(parent, name, default, callback)
     local f = Instance.new("Frame")
     f.Name = "Toggle_" .. name
     f.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -189,7 +189,7 @@ end
 -- ============================================================
 -- INPUT
 -- ============================================================
-function Comp.makeInput(parent, name, default, callback)
+function Lib.makeInput(parent, name, default, callback)
     local f = Instance.new("Frame")
     f.Name = "Input_" .. name
     f.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -231,7 +231,7 @@ end
 -- ============================================================
 -- TEXT INPUT
 -- ============================================================
-function Comp.makeTextInput(parent, name, default, placeholder, callback)
+function Lib.makeTextInput(parent, name, default, placeholder, callback)
     local f = Instance.new("Frame")
     f.Name = "TextInput_" .. name
     f.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -274,7 +274,7 @@ end
 -- ============================================================
 -- SLIDER
 -- ============================================================
-function Comp.makeSlider(parent, name, min, max, default, callback)
+function Lib.makeSlider(parent, name, min, max, default, callback)
     local f = Instance.new("Frame")
     f.Name = "Slider_" .. name
     f.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -380,7 +380,7 @@ end
 -- ============================================================
 -- BUTTON
 -- ============================================================
-function Comp.makeButton(parent, name, callback, noHover)
+function Lib.makeButton(parent, name, callback, noHover)
     local wrapper = Instance.new("Frame")
     wrapper.Name = "BtnWrapper_" .. name
     wrapper.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -436,9 +436,9 @@ function Comp.makeButton(parent, name, callback, noHover)
 end
 
 -- ============================================================
--- DROPDOWN (TIDAK DIUBAH LOGIKANYA)
+-- DROPDOWN (TIDAK DIUBAH)
 -- ============================================================
-function Comp.makeDropdown(parent, name, initialOptions, callback)
+function Lib.makeDropdown(parent, name, initialOptions, callback)
     local f = Instance.new("Frame")
     f.Name = "Dropdown_" .. name
     f.Size = UDim2.new(1, 0, 0, ITEM_H)
@@ -707,80 +707,71 @@ function Comp.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE (VARIAN 1: SIKU TEBAL DALAM FRAME + AUTO HIDE)
+-- RESIZE HANDLE (POCO/HYPEROS STYLE + AUTO HIDE)
 -- ============================================================
-function Comp.attachResizeHandle(mainFrame)
+function Lib.attachResizeHandle(mainFrame)
     if not mainFrame or not mainFrame.Parent then return end
 
     local UIS = S.Services.UIS
-    local RunService = S.Services.Run
     local TS = S.Services.TS
 
     local oldHandle = mainFrame:FindFirstChild("ResizeHandle")
     if oldHandle then oldHandle:Destroy() end
 
-    local COLOR_HANDLE = C.textDim
-
-    -- CONTAINER HANDLE (Area Klik)
+    -- 1. CONTAINER HANDLE (Nempel di luar frame)
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
-    resizeHandle.Size = UDim2.fromOffset(20, 20)
-    resizeHandle.Position = UDim2.new(1, 0, 1, 0) -- 🔥 Nempel di ujung dalam
+    resizeHandle.Size = UDim2.new(0, 44, 0, 44)
     resizeHandle.AnchorPoint = Vector2.new(1, 1)
+    resizeHandle.Position = UDim2.new(1, 14, 1, 14) 
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.ZIndex = 9999
-    resizeHandle.Visible = false
     resizeHandle.Parent = mainFrame
 
-    -- VISUAL (Siku / Bracket Varian 1)
-    local bracket = Instance.new("Frame")
-    bracket.Size = UDim2.fromOffset(16, 16)
-    bracket.AnchorPoint = Vector2.new(1, 1)
-    bracket.Position = UDim2.new(1, -2, 1, -2) -- Jarak dikit dari ujung
-    bracket.BackgroundTransparency = 1
-    bracket.ZIndex = 10000
-    bracket.Parent = resizeHandle
+    -- 2. VISUAL KURVA
+    local arcContainer = Instance.new("Frame")
+    arcContainer.Size = UDim2.new(0, 22, 0, 22)
+    arcContainer.AnchorPoint = Vector2.new(1, 1)
+    arcContainer.Position = UDim2.new(1, 0, 1, 0)
+    arcContainer.BackgroundTransparency = 1
+    arcContainer.ClipsDescendants = true
+    arcContainer.ZIndex = 10000
+    arcContainer.Parent = resizeHandle
 
-    -- Garis Horizontal
-    local lineH = Instance.new("Frame")
-    lineH.Size = UDim2.new(1, -4, 0, 2)
-    lineH.Position = UDim2.new(0, 4, 1, -2)
-    lineH.BackgroundColor3 = COLOR_HANDLE
-    lineH.BorderSizePixel = 0
-    lineH.ZIndex = 10000
-    lineH.Parent = bracket
-    Instance.new("UICorner", lineH).CornerRadius = UDim.new(1, 0)
+    local curvedRing = Instance.new("Frame")
+    curvedRing.Size = UDim2.new(0, 34, 0, 34)
+    curvedRing.AnchorPoint = Vector2.new(0, 0)
+    curvedRing.Position = UDim2.new(0, -17, 0, -17)
+    curvedRing.BackgroundTransparency = 1
+    curvedRing.ZIndex = 10000
+    curvedRing.Parent = arcContainer
 
-    -- Garis Vertikal
-    local lineV = Instance.new("Frame")
-    lineV.Size = UDim2.new(0, 2, 1, -4)
-    lineV.Position = UDim2.new(1, -2, 0, 4)
-    lineV.BackgroundColor3 = COLOR_HANDLE
-    lineV.BorderSizePixel = 0
-    lineV.ZIndex = 10000
-    lineV.Parent = bracket
-    Instance.new("UICorner", lineV).CornerRadius = UDim.new(1, 0)
+    local ringStroke = Instance.new("UIStroke")
+    ringStroke.Color = Color3.fromRGB(220, 220, 220)
+    ringStroke.Thickness = 2.8
+    ringStroke.Transparency = 0.45
+    ringStroke.Parent = curvedRing
 
-    -- ============================================================
-    -- AUTO-HIDE LOGIC
-    -- ============================================================
-    local isShowing = false
+    local ringCorner = Instance.new("UICorner")
+    ringCorner.CornerRadius = UDim.new(1, 0)
+    ringCorner.Parent = curvedRing
+
+    -- 3. LOGIKA AUTO-HIDE
+    local isShowing = true
     local hideTimer = nil
-    local resizing = false
     local IDLE_TIME = 5
+    local resizing = false
 
     local function applyVisualState(show)
         isShowing = show
         if show then
             resizeHandle.Visible = true
-            TS:Create(lineH, TweenInfo.new(0.2), { BackgroundTransparency = 0 }):Play()
-            TS:Create(lineV, TweenInfo.new(0.2), { BackgroundTransparency = 0 }):Play()
+            TS:Create(ringStroke, TweenInfo.new(0.2), { Transparency = 0.45 }):Play()
         else
-            local tw1 = TS:Create(lineH, TweenInfo.new(0.3), { BackgroundTransparency = 1 })
-            local tw2 = TS:Create(lineV, TweenInfo.new(0.3), { BackgroundTransparency = 1 })
-            tw1:Play() tw2:Play()
-            tw1.Completed:Connect(function()
+            local tw = TS:Create(ringStroke, TweenInfo.new(0.3), { Transparency = 1 })
+            tw:Play()
+            tw.Completed:Connect(function()
                 if not isShowing then resizeHandle.Visible = false end
             end)
         end
@@ -790,28 +781,21 @@ function Comp.attachResizeHandle(mainFrame)
         if not mainFrame.Visible then return end
         if not isShowing then applyVisualState(true) end
         if hideTimer then pcall(task.cancel, hideTimer) end
+        
         hideTimer = task.delay(IDLE_TIME, function()
             if not resizing and isShowing then applyVisualState(false) end
         end)
     end
 
-    -- Pantau pergerakan mouse
-    local moveConn = UIS.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            showHandle()
-        end
-    end)
-
-    -- RESIZE STATE
+    -- 4. LOGIKA DRAG & RESIZE
     local activeInput = nil
     local resizeStart = nil
     local startSize = nil
-    local destroyed = false
+    local MIN_WIDTH = 200
+    local MIN_HEIGHT = 120
 
     resizeHandle.InputBegan:Connect(function(input)
-        if destroyed or not mainFrame.Visible then return end
-        local it = input.UserInputType
-        if it == Enum.UserInputType.MouseButton1 or it == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             resizing = true
             activeInput = input
             resizeStart = input.Position
@@ -820,20 +804,21 @@ function Comp.attachResizeHandle(mainFrame)
         end
     end)
 
-    local inputChangedConnection = UIS.InputChanged:Connect(function(input)
+    local inputChangedConn = UIS.InputChanged:Connect(function(input)
         if not resizing or not activeInput then return end
         local isMouse = activeInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement
         local isTouch = activeInput.UserInputType == Enum.UserInputType.Touch and input == activeInput
         if not isMouse and not isTouch then return end
 
         local delta = input.Position - resizeStart
-        local newW = math.clamp(startSize.X + delta.X, 380, 800)
-        local newH = math.clamp(startSize.Y + delta.Y, 250, 600)
-        mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        local newWidth = math.max(MIN_WIDTH, startSize.X + delta.X)
+        local newHeight = math.max(MIN_HEIGHT, startSize.Y + delta.Y)
+        
+        mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
         showHandle()
     end)
 
-    local inputEndedConnection = UIS.InputEnded:Connect(function(input)
+    local inputEndedConn = UIS.InputEnded:Connect(function(input)
         if not resizing or not activeInput then return end
         local isMouse = activeInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1
         local isTouch = activeInput.UserInputType == Enum.UserInputType.Touch and input == activeInput
@@ -846,9 +831,15 @@ function Comp.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- RENDER LOOP (Cek Visibility)
-    local renderConnection = RunService.RenderStepped:Connect(function()
-        if destroyed then return end
+    -- 5. DETEKSI GERAK MOUSE / TOUCH
+    local moveConn = UIS.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            showHandle()
+        end
+    end)
+
+    -- 6. CEK VISIBILITY MAINFRAME
+    local renderConn = S.Services.Run.RenderStepped:Connect(function()
         if not mainFrame.Parent then
             resizeHandle:Destroy()
             return
@@ -860,32 +851,20 @@ function Comp.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- CLEANUP
-    local function cleanup()
-        if destroyed then return end
-        destroyed = true
-        resizing = false
-        activeInput = nil
+    -- 7. CLEANUP
+    resizeHandle.Destroying:Connect(function()
         if hideTimer then pcall(task.cancel, hideTimer) end
-        renderConnection:Disconnect()
-        inputChangedConnection:Disconnect()
-        inputEndedConnection:Disconnect()
+        inputChangedConn:Disconnect()
+        inputEndedConn:Disconnect()
         moveConn:Disconnect()
-    end
-
-    resizeHandle.Destroying:Connect(cleanup)
-
-    mainFrame.Destroying:Connect(function()
-        if resizeHandle.Parent then resizeHandle:Destroy() end
+        renderConn:Disconnect()
     end)
 
-    task.defer(function()
-        if not destroyed and mainFrame.Parent then
-            showHandle()
-        end
-    end)
-
+    task.defer(showHandle)
+    
     return resizeHandle
 end
 
-S.Comp = Comp
+-- Tetep export ke S.Comp biar 7_pages.lua ga error
+S.Comp = Lib
+S.Lib = Lib
