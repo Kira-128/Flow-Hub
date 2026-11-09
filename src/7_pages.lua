@@ -603,10 +603,10 @@ S.GUI.MinBtn.MouseButton1Click:Connect(function()
     S.GUI.MainFrame.Visible = false
     S.GUI.FloatBtn.Visible = true
 end)
-S.GUI.FloatBtn.MouseButton1Click:Connect(function()
-    S.GUI.FloatBtn.Visible = false
-    S.GUI.MainFrame.Visible = true
-end)
+--S.GUI.FloatBtn.MouseButton1Click:Connect(function()
+  --  S.GUI.FloatBtn.Visible = false
+  --  S.GUI.MainFrame.Visible = true
+--end)
 
 S.GUI.MainFrame.Visible = true
 S.GUI.FloatBtn.Visible = false
