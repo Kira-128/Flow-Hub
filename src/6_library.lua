@@ -868,10 +868,6 @@ end
 local newW = math.clamp(startSize.X + delta.X, minW, maxW)
 local newH = math.clamp(startSize.Y + delta.Y, minH, maxH)
 
-mainFrame.Size = UDim2.new(0, newW, 0, newH)
-        mainFrame.Size = UDim2.new(0, newW, 0, newH)
-        updateHandlePosition()
-        showHandle()
     end)
 
     local inputEndedConn = UIS.InputEnded:Connect(function(input)
