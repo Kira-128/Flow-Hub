@@ -852,9 +852,23 @@ function Lib.attachResizeHandle(mainFrame)
         if not isMouse and not isTouch then return end
 
         local delta = input.Position - resizeStart
-        local newW = math.clamp(startSize.X + delta.X, 380, 800)
-        local newH = math.clamp(startSize.Y + delta.Y, 250, 600)
 
+-- 🔥 LOGIKA BATAS RESIZE (PC vs MOBILE)
+local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
+local minW, minH, maxW, maxH
+
+if isMobile then
+    minW, minH = 380, 250
+    maxW, maxH = 800, 600
+else
+    minW, minH = 440, 300
+    maxW, maxH = 1100, 760
+end
+
+local newW = math.clamp(startSize.X + delta.X, minW, maxW)
+local newH = math.clamp(startSize.Y + delta.Y, minH, maxH)
+
+mainFrame.Size = UDim2.new(0, newW, 0, newH)
         mainFrame.Size = UDim2.new(0, newW, 0, newH)
         updateHandlePosition()
         showHandle()
