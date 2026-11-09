@@ -211,10 +211,10 @@ function Lib.makeInput(parent, name, default, callback)
     local b = Instance.new("TextBox")
     b.AnchorPoint = Vector2.new(1, 0.5)
     b.Position = UDim2.new(1, -12, 0.5, 0)
-    b.Size = UDim2.new(0.4, 0, 0, 18)
+    b.Size = UDim2.new(0.20, 0, 0, 22)
     b.Text = tostring(default)
     b.TextColor3 = C.text
-    b.TextSize = 9
+    b.TextSize = 11
     b.Font = F.norm
     b.BackgroundColor3 = C.bg4
     b.BorderSizePixel = 0
