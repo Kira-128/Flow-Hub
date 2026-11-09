@@ -1,10 +1,6 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v3.6)
-  - Size: 450x300
-  - Float Button: Kotak Tumpul + Logo Full 48x48
-  - Anti-Lepas Drag Float Button (Global + Threshold)
-  - Save Position Float Button
+  [5] GUI (Flow Hub v3.7)
 ============================================================
 ]]
 
@@ -36,7 +32,7 @@ gui.Parent = parentGui
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Name = "FloatBtn"
-floatBtn.Size = UDim2.new(0, 48, 0, 48) -- 🔥 Balik ke 48x48
+floatBtn.Size = UDim2.new(0, 48, 0, 48)
 floatBtn.Position = UDim2.new(0, 30, 0.5, -24)
 floatBtn.Text = ""
 floatBtn.BackgroundTransparency = 1
@@ -55,7 +51,7 @@ fBg.BorderSizePixel = 0
 fBg.Active = false
 fBg.ZIndex = 100
 fBg.Parent = floatBtn
-Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12) -- Corner 12px
+Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12)
 
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
@@ -71,7 +67,7 @@ fIcon.ZIndex = 101
 fIcon.Parent = fBg
 
 -- ============================================================
--- FLOAT BUTTON DRAG LOGIC (DARI KODE LU)
+-- FLOAT BUTTON DRAG LOGIC
 -- ============================================================
 local iconConns = {}
 local savedIconPos = floatBtn.Position
@@ -123,7 +119,6 @@ iconConns[#iconConns + 1] = UIS.InputEnded:Connect(function(input)
         if floatBtn and floatBtn.Parent then
             savedIconPos = floatBtn.Position
             if not iconDragMoved then
-                -- Kalau cuma diklik (ga digeser), Buka MainFrame
                 floatBtn.Visible = false
                 if S.GUI and S.GUI.MainFrame then
                     S.GUI.MainFrame.Visible = true
@@ -133,16 +128,25 @@ iconConns[#iconConns + 1] = UIS.InputEnded:Connect(function(input)
     end
 end)
 
--- Simpan ke _G biar ga ilang pas re-execute (Opsional)
 _G.FlowHubSavedIconPos = savedIconPos
 
 -- ============================================================
--- MAIN FRAME (450x300)
+-- MAIN FRAME (RESPONSIVE SIZE)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 450, 0, 300)
-mainFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
+
+-- 🔥 UKURAN KHUSUS PC & HP
+if isMobile then
+    mainFrame.Size = UDim2.new(0, 450, 0, 300) -- Ukuran HP
+else
+    mainFrame.Size = UDim2.new(0, 560, 0, 360) -- Ukuran PC
+end
+
+-- Biar posisinya selalu di tengah
+local startSize = mainFrame.Size
+mainFrame.Position = UDim2.new(0.5, -(startSize.X.Offset / 2), 0.5, -(startSize.Y.Offset / 2))
+
 mainFrame.BackgroundColor3 = C.panel
 mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 0
