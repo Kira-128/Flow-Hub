@@ -707,7 +707,7 @@ function Lib.makeDropdown(parent, name, initialOptions, callback)
 end
 
 -- ============================================================
--- RESIZE HANDLE (LAYER OVERLAY — tampil di luar MainFrame)
+-- RESIZE HANDLE (LAYER OVERLAY + RESPONSIVE MIN/MAX)
 -- ============================================================
 function Lib.attachResizeHandle(mainFrame)
     if not mainFrame or not mainFrame.Parent then return end
@@ -715,6 +715,18 @@ function Lib.attachResizeHandle(mainFrame)
     local UIS = S.Services.UIS
     local TS = S.Services.TS
     local RunService = S.Services.Run
+
+    -- 🔥 LOGIKA BATAS RESIZE (Dihitung sekali di awal)
+    local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
+    local minW, minH, maxW, maxH
+
+    if isMobile then
+        minW, minH = 380, 250
+        maxW, maxH = 800, 600
+    else
+        minW, minH = 440, 300
+        maxW, maxH = 1100, 760
+    end
 
     -- hapus handle lama & layer lama kalau ada
     local oldHandle = mainFrame:FindFirstChild("ResizeHandle")
@@ -826,7 +838,7 @@ function Lib.attachResizeHandle(mainFrame)
     end
 
     -- ============================================================
-    -- RESIZE LOGIC
+    -- RESIZE LOGIC (FIXED)
     -- ============================================================
     local activeInput = nil
     local resizeStart = nil
@@ -853,21 +865,14 @@ function Lib.attachResizeHandle(mainFrame)
 
         local delta = input.Position - resizeStart
 
--- 🔥 LOGIKA BATAS RESIZE (PC vs MOBILE)
-local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
-local minW, minH, maxW, maxH
+        -- Hitung ukuran baru pakai min/max yang udah ditentuin di atas
+        local newW = math.clamp(startSize.X + delta.X, minW, maxW)
+        local newH = math.clamp(startSize.Y + delta.Y, minH, maxH)
 
-if isMobile then
-    minW, minH = 380, 250
-    maxW, maxH = 800, 600
-else
-    minW, minH = 440, 300
-    maxW, maxH = 1100, 760
-end
-
-local newW = math.clamp(startSize.X + delta.X, minW, maxW)
-local newH = math.clamp(startSize.Y + delta.Y, minH, maxH)
-
+        -- 🔥 EKSEKUSI PERUBAHAN UKURAN (INI YANG TADI HILANG)
+        mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        updateHandlePosition()
+        showHandle()
     end)
 
     local inputEndedConn = UIS.InputEnded:Connect(function(input)
@@ -927,7 +932,8 @@ local newH = math.clamp(startSize.Y + delta.Y, minH, maxH)
 
     return resizeHandle
 end
-
+            
+        
 -- Tetep export ke S.Comp biar 7_pages.lua ga error
 S.Comp = Lib
 S.Lib = Lib
