@@ -1,5 +1,5 @@
--- [6] LIBRARY (Flow Hub - Components v6.0 FINAL)
--- Fixes: Renamed to Lib, Poco Resize Handle, Slider Lag, Section Height
+-- [6] LIBRARY (Flow Hub - Components v6.1 FINAL)
+-- Fixes: Renamed to Lib, Poco Resize Handle (FIXED), Slider Lag, Section Height
 
 local S = _G.STHAIN
 local C = S.Theme.Colors
@@ -932,8 +932,7 @@ function Lib.attachResizeHandle(mainFrame)
 
     return resizeHandle
 end
-            
-        
+
 -- Tetep export ke S.Comp biar 7_pages.lua ga error
 S.Comp = Lib
 S.Lib = Lib
