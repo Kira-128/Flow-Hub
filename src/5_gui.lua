@@ -1,14 +1,10 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v3.5)
-  - Size: 450x300 (Start)
-  - Float Button: Kotak Tumpul + Logo Full (TANPA GARIS)
-  - Tabs Sidebar: Support Scroll
-  - Anti-Lepas Drag (Global Input)
-  - Klik vs Drag Threshold
-  - PC & Mobile Detection
-  - Anti-Crash gethui
-  - RESIZE DIHAPUS (Akan ditangani Library)
+  [5] GUI (Flow Hub v3.6)
+  - Size: 450x300
+  - Float Button: Kotak Tumpul + Logo Full 48x48
+  - Anti-Lepas Drag Float Button (Global + Threshold)
+  - Save Position Float Button
 ============================================================
 ]]
 
@@ -36,11 +32,11 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parentGui
 
 -- ============================================================
--- FLOAT BUTTON (KOTAK + LOGO FULL, TANPA GARIS)
+-- FLOAT BUTTON (KOTAK 48x48 + LOGO FULL)
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Name = "FloatBtn"
-floatBtn.Size = UDim2.new(0, 48, 0, 48)
+floatBtn.Size = UDim2.new(0, 48, 0, 48) -- 🔥 Balik ke 48x48
 floatBtn.Position = UDim2.new(0, 30, 0.5, -24)
 floatBtn.Text = ""
 floatBtn.BackgroundTransparency = 1
@@ -59,9 +55,7 @@ fBg.BorderSizePixel = 0
 fBg.Active = false
 fBg.ZIndex = 100
 fBg.Parent = floatBtn
-Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 8)
-
--- 🔥 STROKE DIHAPUS (Sesuai Permintaan)
+Instance.new("UICorner", fBg).CornerRadius = UDim.new(0, 12) -- Corner 12px
 
 local fIcon = Instance.new("ImageLabel")
 fIcon.Name = "FloatLogo"
@@ -77,48 +71,70 @@ fIcon.ZIndex = 101
 fIcon.Parent = fBg
 
 -- ============================================================
--- FLOAT BUTTON DRAG (UIS GLOBAL - ANTI PUTUS)
+-- FLOAT BUTTON DRAG LOGIC (DARI KODE LU)
 -- ============================================================
-local dragging = false
-local dragStart, startPos
-local hasMoved = false
-local DRAG_THRESHOLD = 5
+local iconConns = {}
+local savedIconPos = floatBtn.Position
+local iconDragging = false
+local iconDragStart = nil
+local iconStartPos = nil
+local iconDragMoved = false
+local dragThreshold = 6
 
-floatBtn.InputBegan:Connect(function(input)
+local function disconnectIconConns()
+    for i = #iconConns, 1, -1 do
+        local c = iconConns[i]
+        iconConns[i] = nil
+        pcall(function() c:Disconnect() end)
+    end
+end
+
+-- 1. DETEKSI AWAL
+iconConns[#iconConns + 1] = floatBtn.InputBegan:Connect(function(input)
+    if iconDragging then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        hasMoved = false
-        dragStart = input.Position
-        startPos = floatBtn.Position
+        iconDragging = true
+        iconDragMoved = false
+        iconDragStart = input.Position
+        iconStartPos = floatBtn.Position
     end
 end)
 
-UIS.InputChanged:Connect(function(input)
-    if not dragging then return end
+-- 2. DETEKSI PERGERAKAN
+iconConns[#iconConns + 1] = UIS.InputChanged:Connect(function(input)
+    if not iconDragging or not floatBtn or not floatBtn.Parent or not iconStartPos or not iconDragStart then return end
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        local delta = input.Position - dragStart
-        if math.abs(delta.X) > DRAG_THRESHOLD or math.abs(delta.Y) > DRAG_THRESHOLD then
-            hasMoved = true
+        local delta = input.Position - iconDragStart
+        if delta.Magnitude > dragThreshold then
+            iconDragMoved = true
         end
-        if hasMoved then
-            floatBtn.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
+        floatBtn.Position = UDim2.new(
+            iconStartPos.X.Scale, iconStartPos.X.Offset + delta.X,
+            iconStartPos.Y.Scale, iconStartPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- 3. DETEKSI LEPAS
+iconConns[#iconConns + 1] = UIS.InputEnded:Connect(function(input)
+    if not iconDragging then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        iconDragging = false
+        if floatBtn and floatBtn.Parent then
+            savedIconPos = floatBtn.Position
+            if not iconDragMoved then
+                -- Kalau cuma diklik (ga digeser), Buka MainFrame
+                floatBtn.Visible = false
+                if S.GUI and S.GUI.MainFrame then
+                    S.GUI.MainFrame.Visible = true
+                end
+            end
         end
     end
 end)
 
-UIS.InputEnded:Connect(function(input)
-    if not dragging then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-        if not hasMoved then
-            S.GUI.FloatBtn.Visible = false
-            S.GUI.MainFrame.Visible = true
-        end
-    end
-end)
+-- Simpan ke _G biar ga ilang pas re-execute (Opsional)
+_G.FlowHubSavedIconPos = savedIconPos
 
 -- ============================================================
 -- MAIN FRAME (450x300)
@@ -141,10 +157,6 @@ mStroke.Color = C.stroke
 mStroke.Thickness = 1
 mStroke.Transparency = 0.3
 mStroke.Parent = mainFrame
-
--- ============================================================
--- RESIZE HANDLE DIHAPUS (Digantikan Library)
--- ============================================================
 
 -- ============================================================
 -- HEADER
@@ -300,7 +312,7 @@ line2.BorderSizePixel = 0
 line2.Parent = mainFrame
 
 -- ============================================================
--- SIDEBAR (DENGAN SCROLLING & POSISI FIX)
+-- SIDEBAR
 -- ============================================================
 local SIDEBAR_Y = ROW_Y + 38
 
@@ -331,7 +343,7 @@ sPad.PaddingBottom = UDim.new(0, 4)
 sPad.Parent = sidebar
 
 -- ============================================================
--- CONTENT PANEL (RESPONSIF)
+-- CONTENT PANEL
 -- ============================================================
 local contentPanel = Instance.new("Frame")
 contentPanel.Name = "ContentPanel"
