@@ -82,11 +82,19 @@ addConn(Run.RenderStepped:Connect(function()
     if not mv then return end
 
     if mv.EnableRunSpeed then
+        
         if mv.WalkSpeed and mv.WalkSpeed > 0 and hum.WalkSpeed ~= mv.WalkSpeed then
             hum.WalkSpeed = mv.WalkSpeed
         end
+        lastEnableSpeed = true
+    else
+        
+        if lastEnableSpeed then
+            hum.WalkSpeed = 16
+            lastEnableSpeed = false
+        end
     end
-    
+
     if mv.JumpPower and mv.JumpPower > 0 then
         hum.UseJumpPower = true
         if hum.JumpPower ~= mv.JumpPower then 
