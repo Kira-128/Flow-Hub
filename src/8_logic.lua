@@ -461,7 +461,9 @@ task.spawn(function()
             local myChar, myHRP = getChar(), getHRP()
             local anySetting = Config.Visual.ESPShowDistance or Config.Visual.ESPHealth or Config.Visual.ESPName
 
-            for _, model in pairs(workspace:GetChildren()) do
+            for _, player in pairs(Players:GetPlayers()) do
+    local model = player.Character
+    if model and model ~= myChar then
                 if model ~= myChar and model:IsA("Model") then
                     local hum = model:FindFirstChildOfClass("Humanoid")
                     if hum and hum.Health > 0 then
