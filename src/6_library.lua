@@ -487,7 +487,7 @@ function Lib.makeDropdown(parent, name, initialOptions, callback)
     local arrow = Instance.new("TextLabel")
     arrow.Size = UDim2.new(0, 20, 1, 0)
     arrow.Position = UDim2.new(1, -24, 0, 0)
-    arrow.Text = "▼"
+    arrow.Text = "▶"
     arrow.TextColor3 = C.accent
     arrow.TextSize = 10
     arrow.Font = F.bold
@@ -633,11 +633,11 @@ function Lib.makeDropdown(parent, name, initialOptions, callback)
                 BackgroundTransparency = 0,
                 Position = UDim2.new(popup.Position.X.Scale, popup.Position.X.Offset, 0, startY - 6)
             }):Play()
-            arrow.Text = "▶"
+            arrow.Text = "▼"
         else
             S.Services.TS:Create(popup, TweenInfo.new(0.1), { BackgroundTransparency = 1 }):Play()
             task.delay(0.1, function() popup.Visible = false end)
-            arrow.Text = "▼"
+            arrow.Text = "▶"
         end
     end
 
