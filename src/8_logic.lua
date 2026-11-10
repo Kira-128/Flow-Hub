@@ -74,19 +74,10 @@ end)
 -- ============================================================
 -- MOVEMENT
 -- ============================================================
-local defaultWalkSpeed = 16
-local defaultJumpPower = 50
-
-task.spawn(function()
-    repeat task.wait(0.1) until getHum()
-    defaultWalkSpeed = getHum().WalkSpeed
-    defaultJumpPower = getHum().JumpPower
-end)
-
 addConn(Run.RenderStepped:Connect(function()
     local hum = getHum()
     if not hum then return end
-    
+
     local mv = Config.Movement
     if not mv then return end
 
@@ -94,13 +85,8 @@ addConn(Run.RenderStepped:Connect(function()
         if mv.WalkSpeed and mv.WalkSpeed > 0 and hum.WalkSpeed ~= mv.WalkSpeed then
             hum.WalkSpeed = mv.WalkSpeed
         end
-    else
-         
-        if hum.WalkSpeed ~= defaultWalkSpeed then
-            hum.WalkSpeed = defaultWalkSpeed
-        end
-      end
-      
+    end
+    
     if mv.JumpPower and mv.JumpPower > 0 then
         hum.UseJumpPower = true
         if hum.JumpPower ~= mv.JumpPower then 
