@@ -610,7 +610,7 @@ function Lib.makeDropdown(parent, name, initialOptions, callback)
                 currentValue = opt
                 isOpen = false
                 popup.Visible = false
-                arrow.Text = "▼"
+                arrow.Text = "▶"
                 pcall(callback, opt)
             end)
         end
@@ -662,7 +662,7 @@ function Lib.makeDropdown(parent, name, initialOptions, callback)
         if not stillVisible then 
             isOpen = false 
             popup.Visible = false 
-            arrow.Text = "▼" 
+            arrow.Text = "▶" 
             return 
         end
         updatePopupPosition()
