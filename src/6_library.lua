@@ -898,17 +898,20 @@ function Lib.attachResizeHandle(mainFrame)
 
     -- render loop: cek visibility MainFrame
     local renderConn = RunService.RenderStepped:Connect(function()
-        if destroyed then return end
-        if not mainFrame.Parent then
-            resizeHandle.Visible = false
-            return
-        end
-        if not mainFrame.Visible then
-            ringStroke.Transparency = 1
-            isShowing = false
-            if hideTimer then pcall(task.cancel, hideTimer) hideTimer = nil end
-        end
-    end)
+    if destroyed then return end
+    if not mainFrame.Parent then
+        resizeHandle.Visible = false
+        return
+    end
+    
+    if not mainFrame.Visible then
+        resizeHandle.Visible = false
+        isShowing = false
+        if hideTimer then pcall(task.cancel, hideTimer) hideTimer = nil end
+    else
+        updateHandlePosition()
+    end
+end)
 
     -- cleanup
     local function cleanup()
