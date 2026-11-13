@@ -314,16 +314,35 @@ end)
 -- ============================================================
 -- AUTO HEAL
 -- ============================================================
-local healCD = 0
+local lastHeal = 0
+local healRemote = Remotes and Remotes:FindFirstChild("PlayerCombatRequest")
+
 task.spawn(function()
     while task.wait(0.5) do
         if Config.Combat.AutoHeal then
             local hum = getHum()
             if hum and hum.Health > 0 then
                 local pct = (hum.Health / hum.MaxHealth) * 100
-                if pct <= Config.Combat.HealThreshold and tick() - healCD >= 2.5 then
-                    healCD = tick()
-                    sendKey(Enum.KeyCode.H, 0.05)
+                
+                if pct <= Config.Combat.HealThreshold then
+                    
+                    if LP:GetAttribute("CanUseCombat") == true then
+                        
+                        local cdEnds = tonumber(LP:GetAttribute("HealCooldownEndsAt")) or 0
+                        if cdEnds <= workspace:GetServerTimeNow() then
+                            
+                            if tick() - lastHeal >= 1.5 then
+                                
+                                if healRemote then
+                                    pcall(function()
+                                        healRemote:FireServer("Heal")
+                                    end)
+                                    lastHeal = tick()
+                                end
+                                
+                            end
+                        end
+                    end
                 end
             end
         end
