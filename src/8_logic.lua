@@ -74,6 +74,8 @@ end)
 -- ============================================================
 -- MOVEMENT
 -- ============================================================
+local lastEnableSpeed = false
+
 addConn(Run.RenderStepped:Connect(function()
     local hum = getHum()
     if not hum then return end
@@ -797,7 +799,7 @@ task.spawn(function()
                     local autoPage = S.GUI.ContentScroll:FindFirstChild("Page_Automation")
                     if autoPage then
                         for _, v in pairs(autoPage:GetDescendants()) do
-                            if v:IsA("TextLabel") and v.Text == "Auto Summon (Direct)" then
+                            if v:IsA("TextLabel") and v.Text == "Auto Summon" then
                                 local parent = v.Parent
                                 local toggleBtn = parent:FindFirstChild("Toggle") or parent:FindFirstChild("Btn")
                                 if toggleBtn and toggleBtn:IsA("TextButton") then
