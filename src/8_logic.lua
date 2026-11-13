@@ -953,13 +953,34 @@ task.spawn(function()
 end)
 
 -- LOOP AUTO EVOLVE
+local function doAutoEvolve()
+    local inventory = readAttributeJSON(LP, "UnitsInventory")
+    local units     = inventory.Units or {}
+
+    local EvolutionRequest = Remotes and Remotes:FindFirstChild("EvolutionRequest")
+    if not EvolutionRequest then return false end
+
+    for _, unit in ipairs(units) do
+        local hasEvolution = type(unit.EvolutionPreview) == "table"
+        local masteryLevel = tonumber(unit.MasteryLevel) or 0
+
+        if hasEvolution and masteryLevel >= 20 then
+            pcall(function()
+                EvolutionRequest:FireServer({
+                    RequestId = HttpService:GenerateGUID(false),
+                    CopyId    = unit.CopyId,
+                })
+            end)
+            return true
+        end
+    end
+    return false
+end
+
 task.spawn(function()
-    while task.wait(5) do
-        local AA = Config.Automation
-        if not AA.AutoEvolve then continue end
-        local EvolutionRequest = Remotes and Remotes:FindFirstChild("EvolutionRequest")
-        if EvolutionRequest then
-            pcall(function() EvolutionRequest:FireServer("EvolveAllDuplicates") end)
+    while task.wait(2) do
+        if Config.Automation and Config.Automation.AutoEvolve then
+            doAutoEvolve()
         end
     end
 end)
