@@ -1165,75 +1165,50 @@ function _G.STHAIN.GetMyTeam()
     return "unknown"
 end
 
-local isTeleporting = false
+local fallTimer = nil
 
 function _G.STHAIN.TeleportTo(part)
-    if isTeleporting then return false end 
-    
     local char = getChar()
     if not char then return false end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not (hrp and hum and part) then return false end
-    
-    isTeleporting = true
 
     local targetPos
     if typeof(part) == "Vector3" then 
         targetPos = part
     else
-        if not part.Parent then 
-            isTeleporting = false 
-            return false 
-        end
+        if not part.Parent then return false end
         targetPos = part.Position
     end
     
     local offY = (Config.Teleport and Config.Teleport.OffsetY) or 5
-    
-    local savedCollide = {}
-    for _, p in pairs(char:GetDescendants()) do
-        if p:IsA("BasePart") then
-            savedCollide[p] = p.CanCollide
-            p.CanCollide = false
-        end
-    end
 
-    local oldFallDamage = true
     pcall(function()
-        oldFallDamage = hum:GetStateEnabled(Enum.HumanoidStateType.FallingDown)
         hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
     end)
 
     pcall(function()
+        
         hrp.Velocity = Vector3.zero
         hrp.RotVelocity = Vector3.zero
-    end)
-    pcall(function()
+        
         hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, offY, 0))
     end)
-    
-    task.wait(0.5) 
-    
-    pcall(function()
-        hrp.Velocity = Vector3.zero
-        hrp.RotVelocity = Vector3.zero
-    end)
-    task.wait(1)
 
-    for p, cc in pairs(savedCollide) do
-        if p and p.Parent then
-            pcall(function() p.CanCollide = cc end)
-        end
+    if fallTimer then 
+        task.cancel(fallTimer) 
     end
-
-    pcall(function()
-        if oldFallDamage then
+    
+    fallTimer = task.delay(0.2, function()
+        pcall(function()
             hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-        end
+            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+        end)
+        fallTimer = nil
     end)
 
-    isTeleporting = false
     return true
 end
 
