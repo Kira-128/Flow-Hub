@@ -1163,51 +1163,32 @@ function _G.STHAIN.GetMyTeam()
     return "unknown"
 end
 
-local function godmodeOn()
-    local char = getChar()
-    if not char then return nil end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return nil end
-    local original = { MaxHealth = hum.MaxHealth, Health = hum.Health }
-    local GOD_HP = 1000000
-    pcall(function()
-        hum.MaxHealth = GOD_HP
-        hum.Health = GOD_HP
-    end)
-    local lockConn = Run.Stepped:Connect(function()
-        if hum and hum.Parent then
-            pcall(function()
-                if hum.MaxHealth < GOD_HP then hum.MaxHealth = GOD_HP end
-                if hum.Health < GOD_HP then hum.Health = GOD_HP end
-            end)
-        end
-    end)
-    return {
-        restore = function()
-            if lockConn then lockConn:Disconnect() end
-            if hum and hum.Parent then
-                pcall(function()
-                    hum.MaxHealth = original.MaxHealth
-                    hum.Health = original.MaxHealth
-                end)
-            end
-        end
-    }
-end
+local isTeleporting = false
 
 function _G.STHAIN.TeleportTo(part)
+    if isTeleporting then return false end 
+    
     local char = getChar()
     if not char then return false end
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not (hrp and part) then return false end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not (hrp and hum and part) then return false end
+    
+    isTeleporting = true
+
     local targetPos
-    if typeof(part) == "Vector3" then targetPos = part
+    if typeof(part) == "Vector3" then 
+        targetPos = part
     else
-        if not part.Parent then return false end
+        if not part.Parent then 
+            isTeleporting = false 
+            return false 
+        end
         targetPos = part.Position
     end
+    
     local offY = (Config.Teleport and Config.Teleport.OffsetY) or 5
-    local god = godmodeOn()
+    
     local savedCollide = {}
     for _, p in pairs(char:GetDescendants()) do
         if p:IsA("BasePart") then
@@ -1215,6 +1196,13 @@ function _G.STHAIN.TeleportTo(part)
             p.CanCollide = false
         end
     end
+
+    local oldFallDamage = true
+    pcall(function()
+        oldFallDamage = hum:GetStateEnabled(Enum.HumanoidStateType.FallingDown)
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    end)
+
     pcall(function()
         hrp.Velocity = Vector3.zero
         hrp.RotVelocity = Vector3.zero
@@ -1222,18 +1210,28 @@ function _G.STHAIN.TeleportTo(part)
     pcall(function()
         hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, offY, 0))
     end)
-    task.wait(1.5)
+    
+    task.wait(0.5) 
+    
     pcall(function()
         hrp.Velocity = Vector3.zero
         hrp.RotVelocity = Vector3.zero
     end)
-    task.wait(1)
+    task.wait(0.5)
+
     for p, cc in pairs(savedCollide) do
         if p and p.Parent then
             pcall(function() p.CanCollide = cc end)
         end
     end
-    if god then god.restore() end
+
+    pcall(function()
+        if oldFallDamage then
+            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+        end
+    end)
+
+    isTeleporting = false
     return true
 end
 
