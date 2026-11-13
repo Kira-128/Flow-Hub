@@ -1219,7 +1219,7 @@ function _G.STHAIN.TeleportTo(part)
         hrp.Velocity = Vector3.zero
         hrp.RotVelocity = Vector3.zero
     end)
-    task.wait(0.5)
+    task.wait(1)
 
     for p, cc in pairs(savedCollide) do
         if p and p.Parent then
