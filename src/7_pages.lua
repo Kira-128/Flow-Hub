@@ -502,19 +502,19 @@ resetBtn.MouseButton1Click:Connect(function()
     if resetBtn.Text == "Reset to Default" then
         resetBtn.Text = "Click Again to Confirm"
         
-        if resetTimer then task.cancel(resetTimer) end
+        if resetTimer then pcall(task.cancel, resetTimer) end
         resetTimer = task.delay(3, function()
             resetBtn.Text = "Reset to Default"
             resetTimer = nil
         end)
     elseif resetBtn.Text == "Click Again to Confirm" then
-        if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
-            pcall(_G.STHAIN.Utils.DeleteConfig)
+        -- 🔥 LOGIKA RESET: Hapus file + Balikin config ke default
+        if _G.STHAIN.ResetConfig then 
+            pcall(_G.STHAIN.ResetConfig)
         end
         
-        -- 🔥 Tampilkan Confirmed! selama 3 detik
         resetBtn.Text = "Confirmed!"
-        if resetTimer then task.cancel(resetTimer) end
+        if resetTimer then pcall(task.cancel, resetTimer) end
         
         resetTimer = task.delay(3, function()
             resetBtn.Text = "Reset to Default"
@@ -533,19 +533,19 @@ deleteBtn.MouseButton1Click:Connect(function()
     if deleteBtn.Text == "Delete Config File" then
         deleteBtn.Text = "Click Again to Confirm"
         
-        if deleteTimer then task.cancel(deleteTimer) end
+        if deleteTimer then pcall(task.cancel, deleteTimer) end
         deleteTimer = task.delay(3, function()
             deleteBtn.Text = "Delete Config File"
             deleteTimer = nil
         end)
     elseif deleteBtn.Text == "Click Again to Confirm" then
+        -- 🔥 LOGIKA DELETE: Cuma hapus file
         if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
             pcall(_G.STHAIN.Utils.DeleteConfig)
         end
         
-        -- 🔥 Tampilkan Confirmed! selama 3 detik
         deleteBtn.Text = "Confirmed!"
-        if deleteTimer then task.cancel(deleteTimer) end
+        if deleteTimer then pcall(task.cancel, deleteTimer) end
         
         deleteTimer = task.delay(3, function()
             deleteBtn.Text = "Delete Config File"
@@ -555,6 +555,7 @@ deleteBtn.MouseButton1Click:Connect(function()
 end)
 
 task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
+        
 
 -- ============================================================
 -- DRAG MAIN FRAME (Pakai Header)
