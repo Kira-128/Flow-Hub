@@ -1397,7 +1397,7 @@ local saveThread = nil
 function _G.STHAIN.MarkDirty()
     if not _G.STHAIN.Config.Config.AutoSave then return end
     isDirty = true
-    if saveThread then task.cancel(saveThread) end
+    if saveThread then pcall(task.cancel, saveThread) end
     saveThread = task.delay(2, function()
         if isDirty then
             if _G.STHAIN.Config.Config.AutoSave then
@@ -1424,6 +1424,37 @@ function _G.STHAIN.DeleteConfig()
     return false
 end
 
+function _G.STHAIN.ResetConfig()
+    
+    if Utils and Utils.DeleteConfig then 
+        pcall(Utils.DeleteConfig) 
+    end
+    
+    local defaults = {
+        Combat = { AutoAttack=false, AutoRush=false, AutoFollow=false, KillAura=false, TargetLock=false, AutoHeal=false, AntiStun=false, AttackDelay=0.35, RushDelay=0.5, FollowDelay=0.35, KillAuraRange=20, HealThreshold=30, FOVSize=150, ShowFOV=true },
+        Spawn = { UnitSlot=1, AutoSpawn=false },
+        Visual = { Chams=false, ESPSupply=false, ESPCapture=false, ESPShowDistance=false, ESPHealth=false, ESPName=false, Fullbright=false, NoFog=false },
+        Teleport = { OffsetY=5, EnemySupplyTarget="AttackerSupply1", OwnerSupplyTarget="DefenderSupply1" },
+        Movement = { WalkSpeed=16, EnableRunSpeed=false, Noclip=false, Fly=false, InfJump=false, FlySpeed=60, JumpPower=50 },
+        Automation = { AutoSummon=false, SummonAmount="1x", KeepGems=0, AutoAscend=false, AutoEvolve=false, AutoReward=false, AutoDailyReward=false },
+        AfkFarm = { EnableFarm=false },
+        Misc = { AutoJoinTeam="none", AntiAFK=true },
+        Config = { AutoSave=true }
+    }
+    
+    for cat, vals in pairs(defaults) do
+        if Config[cat] then
+            for k, v in pairs(vals) do
+                Config[cat][k] = v
+            end
+        end
+    end
+    
+    
+    if Utils and Utils.SaveConfig then 
+        pcall(Utils.SaveConfig) 
+    end
+end
 -- ============================================================
 -- RESPAWN HANDLER
 -- ============================================================
