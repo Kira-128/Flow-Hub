@@ -6,7 +6,7 @@ local C = S.Theme.Colors
 local F = S.Theme.Font
 
 local Lib = {}
-local ITEM_H = 32 
+local ITEM_H = 28 
 local HEADER_H = 30
 local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
