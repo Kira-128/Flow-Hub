@@ -6,7 +6,7 @@ local C = S.Theme.Colors
 local F = S.Theme.Font
 
 local Lib = {}
-local ITEM_H = 34 
+local ITEM_H = 32 
 local HEADER_H = 30
 local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
@@ -104,7 +104,7 @@ function Lib.makeSection(parent, title, defaultOpen)
     content.Parent = card
 
     local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 2)
+    contentLayout.Padding = UDim.new(0, 3)
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Parent = content
 
