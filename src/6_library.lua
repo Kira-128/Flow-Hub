@@ -1,6 +1,4 @@
--- [6] LIBRARY (Flow Hub - Components v6.1 FINAL)
--- Fixes: Renamed to Lib, Poco Resize Handle (FIXED), Slider Lag, Section Height
-
+-- [6] LIBRARY
 local S = _G.STHAIN
 local C = S.Theme.Colors
 local F = S.Theme.Font
@@ -716,7 +714,6 @@ function Lib.attachResizeHandle(mainFrame)
     local TS = S.Services.TS
     local RunService = S.Services.Run
 
-    -- 🔥 LOGIKA BATAS RESIZE (Dihitung sekali di awal)
     local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
     local minW, minH, maxW, maxH
 
@@ -869,7 +866,7 @@ function Lib.attachResizeHandle(mainFrame)
         local newW = math.clamp(startSize.X + delta.X, minW, maxW)
         local newH = math.clamp(startSize.Y + delta.Y, minH, maxH)
 
-        -- 🔥 EKSEKUSI PERUBAHAN UKURAN (INI YANG TADI HILANG)
+        -- EKSEKUSI PERUBAHAN UKURAN
         mainFrame.Size = UDim2.new(0, newW, 0, newH)
         updateHandlePosition()
         showHandle()
@@ -936,6 +933,5 @@ end)
     return resizeHandle
 end
 
--- Tetep export ke S.Comp biar 7_pages.lua ga error
 S.Comp = Lib
 S.Lib = Lib
