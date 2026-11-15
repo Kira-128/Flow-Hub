@@ -1,6 +1,10 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v3.6 + Refresh Config)
+  [7] PAGES — Command An Army (v4.0 - Refresh + UI Scale)
+  - ForceFixSection (DIPERTAHANKAN)
+  - Toggle Config Path (Sinkron ke 6_library v5.1)
+  - RefreshAll di tombol Reset
+  - Tambah Slider UI Scale
 ============================================================
 ]]
 
@@ -158,13 +162,6 @@ local function makeTab(iconId, name)
     end)
 
     table.insert(tabs, {btn = btn, icon = ic, text = tx, bar = acc})
-end
-
--- ============================================================
--- HELPER BUTTON
--- ============================================================
-local function makeSectionButton(parent, text, callback)
-    return S.Comp.makeButton(parent, text, callback)
 end
 
 -- ============================================================
@@ -399,7 +396,7 @@ end)
 task.defer(function() task.wait(0.1) forceFixSection(codeSection) end)
 
 -- ============================================================
--- TAB SETTINGS
+-- TAB SETTINGS (Dengan UI Scale Slider Baru)
 -- ============================================================
 local MM = S.Config.Movement
 local XX = S.Config.Misc
@@ -417,6 +414,13 @@ S.Comp.makeInput(utilityContent, "Fly Speed", MM.FlySpeed, function(v) MM.FlySpe
 S.Comp.makeInput(utilityContent, "Jump Power", MM.JumpPower, function(v) MM.JumpPower = v save() end)
 S.Comp.makeToggle(utilityContent, "Anti-AFK", XX.AntiAFK == true, function(v) XX.AntiAFK = v save() end, {"Misc", "AntiAFK"})
 task.defer(function() task.wait(0.1) forceFixSection(utilityContent) end)
+
+-- 🔥 SECTION BARU: UI SETTINGS (Pake Slider)
+local uiSettings = S.Comp.makeSection(pages["Settings"], "UI Settings", false)
+S.Comp.makeSlider(uiSettings, "UI Scale", 50, 150, 100, function(v)
+    S.Comp.setUIScale(v / 100)
+end)
+task.defer(function() task.wait(0.1) forceFixSection(uiSettings) end)
 
 local visualContent = S.Comp.makeSection(pages["Settings"], "Visuals", false)
 S.Comp.makeToggle(visualContent, "Full Bright", VV.Fullbright == true, function(v) VV.Fullbright = v save() end, {"Visual", "Fullbright"})
@@ -493,7 +497,7 @@ task.defer(function() task.wait(0.1) forceFixSection(autoSaveSection) end)
 local configMgmt = S.Comp.makeSection(pages["Config"], "Config Management", false)
 
 -- ============================================================
--- TOMBOL RESET (CONFIRMED! 3 DETIK)
+-- TOMBOL RESET (CONFIRMED! 3 DETIK + REFRESH ALL)
 -- ============================================================
 local resetBtn = S.Comp.makeButton(configMgmt, "Reset to Default", function() end, true)
 local resetTimer = nil
@@ -508,12 +512,12 @@ resetBtn.MouseButton1Click:Connect(function()
             resetTimer = nil
         end)
     elseif resetBtn.Text == "Click Again to Confirm" then
-        -- 🔥 LOGIKA RESET: Hapus file + Balikin config ke default
+        -- 1. Reset config (hapus file + balikin ke default)
         if _G.STHAIN.ResetConfig then 
             pcall(_G.STHAIN.ResetConfig)
         end
-
-        -- 🔥 REFRESH SEMUA TOGGLE DI GUI BIAR SINKRON
+        
+        -- 2. 🔥 REFRESH SEMUA TOGGLE DI GUI
         if S.Comp and S.Comp.RefreshAll then
             S.Comp.RefreshAll()
         end
@@ -544,9 +548,19 @@ deleteBtn.MouseButton1Click:Connect(function()
             deleteTimer = nil
         end)
     elseif deleteBtn.Text == "Click Again to Confirm" then
-        -- 🔥 LOGIKA DELETE: Cuma hapus file
+        -- 1. Hapus file config
         if _G.STHAIN.Utils and _G.STHAIN.Utils.DeleteConfig then 
             pcall(_G.STHAIN.Utils.DeleteConfig)
+        end
+        
+        -- 2. Reset memori config ke default (BIAR LOGIC & TOGGLE SINKRON)
+        if _G.STHAIN.ResetConfig then
+            pcall(_G.STHAIN.ResetConfig)
+        end
+        
+        -- 3. Refresh semua toggle di GUI
+        if S.Comp and S.Comp.RefreshAll then
+            S.Comp.RefreshAll()
         end
         
         deleteBtn.Text = "Confirmed!"
@@ -560,10 +574,9 @@ deleteBtn.MouseButton1Click:Connect(function()
 end)
 
 task.defer(function() task.wait(0.1) forceFixSection(configMgmt) end)
-        
 
 -- ============================================================
--- DRAG MAIN FRAME (Pakai Header)
+-- DRAG MAIN FRAME
 -- ============================================================
 local mainDrag, mainStart, mainPos
 S.GUI.Header.InputBegan:Connect(function(input)
@@ -609,10 +622,10 @@ S.GUI.MinBtn.MouseButton1Click:Connect(function()
     S.GUI.MainFrame.Visible = false
     S.GUI.FloatBtn.Visible = true
 end)
---S.GUI.FloatBtn.MouseButton1Click:Connect(function()
-  --  S.GUI.FloatBtn.Visible = false
-  --  S.GUI.MainFrame.Visible = true
---end)
+S.GUI.FloatBtn.MouseButton1Click:Connect(function()
+    S.GUI.FloatBtn.Visible = false
+    S.GUI.MainFrame.Visible = true
+end)
 
 S.GUI.MainFrame.Visible = true
 S.GUI.FloatBtn.Visible = false
@@ -686,7 +699,7 @@ if S.GUI.SearchBox then
 end
 
 -- ============================================================
--- RESIZE UI (FITUR BARU)
+-- RESIZE UI
 -- ============================================================
 if S.Comp and S.Comp.attachResizeHandle then
     S.Comp.attachResizeHandle(S.GUI.MainFrame)
