@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [4] UTILS — Command An Army
+  [4] UTILS — v1.7
 ============================================================
 ]]
 
@@ -116,10 +116,7 @@ function Utils.DeleteConfig()
             if success then deleted = true end
         end
     end
-    if delfolder and isfolder then
-        local ok, exist = pcall(isfolder, CONFIG_FOLDER)
-        if ok and exist then pcall(function() delfolder(CONFIG_FOLDER) end) end
-    end
+    -- delfolder DIHAPUS: Biar folder FlowHub_Configs tetep ada
     return deleted
 end
 
