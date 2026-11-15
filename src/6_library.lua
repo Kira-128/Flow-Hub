@@ -1,22 +1,32 @@
--- [6] LIBRARY (Flow Hub - Components v6.2 - With Refresh System)
--- Fixes: Renamed to Lib, Poco Resize Handle, Slider Lag, Section Height, Toggle Registry
+--[[
+============================================================
+  [6] LIBRARY (Flow Hub v5.1 - LYNX DROPDOWN + NEW FEATURES)
+  - Dropdown Overlay TIDAK DIUBAH (Visual Lynx tetep sama)
+  - Poco Resize Handle (Fixed Bug)
+  - UI Scale Support
+  - Toggle Registry (Buat Refresh Config)
+============================================================
+]]
 
 local S = _G.STHAIN
 local C = S.Theme.Colors
 local F = S.Theme.Font
 
-local Lib = {}
-local ITEM_H = 34 
-local HEADER_H = 30
+local Library = {}
+
+local ITEM_H = 34
+local HEADER_H = 32
 local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
+local POPUP_W = 180
+local POPUP_MAX_H = 200
 
 -- ============================================================
 -- TOGGLE REGISTRY (Buat Refresh Config)
 -- ============================================================
 local ToggleRegistry = {}
 
-function Lib.RefreshAll()
+function Library.RefreshAll()
     for _, entry in pairs(ToggleRegistry) do
         local path = entry.path
         local currentVal = nil
@@ -27,15 +37,40 @@ function Lib.RefreshAll()
         end
         
         if currentVal ~= nil and entry.setState then
-            entry.setState(currentVal, true) -- true = skip callback
+            entry.setState(currentVal, true)
         end
     end
 end
 
 -- ============================================================
--- HELPER: Recalculate section height
+-- UI SCALE (Fitur Baru)
 -- ============================================================
-local function recalcSection(card, content)
+function Library.setUIScale(scale)
+    if not S.GUI or not S.GUI.MainFrame then return end
+    local mainFrame = S.GUI.MainFrame
+    local uiScale = mainFrame:FindFirstChildOfClass("UIScale")
+    if not uiScale then
+        uiScale = Instance.new("UIScale")
+        uiScale.Parent = mainFrame
+    end
+    uiScale.Scale = math.clamp(scale, 0.5, 2.0)
+end
+
+-- ============================================================
+-- HELPER: new Instance
+-- ============================================================
+function Library.new(class, props)
+    local inst = Instance.new(class)
+    for k, v in pairs(props) do
+        inst[k] = v
+    end
+    return inst
+end
+
+-- ============================================================
+-- HELPER: Realtime Section Height (v3.2)
+-- ============================================================
+local function updateSectionHeight(card, content)
     if not card or not card.Parent then return end
     if not content.Visible then
         card.Size = UDim2.new(1, 0, 0, HEADER_H)
@@ -43,155 +78,175 @@ local function recalcSection(card, content)
     end
     local layout = content:FindFirstChildOfClass("UIListLayout")
     local totalH = 0
-    if layout then totalH = layout.AbsoluteContentSize.Y end
+    if layout then
+        totalH = layout.AbsoluteContentSize.Y
+    end
     card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
 end
 
-local function hookAutoRecalc(card, content)
+local function bindAutoHeight(card, content)
     local layout = content:FindFirstChildOfClass("UIListLayout")
     if layout then
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            recalcSection(card, content)
+            updateSectionHeight(card, content)
         end)
     end
+
+    local uiScale = card:FindFirstChildOfClass("UIScale")
+    if uiScale then
+        uiScale:GetPropertyChangedSignal("Scale"):Connect(function()
+            updateSectionHeight(card, content)
+        end)
+    end
+
     content.ChildAdded:Connect(function()
-        task.defer(function() recalcSection(card, content) end)
+        task.defer(function() updateSectionHeight(card, content) end)
     end)
+
     content.ChildRemoved:Connect(function()
-        task.defer(function() recalcSection(card, content) end)
+        task.defer(function() updateSectionHeight(card, content) end)
     end)
+
     content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        recalcSection(card, content)
+        updateSectionHeight(card, content)
     end)
 end
 
 -- ============================================================
 -- SECTION
 -- ============================================================
-function Lib.makeSection(parent, title, defaultOpen)
-    local card = Instance.new("Frame")
-    card.Name = "Section_" .. title
-    card.Size = UDim2.new(1, 0, 0, HEADER_H)
-    card.BackgroundColor3 = CARD_BG
-    card.BackgroundTransparency = CARD_TRANS
-    card.BorderSizePixel = 0
-    card.ClipsDescendants = true
-    card.Parent = parent
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
+function Library.makeSection(parent, title, defaultOpen)
+    local card = Library.new("Frame", {
+        Name = "Section_" .. title,
+        Size = UDim2.new(1, 0, 0, HEADER_H),
+        BackgroundColor3 = CARD_BG,
+        BackgroundTransparency = CARD_TRANS,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Parent = parent
+    })
+    Library.new("UICorner", { Parent = card, CornerRadius = UDim.new(0, 6) })
 
-    local header = Instance.new("TextButton")
-    header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, HEADER_H)
-    header.Position = UDim2.new(0, 0, 0, 0)
-    header.Text = ""
-    header.BackgroundTransparency = 1
-    header.BorderSizePixel = 0
-    header.AutoButtonColor = false
-    header.ZIndex = 2
-    header.Parent = card
+    local header = Library.new("TextButton", {
+        Name = "Header",
+        Size = UDim2.new(1, 0, 0, HEADER_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        ZIndex = 2,
+        Parent = card
+    })
 
-    local titleLbl = Instance.new("TextLabel")
-    titleLbl.Size = UDim2.new(1, -50, 1, 0)
-    titleLbl.Position = UDim2.new(0, 12, 0, 0)
-    titleLbl.Text = title
-    titleLbl.TextColor3 = C.text
-    titleLbl.TextSize = 11
-    titleLbl.Font = F.bold
-    titleLbl.TextXAlignment = Enum.TextXAlignment.Left
-    titleLbl.BackgroundTransparency = 1
-    titleLbl.ZIndex = 3
-    titleLbl.Parent = header
+    Library.new("TextLabel", {
+        Size = UDim2.new(1, -50, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = title,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.bold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        ZIndex = 3,
+        Parent = header
+    })
 
-    local arrow = Instance.new("TextLabel")
-    arrow.Size = UDim2.new(0, 16, 1, 0)
-    arrow.Position = UDim2.new(1, -26, 0, 0)
-    arrow.AnchorPoint = Vector2.new(1, 0) 
-    arrow.Text = defaultOpen and "▼" or "▶"
-    arrow.TextColor3 = C.accent
-    arrow.TextSize = 10
-    arrow.Font = F.bold
-    arrow.BackgroundTransparency = 1
-    arrow.ZIndex = 3
-    arrow.Parent = header
+    local arrow = Library.new("TextLabel", {
+        Size = UDim2.new(0, 16, 1, 0),
+        Position = UDim2.new(1, -26, 0, 0),
+        AnchorPoint = Vector2.new(1, 0),
+        Text = defaultOpen and "▼" or "▶",
+        TextColor3 = C.accent,
+        TextSize = 10,
+        Font = F.bold,
+        BackgroundTransparency = 1,
+        ZIndex = 3,
+        Parent = header
+    })
 
-    local content = Instance.new("Frame")
-    content.Name = "Content"
-    content.Size = UDim2.new(1, 0, 0, 0)
-    content.Position = UDim2.new(0, 0, 0, HEADER_H)
-    content.BackgroundTransparency = 1
-    content.ClipsDescendants = false
-    content.Visible = defaultOpen 
-    content.ZIndex = 2
-    content.Parent = card
+    local content = Library.new("Frame", {
+        Name = "Content",
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = UDim2.new(0, 0, 0, HEADER_H),
+        BackgroundTransparency = 1,
+        ClipsDescendants = false,
+        Visible = defaultOpen,
+        ZIndex = 2,
+        Parent = card
+    })
 
-    local contentLayout = Instance.new("UIListLayout")
-    contentLayout.Padding = UDim.new(0, 1)
-    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Parent = content
+    Library.new("UIListLayout", {
+        Padding = UDim.new(0, 2),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = content
+    })
 
-    local cPad = Instance.new("UIPadding")
-    cPad.PaddingTop = UDim.new(0, 4)
-    cPad.PaddingBottom = UDim.new(0, 4)
-    cPad.Parent = content
+    Library.new("UIPadding", {
+        PaddingTop = UDim.new(0, 4),
+        PaddingBottom = UDim.new(0, 4),
+        Parent = content
+    })
 
     local isOpen = defaultOpen
-    hookAutoRecalc(card, content)
+    bindAutoHeight(card, content)
 
     header.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         arrow.Text = isOpen and "▼" or "▶"
         content.Visible = isOpen
-        task.defer(function() recalcSection(card, content) end)
+        task.defer(function() updateSectionHeight(card, content) end)
     end)
 
     task.defer(function()
         task.wait(0.15)
-        if defaultOpen then recalcSection(card, content) end
+        if defaultOpen then updateSectionHeight(card, content) end
     end)
 
-    return content, function() recalcSection(card, content) end, card
+    return content
 end
 
 -- ============================================================
 -- TOGGLE (WITH REGISTRY)
 -- ============================================================
-function Lib.makeToggle(parent, name, default, callback, configPath)
-    local f = Instance.new("Frame")
-    f.Name = "Toggle_" .. name
-    f.Size = UDim2.new(1, 0, 0, ITEM_H)
-    f.BackgroundTransparency = 1
-    f.BorderSizePixel = 0
-    f.Parent = parent
+function Library.makeToggle(parent, name, default, callback, configPath)
+    local f = Library.new("Frame", {
+        Name = "Toggle_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
 
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.7, -12, 1, 0)
-    l.Position = UDim2.new(0, 12, 0, 0)
-    l.Text = name
-    l.TextColor3 = C.text
-    l.TextSize = 11
-    l.Font = F.norm
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.BackgroundTransparency = 1
-    l.Parent = f
+    Library.new("TextLabel", {
+        Size = UDim2.new(0.7, -12, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
 
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0, 30, 0, 18)
-    b.AnchorPoint = Vector2.new(1, 0.5)
-    b.Position = UDim2.new(1, -12, 0.5, 0)
-    b.Text = ""
-    b.BackgroundColor3 = default and C.accent or C.bg4
-    b.BorderSizePixel = 0
-    b.AutoButtonColor = false
-    b.Parent = f
-    Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
+    local b = Library.new("TextButton", {
+        Size = UDim2.new(0, 30, 0, 18),
+        Position = UDim2.new(1, -42, 0.5, -9),
+        Text = "",
+        BackgroundColor3 = default and C.accent or C.bg4,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Parent = f
+    })
+    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(1, 0) })
 
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 12, 0, 12)
-    knob.Position = default and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
-    knob.BackgroundColor3 = C.text
-    knob.BorderSizePixel = 0
-    knob.Parent = b
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+    local knob = Library.new("Frame", {
+        Size = UDim2.new(0, 12, 0, 12),
+        Position = default and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 3, 0.5, -6),
+        BackgroundColor3 = C.text,
+        BorderSizePixel = 0,
+        Parent = b
+    })
+    Library.new("UICorner", { Parent = knob, CornerRadius = UDim.new(1, 0) })
 
     local state = default
 
@@ -203,54 +258,54 @@ function Lib.makeToggle(parent, name, default, callback, configPath)
         if not skipCallback then pcall(callback, state) end
     end
 
-    b.MouseButton1Click:Connect(function() setState(not state, false) end)
-    
-    -- 🔥 TAMBAHIN KE REGISTRY (Kalau configPath dikasih)
+    b.MouseButton1Click:Connect(function()
+        setState(not state, false)
+    end)
+
     if configPath then
-        table.insert(ToggleRegistry, {
-            path = configPath,
-            setState = setState
-        })
+        table.insert(ToggleRegistry, { path = configPath, setState = setState })
     end
-    
+
     return setState
 end
 
 -- ============================================================
--- INPUT
+-- INPUT (Angka)
 -- ============================================================
-function Lib.makeInput(parent, name, default, callback)
-    local f = Instance.new("Frame")
-    f.Name = "Input_" .. name
-    f.Size = UDim2.new(1, 0, 0, ITEM_H)
-    f.BackgroundTransparency = 1
-    f.BorderSizePixel = 0
-    f.Parent = parent
+function Library.makeInput(parent, name, default, callback)
+    local f = Library.new("Frame", {
+        Name = "Input_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
 
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.55, -12, 1, 0)
-    l.Position = UDim2.new(0, 12, 0, 0)
-    l.Text = name
-    l.TextColor3 = C.text
-    l.TextSize = 11
-    l.Font = F.norm
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.BackgroundTransparency = 1
-    l.Parent = f
+    Library.new("TextLabel", {
+        Size = UDim2.new(0.55, -12, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
 
-    local b = Instance.new("TextBox")
-    b.AnchorPoint = Vector2.new(1, 0.5)
-    b.Position = UDim2.new(1, -12, 0.5, 0)
-    b.Size = UDim2.new(0.20, 0, 0, 22)
-    b.Text = tostring(default)
-    b.TextColor3 = C.text
-    b.TextSize = 11
-    b.Font = F.norm
-    b.BackgroundColor3 = C.bg4
-    b.BorderSizePixel = 0
-    b.ClearTextOnFocus = false
-    b.Parent = f
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    local b = Library.new("TextBox", {
+        Size = UDim2.new(0, 55, 0, 22),
+        Position = UDim2.new(1, -67, 0.5, -11),
+        Text = tostring(default),
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        BackgroundColor3 = C.bg4,
+        BorderSizePixel = 0,
+        ClearTextOnFocus = false,
+        Parent = f
+    })
+    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
 
     b.FocusLost:Connect(function()
         local v = tonumber(b.Text)
@@ -261,112 +316,142 @@ end
 -- ============================================================
 -- TEXT INPUT
 -- ============================================================
-function Lib.makeTextInput(parent, name, default, placeholder, callback)
-    local f = Instance.new("Frame")
-    f.Name = "TextInput_" .. name
-    f.Size = UDim2.new(1, 0, 0, ITEM_H)
-    f.BackgroundTransparency = 1
-    f.BorderSizePixel = 0
-    f.Parent = parent
+function Library.makeTextInput(parent, name, default, placeholder, callback, isFullWidth)
+    local f = Library.new("Frame", {
+        Name = "TextInput_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
 
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.5, -12, 1, 0)
-    l.Position = UDim2.new(0, 12, 0, 0)
-    l.Text = name
-    l.TextColor3 = C.text
-    l.TextSize = 11
-    l.Font = F.norm
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.BackgroundTransparency = 1
-    l.Parent = f
+    local labelSize = isFullWidth and UDim2.new(0, 80, 1, 0) or UDim2.new(0.5, -12, 1, 0)
+    Library.new("TextLabel", {
+        Size = labelSize,
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
 
-    local b = Instance.new("TextBox")
-    b.Name = "TextBox"
-    b.AnchorPoint = Vector2.new(1, 0.5)
-    b.Position = UDim2.new(1, -12, 0.5, 0)
-    b.Size = UDim2.new(0.48, 0, 0, 22)
-    b.Text = tostring(default or "")
-    b.PlaceholderText = placeholder or ""
-    b.PlaceholderColor3 = C.textDim2
-    b.TextColor3 = C.text
-    b.TextSize = 11
-    b.Font = F.norm
-    b.BackgroundColor3 = C.bg4
-    b.BorderSizePixel = 0
-    b.ClearTextOnFocus = false
-    b.Parent = f
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    local b
+    if isFullWidth then
+        b = Library.new("TextBox", {
+            Size = UDim2.new(1, -12, 0, 22),
+            Position = UDim2.new(0, 6, 0.5, -11),
+            Text = tostring(default or ""),
+            PlaceholderText = placeholder or "",
+            PlaceholderColor3 = C.textDim2,
+            TextColor3 = C.text,
+            TextSize = 11,
+            Font = F.norm,
+            BackgroundColor3 = C.bg4,
+            BorderSizePixel = 0,
+            ClearTextOnFocus = false,
+            Parent = f
+        })
+    else
+        b = Library.new("TextBox", {
+            Size = UDim2.new(0, 130, 0, 22),
+            Position = UDim2.new(1, -142, 0.5, -11),
+            Text = tostring(default or ""),
+            PlaceholderText = placeholder or "",
+            PlaceholderColor3 = C.textDim2,
+            TextColor3 = C.text,
+            TextSize = 11,
+            Font = F.norm,
+            BackgroundColor3 = C.bg4,
+            BorderSizePixel = 0,
+            ClearTextOnFocus = false,
+            Parent = f
+        })
+    end
+    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
 
-    b.FocusLost:Connect(function() pcall(callback, b.Text) end)
+    b.FocusLost:Connect(function()
+        pcall(callback, b.Text)
+    end)
+
     return b
 end
 
 -- ============================================================
--- SLIDER
+-- SLIDER (Fitur Baru)
 -- ============================================================
-function Lib.makeSlider(parent, name, min, max, default, callback)
-    local f = Instance.new("Frame")
-    f.Name = "Slider_" .. name
-    f.Size = UDim2.new(1, 0, 0, ITEM_H)
-    f.BackgroundTransparency = 1
-    f.BorderSizePixel = 0
-    f.Parent = parent
+function Library.makeSlider(parent, name, min, max, default, callback)
+    local f = Library.new("Frame", {
+        Name = "Slider_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = parent
+    })
 
-    local l = Instance.new("TextLabel")
-    l.Size = UDim2.new(0.6, -12, 1, 0)
-    l.Position = UDim2.new(0, 12, 0, 0)
-    l.Text = name
-    l.TextColor3 = C.text
-    l.TextSize = 11
-    l.Font = F.norm
-    l.TextXAlignment = Enum.TextXAlignment.Left
-    l.BackgroundTransparency = 1
-    l.Parent = f
+    Library.new("TextLabel", {
+        Size = UDim2.new(0.6, -12, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
 
-    local valLabel = Instance.new("TextLabel")
-    valLabel.AnchorPoint = Vector2.new(1, 0.5)
-    valLabel.Position = UDim2.new(1, -12, 0.5, 0)
-    valLabel.Size = UDim2.new(0, 30, 1, 0)
-    valLabel.Text = tostring(default)
-    valLabel.TextColor3 = C.accent
-    valLabel.TextSize = 11
-    valLabel.Font = F.bold
-    valLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valLabel.BackgroundTransparency = 1
-    valLabel.Parent = f
+    local valLabel = Library.new("TextLabel", {
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -12, 0.5, 0),
+        Size = UDim2.new(0, 30, 1, 0),
+        Text = tostring(default),
+        TextColor3 = C.accent,
+        TextSize = 11,
+        Font = F.bold,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        BackgroundTransparency = 1,
+        Parent = f
+    })
 
-    local barBG = Instance.new("Frame")
-    barBG.AnchorPoint = Vector2.new(1, 0.5)
-    barBG.Position = UDim2.new(1, -50, 0.5, 0)
-    barBG.Size = UDim2.new(0.4, 0, 0, 6)
-    barBG.BackgroundColor3 = C.bg4
-    barBG.BorderSizePixel = 0
-    barBG.Parent = f
-    Instance.new("UICorner", barBG).CornerRadius = UDim.new(1, 0)
+    local barBG = Library.new("Frame", {
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -50, 0.5, 0),
+        Size = UDim2.new(0.4, 0, 0, 6),
+        BackgroundColor3 = C.bg4,
+        BorderSizePixel = 0,
+        Parent = f
+    })
+    Library.new("UICorner", { Parent = barBG, CornerRadius = UDim.new(1, 0) })
 
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = C.accent
-    fill.BorderSizePixel = 0
-    fill.Parent = barBG
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+    local fill = Library.new("Frame", {
+        Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+        BackgroundColor3 = C.accent,
+        BorderSizePixel = 0,
+        Parent = barBG
+    })
+    Library.new("UICorner", { Parent = fill, CornerRadius = UDim.new(1, 0) })
 
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 14, 0, 14)
-    knob.AnchorPoint = Vector2.new(0.5, 0.5)
-    knob.Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, 0)
-    knob.BackgroundColor3 = C.text
-    knob.BorderSizePixel = 0
-    knob.ZIndex = 2
-    knob.Parent = barBG
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+    local knob = Library.new("Frame", {
+        Size = UDim2.new(0, 14, 0, 14),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, 0),
+        BackgroundColor3 = C.text,
+        BorderSizePixel = 0,
+        ZIndex = 2,
+        Parent = barBG
+    })
+    Library.new("UICorner", { Parent = knob, CornerRadius = UDim.new(1, 0) })
 
-    local sliderBtn = Instance.new("TextButton")
-    sliderBtn.Size = UDim2.new(1, 0, 1, 0)
-    sliderBtn.BackgroundTransparency = 1
-    sliderBtn.Text = ""
-    sliderBtn.ZIndex = 3
-    sliderBtn.Parent = barBG
+    local sliderBtn = Library.new("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        ZIndex = 3,
+        Parent = barBG
+    })
 
     local isDragging = false
     local currentVal = default
@@ -381,26 +466,26 @@ function Lib.makeSlider(parent, name, min, max, default, callback)
         if triggerCallback then pcall(callback, val) end
     end
 
-    sliderBtn.MouseButton1Down:Connect(function() 
-        isDragging = true 
-        updateValue(S.Services.UIS:GetMouseLocation().X, false) 
+    sliderBtn.MouseButton1Down:Connect(function()
+        isDragging = true
+        updateValue(S.Services.UIS:GetMouseLocation().X, false)
     end)
-    
-    sliderBtn.MouseButton1Up:Connect(function() 
-        isDragging = false 
-        pcall(callback, currentVal) 
+
+    sliderBtn.MouseButton1Up:Connect(function()
+        isDragging = false
+        pcall(callback, currentVal)
     end)
-    
+
     S.Services.UIS.InputChanged:Connect(function(input)
         if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             updateValue(input.Position.X, false)
         end
     end)
-    
+
     S.Services.UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             if isDragging then
-                isDragging = false 
+                isDragging = false
                 pcall(callback, currentVal)
             end
         end
@@ -410,36 +495,39 @@ end
 -- ============================================================
 -- BUTTON
 -- ============================================================
-function Lib.makeButton(parent, name, callback, noHover)
-    local wrapper = Instance.new("Frame")
-    wrapper.Name = "BtnWrapper_" .. name
-    wrapper.Size = UDim2.new(1, 0, 0, ITEM_H)
-    wrapper.BackgroundTransparency = 1
-    wrapper.Parent = parent
+function Library.makeButton(parent, name, callback, noHover)
+    local wrapper = Library.new("Frame", {
+        Name = "BtnWrapper_" .. name,
+        Size = UDim2.new(1, 0, 0, ITEM_H),
+        BackgroundTransparency = 1,
+        Parent = parent
+    })
 
-    local b = Instance.new("TextButton")
-    b.Name = "Button_" .. name
-    b.Size = UDim2.new(1, -12, 0, ITEM_H - 8)
-    b.Position = UDim2.new(0, 6, 0.5, -(ITEM_H-8)/2)
-    b.Text = name
-    b.TextColor3 = C.text
-    b.TextSize = 11
-    b.Font = F.norm
-    b.BackgroundColor3 = C.bg4
-    b.BackgroundTransparency = 0.3
-    b.BorderSizePixel = 0
-    b.AutoButtonColor = false
-    b.Parent = wrapper
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
+    local b = Library.new("TextButton", {
+        Name = "Button_" .. name,
+        Size = UDim2.new(1, -12, 0, ITEM_H - 8),
+        Position = UDim2.new(0, 6, 0.5, -(ITEM_H-8)/2),
+        Text = name,
+        TextColor3 = C.text,
+        TextSize = 11,
+        Font = F.norm,
+        BackgroundColor3 = C.bg4,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Parent = wrapper
+    })
+    Library.new("UICorner", { Parent = b, CornerRadius = UDim.new(0, 5) })
 
-    local flash = Instance.new("Frame")
-    flash.Size = UDim2.new(1, 0, 1, 0)
-    flash.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    flash.BackgroundTransparency = 1
-    flash.BorderSizePixel = 0
-    flash.ZIndex = 1
-    flash.Parent = b
-    Instance.new("UICorner", flash).CornerRadius = UDim.new(0, 5)
+    local flash = Library.new("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 5,
+        Parent = b
+    })
+    Library.new("UICorner", { Parent = flash, CornerRadius = UDim.new(0, 5) })
 
     b.MouseButton1Down:Connect(function()
         S.Services.TS:Create(flash, TweenInfo.new(0.1), { BackgroundTransparency = 0.8 }):Play()
@@ -451,8 +539,10 @@ function Lib.makeButton(parent, name, callback, noHover)
         S.Services.TS:Create(flash, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
     end)
 
-    b.MouseButton1Click:Connect(function() pcall(callback) end)
-    
+    b.MouseButton1Click:Connect(function()
+        pcall(callback)
+    end)
+
     if not noHover then
         b.MouseEnter:Connect(function()
             S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg3, BackgroundTransparency = 0.1 }):Play()
@@ -461,15 +551,14 @@ function Lib.makeButton(parent, name, callback, noHover)
             S.Services.TS:Create(b, TweenInfo.new(0.15), { BackgroundColor3 = C.bg4, BackgroundTransparency = 0.3 }):Play()
         end)
     end
-    
+
     return b
 end
 
 -- ============================================================
--- DROPDOWN (TIDAK DIUBAH)
+-- DROPDOWN (Lynx Style - TIDAK DIUBAH)
 -- ============================================================
-
-    Library._dropdownOverlay = nil
+Library._dropdownOverlay = nil
 Library._dropdownPanel = nil
 Library._dropdownFolder = nil
 Library._dropdownPageLayout = nil
@@ -478,7 +567,6 @@ Library._dropdownCount = 0
 function Library._initDropdownSystem()
     if Library._dropdownOverlay then return end
     
-    -- ⬇️ DIUBAH KE 36: Pas di bawah garis Header (sebelum Search Bar) ⬇️
     Library._dropdownOverlay = Library.new("Frame", {
         Parent = S.GUI.MainFrame,
         Size = UDim2.new(1, 0, 1, -36),           
@@ -879,11 +967,10 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
     }
 end
 
-
 -- ============================================================
--- RESIZE HANDLE (LAYER OVERLAY + RESPONSIVE MIN/MAX)
+-- RESIZE HANDLE (Poco Style + Auto-Hide)
 -- ============================================================
-function Lib.attachResizeHandle(mainFrame)
+function Library.attachResizeHandle(mainFrame)
     if not mainFrame or not mainFrame.Parent then return end
 
     local UIS = S.Services.UIS
@@ -901,15 +988,13 @@ function Lib.attachResizeHandle(mainFrame)
         maxW, maxH = 1100, 760
     end
 
-    -- hapus handle lama & layer lama kalau ada
+    -- Hapus handle lama & layer lama kalau ada
     local oldHandle = mainFrame:FindFirstChild("ResizeHandle")
     if oldHandle then oldHandle:Destroy() end
     local oldLayer = mainFrame.Parent and mainFrame.Parent:FindFirstChild("ResizeHandleLayer")
     if oldLayer then oldLayer:Destroy() end
 
-    -- ============================================================
-    -- LAYER OVERLAY (parent = ScreenGui, tidak ke-clip MainFrame)
-    -- ============================================================
+    -- Layer Overlay
     local handleLayer = Instance.new("Frame")
     handleLayer.Name = "ResizeHandleLayer"
     handleLayer.Size = UDim2.new(1, 0, 1, 0)
@@ -917,17 +1002,15 @@ function Lib.attachResizeHandle(mainFrame)
     handleLayer.BorderSizePixel = 0
     handleLayer.ClipsDescendants = false
     handleLayer.ZIndex = 9998
-    handleLayer.Active = false -- ⬅️ PENTING: Biar ga ngeblok klik game
-    handleLayer.Parent = mainFrame.Parent   -- ScreenGui
+    handleLayer.Active = false -- PENTING: Biar ga ngeblok klik game
+    handleLayer.Parent = mainFrame.Parent
 
-    -- ============================================================
-    -- HANDLE
-    -- ============================================================
+    -- Handle
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
     resizeHandle.Size = UDim2.new(0, 44, 0, 44)
     resizeHandle.AnchorPoint = Vector2.new(1, 1)
-    resizeHandle.Position = UDim2.new(0, 0, 0, 0)   -- di-update tiap frame
+    resizeHandle.Position = UDim2.new(0, 0, 0, 0)
     resizeHandle.BackgroundTransparency = 1
     resizeHandle.Text = ""
     resizeHandle.AutoButtonColor = false
@@ -935,7 +1018,7 @@ function Lib.attachResizeHandle(mainFrame)
     resizeHandle.Visible = true
     resizeHandle.Parent = handleLayer
 
-    -- arc container 24 (stroke tidak terpotong)
+    -- Arc Container
     local arcContainer = Instance.new("Frame")
     arcContainer.Size = UDim2.new(0, 24, 0, 24)
     arcContainer.AnchorPoint = Vector2.new(1, 1)
@@ -945,7 +1028,7 @@ function Lib.attachResizeHandle(mainFrame)
     arcContainer.ZIndex = 10000
     arcContainer.Parent = resizeHandle
 
-    -- ring 34x34, anchor (0,0), posisi (-17,-17) → arc muncul di pojok
+    -- Curved Ring
     local curvedRing = Instance.new("Frame")
     curvedRing.Size = UDim2.new(0, 34, 0, 34)
     curvedRing.AnchorPoint = Vector2.new(0, 0)
@@ -964,9 +1047,7 @@ function Lib.attachResizeHandle(mainFrame)
     ringCorner.CornerRadius = UDim.new(1, 0)
     ringCorner.Parent = curvedRing
 
-    -- ============================================================
-    -- UPDATE POSISI HANDLE (ikut pojok kanan-bawah MainFrame)
-    -- ============================================================
+    -- Update Posisi Handle
     local GAP = 14
 
     local function updateHandlePosition()
@@ -983,9 +1064,7 @@ function Lib.attachResizeHandle(mainFrame)
     local updateConn = RunService.RenderStepped:Connect(updateHandlePosition)
     updateHandlePosition()
 
-    -- ============================================================
-    -- AUTO-HIDE (fade stroke, JANGAN set Visible=false)
-    -- ============================================================
+    -- Auto-Hide
     local isShowing = true
     local hideTimer = nil
     local IDLE_TIME = 5
@@ -1011,9 +1090,7 @@ function Lib.attachResizeHandle(mainFrame)
         end)
     end
 
-    -- ============================================================
-    -- RESIZE LOGIC (FIXED)
-    -- ============================================================
+    -- Resize Logic
     local activeInput = nil
     local resizeStart = nil
     local startSize = nil
@@ -1039,11 +1116,9 @@ function Lib.attachResizeHandle(mainFrame)
 
         local delta = input.Position - resizeStart
 
-        -- Hitung ukuran baru pakai min/max yang udah ditentuin di atas
         local newW = math.clamp(startSize.X + delta.X, minW, maxW)
         local newH = math.clamp(startSize.Y + delta.Y, minH, maxH)
 
-        -- EKSEKUSI PERUBAHAN UKURAN
         mainFrame.Size = UDim2.new(0, newW, 0, newH)
         updateHandlePosition()
         showHandle()
@@ -1070,7 +1145,7 @@ function Lib.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- render loop: cek visibility MainFrame
+    -- Render loop: cek visibility MainFrame
     local renderConn = RunService.RenderStepped:Connect(function()
         if destroyed then return end
         if not mainFrame.Parent then
@@ -1087,7 +1162,7 @@ function Lib.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- cleanup
+    -- Cleanup
     local function cleanup()
         if destroyed then return end
         destroyed = true
@@ -1110,5 +1185,4 @@ function Lib.attachResizeHandle(mainFrame)
     return resizeHandle
 end
 
-S.Comp = Lib
-S.Lib = Lib
+S.Comp = Library
