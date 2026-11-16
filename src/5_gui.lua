@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v3.8 - Mobile Size 440x300)
+  [5] GUI (Flow Hub v2.4) 
 ============================================================
 ]]
 
@@ -138,9 +138,9 @@ mainFrame.Name = "MainFrame"
 
 -- 🔥 UKURAN KHUSUS PC & HP
 if isMobile then
-    mainFrame.Size = UDim2.new(0, 440, 0, 300) -- Ukuran HP (Sesuai Request)
+    mainFrame.Size = UDim2.new(0, 450, 0, 300) -- Ukuran HP
 else
-    mainFrame.Size = UDim2.new(0, 560, 0, 360) -- Ukuran PC (Lynx)
+    mainFrame.Size = UDim2.new(0, 560, 0, 360) -- Ukuran PC
 end
 
 -- Biar posisinya selalu di tengah
