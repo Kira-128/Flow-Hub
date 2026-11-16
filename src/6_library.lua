@@ -556,12 +556,11 @@ function Library.makeButton(parent, name, callback, noHover)
 end
 
 -- ============================================================
--- DROPDOWN (Lynx Style - TIDAK DIUBAH)
+-- DROPDOWN (Lynx Style - Fixed Warna & Numpuk)
 -- ============================================================
 Library._dropdownOverlay = nil
 Library._dropdownPanel = nil
 Library._dropdownFolder = nil
-Library._dropdownPageLayout = nil
 Library._dropdownCount = 0
 
 function Library._initDropdownSystem()
@@ -590,13 +589,14 @@ function Library._initDropdownSystem()
         ZIndex = 51
     })
 
+    -- Panel Dropdown (Warna disamain sama Section: C.bg3)
     Library._dropdownPanel = Library.new("Frame", {
         Parent = Library._dropdownOverlay,
         AnchorPoint = Vector2.new(1, 0.5),
-        Size = UDim2.new(0, 160, 1, -16),
-        Position = UDim2.new(1, 172, 0.5, 0),
-        BackgroundColor3 = C.bg2,
-        BackgroundTransparency = 0.09,
+        Size = UDim2.new(0, 180, 1, -16),
+        Position = UDim2.new(1, 192, 0.5, 0),
+        BackgroundColor3 = C.bg3,              -- ✅ Sama kayak Section
+        BackgroundTransparency = 0.05,         -- ✅ Lebih solid dikit
         BorderSizePixel = 0,
         ClipsDescendants = true,
         ZIndex = 52,
@@ -615,21 +615,12 @@ function Library._initDropdownSystem()
         ZIndex = 53,
         Name = "DropdownFolder"
     })
-
-    Library._dropdownPageLayout = Library.new("UIPageLayout", {
-        Parent = Library._dropdownFolder,
-        EasingDirection = Enum.EasingDirection.InOut,
-        EasingStyle = Enum.EasingStyle.Quad,
-        TweenTime = 0.01,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        FillDirection = Enum.FillDirection.Vertical,
-        Name = "DropdownPageLayout"
-    })
+    -- UIPageLayout DIHAPUS (Biar ga numpuk)
 
     closeOverlay.Activated:Connect(function()
         if Library._dropdownOverlay.Visible then
             Library._dropdownOverlay.BackgroundTransparency = 0.95
-            Library._dropdownPanel.Position = UDim2.new(1, 172, 0.5, 0)
+            Library._dropdownPanel.Position = UDim2.new(1, 192, 0.5, 0)
             Library._dropdownOverlay.Visible = false
         end
     end)
@@ -638,7 +629,14 @@ end
 function Library._showDropdown(dropdownContainer)
     Library._initDropdownSystem()
     Library._dropdownOverlay.Visible = true
-    Library._dropdownPageLayout:JumpTo(dropdownContainer)
+    
+    -- Sembunyiin semua container, munculin yang dipilih
+    for _, child in pairs(Library._dropdownFolder:GetChildren()) do
+        if child:IsA("Frame") then
+            child.Visible = (child == dropdownContainer)
+        end
+    end
+    
     Library._dropdownOverlay.BackgroundTransparency = 0.95
     Library._dropdownPanel.Position = UDim2.new(1, -11, 0.5, 0)
 end
@@ -646,7 +644,7 @@ end
 function Library._hideDropdown()
     if Library._dropdownOverlay and Library._dropdownOverlay.Visible then
         Library._dropdownOverlay.BackgroundTransparency = 0.95
-        Library._dropdownPanel.Position = UDim2.new(1, 172, 0.5, 0)
+        Library._dropdownPanel.Position = UDim2.new(1, 192, 0.5, 0)
         Library._dropdownOverlay.Visible = false
     end
 end
@@ -723,11 +721,14 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         ZIndex = 10
     })
 
+    -- Container (Visible = false by default)
     local dropdownContainer = Library.new("Frame", {
         Parent = Library._dropdownFolder,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
-        LayoutOrder = dropdownLayoutOrder
+        LayoutOrder = dropdownLayoutOrder,
+        Visible = false, -- ✅ Cuma muncul pas dipilih
+        ZIndex = 54
     })
 
     local searchBox = Library.new("TextBox", {
@@ -744,7 +745,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         Size = UDim2.new(1, -8, 0, 24),
         Position = UDim2.new(0, 4, 0, 4),
         ClearTextOnFocus = false,
-        ZIndex = 54
+        ZIndex = 55
     })
     Library.new("UICorner", { Parent = searchBox, CornerRadius = UDim.new(0, 4) })
     Library.new("UIStroke", { Parent = searchBox, Color = C.stroke, Thickness = 1, Transparency = 0.5 })
@@ -762,7 +763,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         BackgroundTransparency = 1,
         ScrollBarThickness = 0,
         CanvasSize = UDim2.new(0, 0, 0, 0),
-        ZIndex = 54
+        ZIndex = 55
     })
 
     local allOptions, filteredOptions = {}, {}
@@ -808,7 +809,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
     local function paintRow(row, opt)
         local selected = (opt.value == selectedValue)
         row.ChooseFrame.Size = selected and UDim2.new(0, 3, 0, 16) or UDim2.new(0, 0, 0, 0)
-        row.BackgroundColor3 = selected and C.bg3 or C.bg2
+        row.BackgroundColor3 = selected and C.bg4 or C.bg2
         row.BackgroundTransparency = selected and CARD_TRANS or 0.5
         row.OptionText.TextColor3 = selected and C.text or C.textDim
         row.OptionText.Text = opt.label
@@ -858,7 +859,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
                 Text = "",
                 AutoButtonColor = false,
                 Visible = false,
-                ZIndex = 55
+                ZIndex = 56
             })
             Library.new("UICorner", { Parent = rowFrame, CornerRadius = UDim.new(0, 4) })
 
@@ -868,7 +869,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
                 Position = UDim2.new(0, 0, 0.5, -8),
                 BackgroundColor3 = C.accent,
                 BorderSizePixel = 0,
-                ZIndex = 56
+                ZIndex = 57
             })
             Library.new("UICorner", { Parent = chooseFrame, CornerRadius = UDim.new(1, 0) })
 
@@ -882,7 +883,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
                 BackgroundTransparency = 1,
                 Position = UDim2.new(0, 10, 0, 0),
                 Size = UDim2.new(1, -14, 1, 0),
-                ZIndex = 56
+                ZIndex = 57
             })
 
             rowFrame.MouseEnter:Connect(function()
@@ -966,7 +967,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         ClosePopup = function() Library._hideDropdown() end
     }
 end
-
+    
 -- ============================================================
 -- RESIZE HANDLE (Poco Style + Auto-Hide)
 -- ============================================================
