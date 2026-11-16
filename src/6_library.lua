@@ -1,9 +1,8 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v7.0 - LYNX ENGINE x FLOW VISUAL)
-  - Dropdown System: 100% Logic Lynx, 100% Visual Flow
+  [6] LIBRARY (Flow Hub v7.0 - PURE LYNX LOGIC)
+  - Dropdown System: 100% Logic Lynx (Anti-Double Highlight)
   - Anti-Cursor | (ReleaseFocus on Scroll/Drag)
-  - Persistent Highlight (UIStroke Box)
   - Section Auto-Height FIXED (No more flicker)
   - Memory Leak FIXED
 ============================================================
@@ -571,7 +570,7 @@ function Library.makeButton(parent, name, callback, noHover)
 end
 
 -- ============================================================
--- DROPDOWN SYSTEM (LYNX ENGINE x FLOW VISUAL)
+-- DROPDOWN SYSTEM (PURE LYNX LOGIC)
 -- ============================================================
 Library._dropdownOverlay = nil
 Library._dropdownPanel = nil
@@ -822,7 +821,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         optionLabel.Text = found or tostring(selectedValue)
     end
 
-    -- 🔥 LOGIKA LYNX 100%: PAINT ROW DENGAN HIGHLIGHT KOTAK
+    -- 🔥 LOGIKA MURNI LYNX: PAINT ROW (TANPA EVENT HOVER)
     local function paintRow(row, opt)
         local selected = (opt.value == selectedValue)
         if selected then
@@ -864,7 +863,10 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
             if optIndex <= lastVisible then
                 local opt = list[optIndex]
                 row.Frame.Position = UDim2.new(0, 0, 0, (optIndex - 1) * ROW_STRIDE)
-                paintRow(row, opt)
+                
+                -- 🔥 PAINT ROW DIPANGGIL SETIAP SAAT (ANTI-BUG)
+                paintRow(row, opt) 
+                
                 row.Frame.Visible = true
                 row.Index = optIndex
             else
@@ -920,47 +922,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
                 ZIndex = 157
             })
 
-            rowFrame.MouseEnter:Connect(function()
-                if rowFrame.Visible then
-                    rowFrame.BackgroundColor3 = C.bg4
-                    rowFrame.BackgroundTransparency = 0.2
-                    optionText.TextColor3 = C.accent
-                    chooseFrame.Size = UDim2.new(0, 3, 0, 16)
-                end
-            end)
-            rowFrame.MouseLeave:Connect(function()
-                if rowFrame.Visible then
-                    local rowData = rowPool[i]
-                    local opt = rowData and rowData.Index and filteredOptions[rowData.Index] or nil
-                    if not opt or opt.value ~= selectedValue then
-                        rowFrame.BackgroundColor3 = C.bg3
-                        rowFrame.BackgroundTransparency = 1
-                        optionText.TextColor3 = C.textDim
-                        chooseFrame.Size = UDim2.new(0, 0, 0, 16)
-                    end
-                end
-            end)
-            
-            rowFrame.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.Touch and rowFrame.Visible then
-                    rowFrame.BackgroundColor3 = C.bg4
-                    rowFrame.BackgroundTransparency = 0.2
-                    optionText.TextColor3 = C.accent
-                    chooseFrame.Size = UDim2.new(0, 3, 0, 16)
-                end
-            end)
-            rowFrame.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.Touch and rowFrame.Visible then
-                    local rowData = rowPool[i]
-                    local opt = rowData and rowData.Index and filteredOptions[rowData.Index] or nil
-                    if not opt or opt.value ~= selectedValue then
-                        rowFrame.BackgroundColor3 = C.bg3
-                        rowFrame.BackgroundTransparency = 1
-                        optionText.TextColor3 = C.textDim
-                        chooseFrame.Size = UDim2.new(0, 0, 0, 16)
-                    end
-                end
-            end)
+            -- 🔥 EVENT HOVER (MouseEnter/MouseLeave) DIHAPUS TOTAL
 
             rowFrame.MouseButton1Click:Connect(function()
                 local rowData = rowPool[i]
@@ -977,7 +939,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
                 end
                 pcall(callback, opt.value)
                 
-                -- 🔥 FIX: Re-paint semua row setelah dipilih agar highlight langsung hilang
                 task.defer(refreshVisible)
             end)
 
@@ -991,7 +952,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         end
     end
 
-    -- 🔥 LOGIKA LYNX: Lepas fokus saat scroll
+    -- 🔥 FIX KURSOR: LEPAS FOKUS SAAT SCROLL
     scrollSelect:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
         if searchBox:IsFocused() then searchBox:ReleaseFocus() end
         refreshVisible()
