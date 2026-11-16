@@ -1,10 +1,11 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v6.5 - LYNX FINAL EDITION)
-  - Dropdown System (Anti-Clip, Anti-Kursor, Hover Highlight)
+  [6] LIBRARY (Flow Hub v7.0 - LYNX ENGINE x FLOW VISUAL)
+  - Dropdown System: 100% Logic Lynx, 100% Visual Flow
+  - Anti-Cursor | (ReleaseFocus on Scroll/Drag)
+  - Persistent Highlight (UIStroke Box)
   - Section Auto-Height FIXED (No more flicker)
-  - Memory Leak FIXED (Slider & Dropdown connections)
-  - RefreshAll UPGRADED (Sync Toggle, Input, Dropdown)
+  - Memory Leak FIXED
 ============================================================
 ]]
 
@@ -570,7 +571,7 @@ function Library.makeButton(parent, name, callback, noHover)
 end
 
 -- ============================================================
--- DROPDOWN SYSTEM (LYNX FINAL STYLE)
+-- DROPDOWN SYSTEM (LYNX ENGINE x FLOW VISUAL)
 -- ============================================================
 Library._dropdownOverlay = nil
 Library._dropdownPanel = nil
@@ -787,12 +788,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
     local searchThread = nil
     local poolBuilt = false
 
-    local function forceReleaseFocus()
-        if searchBox:IsFocused() then
-            searchBox:ReleaseFocus()
-        end
-    end
-
     local function applyFilter(query)
         table.clear(filteredOptions)
         if not query or query == "" then
@@ -827,17 +822,18 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         optionLabel.Text = found or tostring(selectedValue)
     end
 
+    -- 🔥 LOGIKA LYNX 100%: PAINT ROW DENGAN HIGHLIGHT KOTAK
     local function paintRow(row, opt)
         local selected = (opt.value == selectedValue)
         if selected then
-            row.Frame.BackgroundColor3 = C.bg3
-            row.Frame.BackgroundTransparency = 0.1
+            row.BackgroundColor3 = C.bg3
+            row.BackgroundTransparency = 0.1
             row.Highlight.Transparency = 0 
             row.ChooseFrame.Size = UDim2.new(0, 3, 0, 16)
             row.OptionText.TextColor3 = C.accent
         else
-            row.Frame.BackgroundColor3 = C.bg3
-            row.Frame.BackgroundTransparency = 1 
+            row.BackgroundColor3 = C.bg3
+            row.BackgroundTransparency = 1 
             row.Highlight.Transparency = 1 
             row.ChooseFrame.Size = UDim2.new(0, 0, 0, 0)
             row.OptionText.TextColor3 = C.textDim
@@ -924,7 +920,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
                 ZIndex = 157
             })
 
-            -- 🔥 HIGHLIGHT SAAT DI-HOVER (PC)
             rowFrame.MouseEnter:Connect(function()
                 if rowFrame.Visible then
                     rowFrame.BackgroundColor3 = C.bg4
@@ -945,8 +940,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
                     end
                 end
             end)
-
-            -- 🔥 HIGHLIGHT SAAT DISENTUH (MOBILE)
+            
             rowFrame.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.Touch and rowFrame.Visible then
                     rowFrame.BackgroundColor3 = C.bg4
@@ -982,6 +976,9 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
                     if cat then cat[configPath[2]] = opt.value end
                 end
                 pcall(callback, opt.value)
+                
+                -- 🔥 FIX: Re-paint semua row setelah dipilih agar highlight langsung hilang
+                task.defer(refreshVisible)
             end)
 
             table.insert(rowPool, {
@@ -994,15 +991,9 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         end
     end
 
-    -- 🔥 FIX: Hilangkan kursor saat scroll/drag
-    scrollSelect.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            forceReleaseFocus()
-        end
-    end)
-
+    -- 🔥 LOGIKA LYNX: Lepas fokus saat scroll
     scrollSelect:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-        forceReleaseFocus()
+        if searchBox:IsFocused() then searchBox:ReleaseFocus() end
         refreshVisible()
     end)
     
@@ -1013,7 +1004,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         buildPool()
         updateClosedLabel()
         Library._showDropdown(dropdownContainer)
-        forceReleaseFocus()
+        if searchBox:IsFocused() then searchBox:ReleaseFocus() end
         task.defer(refreshVisible)
     end)
 
