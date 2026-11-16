@@ -1,10 +1,9 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v4.6 - FINAL STABLE)
+  [7] PAGES — Command An Army (v4.7 - FINAL STABLE)
   - Kompatibel dengan 5_gui.lua (v2.4)
   - ForceFixSection DIHAPUS TOTAL
-  - Minimize & Float Button FIXED
-  - Config Save (Debounced) & Search Bar FIXED
+  - Auto-Open & Minimize FIXED
 ============================================================
 ]]
 
@@ -514,7 +513,7 @@ S.GUI.Header.InputEnded:Connect(function(input)
 end)
 
 -- ============================================================
--- MINIMIZE / OPEN LOGIC (WAJIB KARENA 5_GUI TIDAK DIUBAH)
+-- MINIMIZE / OPEN LOGIC
 -- ============================================================
 if S.GUI.MinBtn then
     S.GUI.MinBtn.MouseButton1Click:Connect(function()
@@ -523,12 +522,9 @@ if S.GUI.MinBtn then
     end)
 end
 
-if S.GUI.FloatBtn then
-    S.GUI.FloatBtn.MouseButton1Click:Connect(function()
-        S.GUI.FloatBtn.Visible = false
-        S.GUI.MainFrame.Visible = true
-    end)
-end
+-- 🔥 AUTO OPEN SAAT START
+S.GUI.MainFrame.Visible = true
+S.GUI.FloatBtn.Visible = false
 
 -- ============================================================
 -- INITIAL PAGE SETUP
