@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v3.7)
+  [5] GUI (Flow Hub v3.8 -
 ============================================================
 ]]
 
@@ -131,16 +131,16 @@ end)
 _G.FlowHubSavedIconPos = savedIconPos
 
 -- ============================================================
--- MAIN FRAME (RESPONSIVE SIZE)
+-- MAIN FRAME (RESPONSIVE SIZE - LYNX STYLE)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 
--- 🔥 UKURAN KHUSUS PC & HP
+-- 🔥 UKURAN KHUSUS PC & HP (Persis Lynx)
 if isMobile then
-    mainFrame.Size = UDim2.new(0, 450, 0, 300) -- Ukuran HP
+    mainFrame.Size = UDim2.new(0, 420, 0, 280) -- Ukuran HP (Lynx)
 else
-    mainFrame.Size = UDim2.new(0, 560, 0, 360) -- Ukuran PC
+    mainFrame.Size = UDim2.new(0, 560, 0, 360) -- Ukuran PC (Lynx)
 end
 
 -- Biar posisinya selalu di tengah
