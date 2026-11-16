@@ -1,9 +1,9 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v4.0 - LYNX LAYOUT)
-  - Search Bar di Sidebar (Kayak Lynx)
-  - Tanpa Title di atas konten
-  - MainFrame: PC 440x300 | Mobile 420x280
+  [5] GUI (Flow Hub v5.0 - 100% LYNX)
+  - Search Bar di Sidebar
+  - Title dengan Accent Line (Tanpa Garis Bawah)
+  - MainFrame: PC 560x360 | Mobile 420x280
 ============================================================
 ]]
 
@@ -139,7 +139,7 @@ mainFrame.Name = "MainFrame"
 if isMobile then
     mainFrame.Size = UDim2.new(0, 420, 0, 280) -- Ukuran HP (Lynx)
 else
-    mainFrame.Size = UDim2.new(0, 440, 0, 300) -- Ukuran PC (Sesuai Request)
+    mainFrame.Size = UDim2.new(0, 560, 0, 360) -- Ukuran PC (Lynx)
 end
 
 local startSize = mainFrame.Size
@@ -327,10 +327,38 @@ contentPanel.BorderSizePixel = 0
 contentPanel.ClipsDescendants = true
 contentPanel.Parent = mainFrame
 
+-- Title Bar (di atas konten)
+local topBar = Instance.new("Frame")
+topBar.Name = "TopBar"
+topBar.Size = UDim2.new(1, 0, 0, 28)
+topBar.Position = UDim2.new(0, 0, 0, 0)
+topBar.BackgroundTransparency = 1
+topBar.Parent = contentPanel
+
+local pageTitleAccent = Instance.new("Frame")
+pageTitleAccent.Size = UDim2.new(0, 3, 0, 16)
+pageTitleAccent.Position = UDim2.new(0, 0, 0.5, -8)
+pageTitleAccent.BackgroundColor3 = C.accent
+pageTitleAccent.BorderSizePixel = 0
+pageTitleAccent.Parent = topBar
+Instance.new("UICorner", pageTitleAccent).CornerRadius = UDim.new(1, 0)
+
+local cTitle = Instance.new("TextLabel")
+cTitle.Size = UDim2.new(1, -16, 1, 0)
+cTitle.Position = UDim2.new(0, 10, 0, 0)
+cTitle.Text = "Combat"
+cTitle.TextColor3 = C.text
+cTitle.TextSize = 12
+cTitle.Font = F.bold
+cTitle.TextXAlignment = Enum.TextXAlignment.Left
+cTitle.BackgroundTransparency = 1
+cTitle.Parent = topBar
+
+-- Content Scroll
 local contentScroll = Instance.new("Frame")
 contentScroll.Name = "ContentScroll"
-contentScroll.Size = UDim2.new(1, 0, 1, 0)
-contentScroll.Position = UDim2.new(0, 0, 0, 0)
+contentScroll.Size = UDim2.new(1, 0, 1, -28)
+contentScroll.Position = UDim2.new(0, 0, 0, 28)
 contentScroll.BackgroundTransparency = 1
 contentScroll.BorderSizePixel = 0
 contentScroll.ClipsDescendants = true
@@ -347,10 +375,10 @@ S.GUI = {
     Sidebar = sidebar,
     Content = contentPanel,
     ContentScroll = contentScroll,
-    ContentTitle = nil, -- Dihapus, karena judul cuma di tab
-    TitleLine = nil,    -- Dihapus
+    ContentTitle = cTitle,
+    TitleLine = nil,
     HeaderLine = line1,
-    TitleDivider = nil, -- Dihapus
+    TitleDivider = nil,
     SearchBox = searchBox,
     MinBtn = minBtn,
     CloseBtn = nil,
