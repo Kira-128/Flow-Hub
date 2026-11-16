@@ -1,10 +1,10 @@
 --[[
 ============================================================
-  [7] PAGES — Command An Army (v4.5 - Final Cleanup)
+  [7] PAGES — Command An Army (v4.6 - FINAL STABLE)
+  - Kompatibel dengan 5_gui.lua (v2.4)
   - ForceFixSection DIHAPUS TOTAL
-  - Auto-height murni dari 6_library.lua
-  - Config Save (Debounced)
-  - Fix Search Bar & Dropdown Loop
+  - Minimize & Float Button FIXED
+  - Config Save (Debounced) & Search Bar FIXED
 ============================================================
 ]]
 
@@ -487,7 +487,7 @@ deleteBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============================================================
--- DRAG MAIN FRAME (CLAMPED)
+-- DRAG MAIN FRAME (BEBAS)
 -- ============================================================
 local mainDrag, mainStart, mainPos
 S.GUI.Header.InputBegan:Connect(function(input)
@@ -497,21 +497,38 @@ S.GUI.Header.InputBegan:Connect(function(input)
         mainPos = S.GUI.MainFrame.Position
     end
 end)
+
 S.GUI.Header.InputChanged:Connect(function(input)
     if mainDrag and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
         local delta = input.Position - mainStart
-        local vp = workspace.CurrentCamera.ViewportSize
-        local mfSize = S.GUI.MainFrame.AbsoluteSize
-        local newX = math.clamp(mainPos.X.Offset + delta.X, -mfSize.X + 100, vp.X - 100)
-        local newY = math.clamp(mainPos.Y.Offset + delta.Y, 0, vp.Y - 40)
+        local newX = mainPos.X.Offset + delta.X
+        local newY = mainPos.Y.Offset + delta.Y
         S.GUI.MainFrame.Position = UDim2.new(mainPos.X.Scale, newX, mainPos.Y.Scale, newY)
     end
 end)
+
 S.GUI.Header.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         mainDrag = false
     end
 end)
+
+-- ============================================================
+-- MINIMIZE / OPEN LOGIC (WAJIB KARENA 5_GUI TIDAK DIUBAH)
+-- ============================================================
+if S.GUI.MinBtn then
+    S.GUI.MinBtn.MouseButton1Click:Connect(function()
+        S.GUI.MainFrame.Visible = false
+        S.GUI.FloatBtn.Visible = true
+    end)
+end
+
+if S.GUI.FloatBtn then
+    S.GUI.FloatBtn.MouseButton1Click:Connect(function()
+        S.GUI.FloatBtn.Visible = false
+        S.GUI.MainFrame.Visible = true
+    end)
+end
 
 -- ============================================================
 -- INITIAL PAGE SETUP
