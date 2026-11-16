@@ -1,6 +1,9 @@
 --[[
 ============================================================
-  [5] GUI (Flow Hub v3.9 - Size 440x300)
+  [5] GUI (Flow Hub v4.0 - LYNX LAYOUT)
+  - Search Bar di Sidebar (Kayak Lynx)
+  - Tanpa Title di atas konten
+  - MainFrame: PC 440x300 | Mobile 420x280
 ============================================================
 ]]
 
@@ -28,7 +31,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = parentGui
 
 -- ============================================================
--- FLOAT BUTTON (KOTAK 48x48 + LOGO FULL)
+-- FLOAT BUTTON
 -- ============================================================
 local floatBtn = Instance.new("TextButton")
 floatBtn.Name = "FloatBtn"
@@ -85,7 +88,6 @@ local function disconnectIconConns()
     end
 end
 
--- 1. DETEKSI AWAL
 iconConns[#iconConns + 1] = floatBtn.InputBegan:Connect(function(input)
     if iconDragging then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -96,7 +98,6 @@ iconConns[#iconConns + 1] = floatBtn.InputBegan:Connect(function(input)
     end
 end)
 
--- 2. DETEKSI PERGERAKAN
 iconConns[#iconConns + 1] = UIS.InputChanged:Connect(function(input)
     if not iconDragging or not floatBtn or not floatBtn.Parent or not iconStartPos or not iconDragStart then return end
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
@@ -111,7 +112,6 @@ iconConns[#iconConns + 1] = UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- 3. DETEKSI LEPAS
 iconConns[#iconConns + 1] = UIS.InputEnded:Connect(function(input)
     if not iconDragging then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -131,19 +131,17 @@ end)
 _G.FlowHubSavedIconPos = savedIconPos
 
 -- ============================================================
--- MAIN FRAME (RESPONSIVE SIZE - 440x300)
+-- MAIN FRAME (RESPONSIVE SIZE)
 -- ============================================================
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 
--- 🔥 UKURAN KHUSUS PC & HP
 if isMobile then
     mainFrame.Size = UDim2.new(0, 420, 0, 280) -- Ukuran HP (Lynx)
 else
     mainFrame.Size = UDim2.new(0, 440, 0, 300) -- Ukuran PC (Sesuai Request)
 end
 
--- Biar posisinya selalu di tengah
 local startSize = mainFrame.Size
 mainFrame.Position = UDim2.new(0.5, -(startSize.X.Offset / 2), 0.5, -(startSize.Y.Offset / 2))
 
@@ -239,7 +237,7 @@ minBtn.Parent = header
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 4)
 
 -- ============================================================
--- GARIS 1
+-- GARIS 1 (Header Line)
 -- ============================================================
 local line1 = Instance.new("Frame")
 line1.Name = "HeaderLine"
@@ -251,78 +249,14 @@ line1.BorderSizePixel = 0
 line1.Parent = mainFrame
 
 -- ============================================================
--- SEARCH + TITLE + ACCENT LINE + GARIS 2
+-- SIDEBAR (DENGAN SEARCH BAR DI DALAMNYA)
 -- ============================================================
-local ROW_Y = HEADER_H + 8
-
-local searchFrame = Instance.new("Frame")
-searchFrame.Size = UDim2.new(0.35, 0, 0, 26)
-searchFrame.Position = UDim2.new(0, 10, 0, ROW_Y)
-searchFrame.BackgroundColor3 = C.bg2
-searchFrame.BackgroundTransparency = 0.1
-searchFrame.BorderSizePixel = 0
-searchFrame.Parent = mainFrame
-Instance.new("UICorner", searchFrame).CornerRadius = UDim.new(0, 5)
-
-local sIcon = Instance.new("ImageLabel")
-sIcon.Size = UDim2.new(0, 10, 0, 10)
-sIcon.Position = UDim2.new(0, 9, 0.5, -5)
-sIcon.BackgroundTransparency = 1
-sIcon.Image = I.search
-sIcon.ImageColor3 = C.textDim
-sIcon.Parent = searchFrame
-
-local searchBox = Instance.new("TextBox")
-searchBox.Size = UDim2.new(1, -30, 1, 0)
-searchBox.Position = UDim2.new(0, 26, 0, 0)
-searchBox.Text = ""
-searchBox.PlaceholderText = "Search feature.."
-searchBox.PlaceholderColor3 = C.textDim2
-searchBox.TextColor3 = C.text
-searchBox.TextSize = 10
-searchBox.Font = F.norm
-searchBox.BackgroundTransparency = 1
-searchBox.TextXAlignment = Enum.TextXAlignment.Left
-searchBox.ClearTextOnFocus = false
-searchBox.Parent = searchFrame
-
-local vDivider = Instance.new("Frame")
-vDivider.Name = "TitleDivider"
-vDivider.Size = UDim2.new(0, 2, 0, 18)
-vDivider.Position = UDim2.new(0.35, 10, 0, ROW_Y + 4)
-vDivider.BackgroundColor3 = C.accent
-vDivider.BorderSizePixel = 0
-vDivider.Parent = mainFrame
-Instance.new("UICorner", vDivider).CornerRadius = UDim.new(1, 0)
-
-local cTitle = Instance.new("TextLabel")
-cTitle.Size = UDim2.new(1, -200, 0, 26)
-cTitle.Position = UDim2.new(0.35, 20, 0, ROW_Y)
-cTitle.Text = "Combat"
-cTitle.TextColor3 = C.text
-cTitle.TextSize = 12
-cTitle.Font = F.bold
-cTitle.TextXAlignment = Enum.TextXAlignment.Left
-cTitle.BackgroundTransparency = 1
-cTitle.Parent = mainFrame
-
-local line2 = Instance.new("Frame")
-line2.Name = "TitleLine"
-line2.Size = UDim2.new(1, -200, 0, 1)
-line2.Position = UDim2.new(0.35, 20, 0, ROW_Y + 28)
-line2.BackgroundColor3 = C.stroke
-line2.BackgroundTransparency = 0.3
-line2.BorderSizePixel = 0
-line2.Parent = mainFrame
-
--- ============================================================
--- SIDEBAR
--- ============================================================
-local SIDEBAR_Y = ROW_Y + 38
+local SIDEBAR_W = 120
+local SIDEBAR_Y = HEADER_H + 6
 
 local sidebar = Instance.new("ScrollingFrame")
 sidebar.Name = "Sidebar"
-sidebar.Size = UDim2.new(0, 120, 1, -(SIDEBAR_Y + 10))
+sidebar.Size = UDim2.new(0, SIDEBAR_W, 1, -(SIDEBAR_Y + 10))
 sidebar.Position = UDim2.new(0, 10, 0, SIDEBAR_Y)
 sidebar.BackgroundTransparency = 1
 sidebar.BorderSizePixel = 0
@@ -334,6 +268,41 @@ sidebar.ScrollingDirection = Enum.ScrollingDirection.Y
 sidebar.ClipsDescendants = true
 sidebar.Parent = mainFrame
 
+-- SEARCH BAR (Pindahan dari mainFrame)
+local searchFrame = Instance.new("Frame")
+searchFrame.Name = "SearchFrame"
+searchFrame.Size = UDim2.new(1, -8, 0, 24)
+searchFrame.Position = UDim2.new(0, 4, 0, 4)
+searchFrame.BackgroundColor3 = C.bg2
+searchFrame.BackgroundTransparency = 0.1
+searchFrame.BorderSizePixel = 0
+searchFrame.ZIndex = 5
+searchFrame.Parent = sidebar
+Instance.new("UICorner", searchFrame).CornerRadius = UDim.new(0, 5)
+
+local sIcon = Instance.new("ImageLabel")
+sIcon.Size = UDim2.new(0, 10, 0, 10)
+sIcon.Position = UDim2.new(0, 8, 0.5, -5)
+sIcon.BackgroundTransparency = 1
+sIcon.Image = I.search
+sIcon.ImageColor3 = C.textDim
+sIcon.Parent = searchFrame
+
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1, -26, 1, 0)
+searchBox.Position = UDim2.new(0, 24, 0, 0)
+searchBox.Text = ""
+searchBox.PlaceholderText = "Search.."
+searchBox.PlaceholderColor3 = C.textDim2
+searchBox.TextColor3 = C.text
+searchBox.TextSize = 10
+searchBox.Font = F.norm
+searchBox.BackgroundTransparency = 1
+searchBox.TextXAlignment = Enum.TextXAlignment.Left
+searchBox.ClearTextOnFocus = false
+searchBox.Parent = searchFrame
+
+-- Layout Tab (diturunin biar ga nabrak search bar)
 local sLayout = Instance.new("UIListLayout")
 sLayout.Padding = UDim.new(0, 4)
 sLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -342,7 +311,7 @@ sLayout.SortOrder = Enum.SortOrder.LayoutOrder
 sLayout.Parent = sidebar
 
 local sPad = Instance.new("UIPadding")
-sPad.PaddingTop = UDim.new(0, 0)
+sPad.PaddingTop = UDim.new(0, 36) -- Jarak buat Search Bar di atas
 sPad.PaddingBottom = UDim.new(0, 4)
 sPad.Parent = sidebar
 
@@ -351,8 +320,8 @@ sPad.Parent = sidebar
 -- ============================================================
 local contentPanel = Instance.new("Frame")
 contentPanel.Name = "ContentPanel"
-contentPanel.Size = UDim2.new(1, -140, 1, -(SIDEBAR_Y + 10)) 
-contentPanel.Position = UDim2.new(0, 130, 0, SIDEBAR_Y)
+contentPanel.Size = UDim2.new(1, -(SIDEBAR_W + 20), 1, -(SIDEBAR_Y + 10))
+contentPanel.Position = UDim2.new(0, SIDEBAR_W + 20, 0, SIDEBAR_Y)
 contentPanel.BackgroundTransparency = 1
 contentPanel.BorderSizePixel = 0
 contentPanel.ClipsDescendants = true
@@ -378,10 +347,10 @@ S.GUI = {
     Sidebar = sidebar,
     Content = contentPanel,
     ContentScroll = contentScroll,
-    ContentTitle = cTitle,
-    TitleLine = line2,
+    ContentTitle = nil, -- Dihapus, karena judul cuma di tab
+    TitleLine = nil,    -- Dihapus
     HeaderLine = line1,
-    TitleDivider = vDivider,
+    TitleDivider = nil, -- Dihapus
     SearchBox = searchBox,
     MinBtn = minBtn,
     CloseBtn = nil,
