@@ -589,14 +589,14 @@ function Library._initDropdownSystem()
         ZIndex = 51
     })
 
-    -- Panel Dropdown (Warna disamain sama Section: C.bg3)
+    -- Panel Dropdown (Warna C.bg3 biar nyatu sama Section)
     Library._dropdownPanel = Library.new("Frame", {
         Parent = Library._dropdownOverlay,
         AnchorPoint = Vector2.new(1, 0.5),
         Size = UDim2.new(0, 180, 1, -16),
         Position = UDim2.new(1, 192, 0.5, 0),
         BackgroundColor3 = C.bg3,              -- ✅ Sama kayak Section
-        BackgroundTransparency = 0.05,         -- ✅ Lebih solid dikit
+        BackgroundTransparency = 0.05,
         BorderSizePixel = 0,
         ClipsDescendants = true,
         ZIndex = 52,
@@ -615,14 +615,10 @@ function Library._initDropdownSystem()
         ZIndex = 53,
         Name = "DropdownFolder"
     })
-    -- UIPageLayout DIHAPUS (Biar ga numpuk)
+    -- UIPageLayout DIHAPUS (Biar ga numpuk 1111)
 
     closeOverlay.Activated:Connect(function()
-        if Library._dropdownOverlay.Visible then
-            Library._dropdownOverlay.BackgroundTransparency = 0.95
-            Library._dropdownPanel.Position = UDim2.new(1, 192, 0.5, 0)
-            Library._dropdownOverlay.Visible = false
-        end
+        Library._hideDropdown()
     end)
 end
 
@@ -674,11 +670,12 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         Parent = f
     })
 
+    -- Select Option (Tombol Pilihan)
     local selectFrame = Library.new("Frame", {
         Parent = f,
         AnchorPoint = Vector2.new(1, 0.5),
-        BackgroundColor3 = C.bg2,
-        BackgroundTransparency = CARD_TRANS,
+        BackgroundColor3 = C.bg4, -- ✅ Warna sama kayak kotak input
+        BackgroundTransparency = 0.3,
         Position = UDim2.new(1, -12, 0.5, 0),
         Size = UDim2.new(0.48, 0, 0, 22),
         LayoutOrder = dropdownLayoutOrder,
@@ -691,7 +688,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         Parent = selectFrame,
         Font = F.bold,
         Text = initialOptions[1] or "Select",
-        TextColor3 = C.textDim,
+        TextColor3 = C.text,
         TextSize = 11,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -739,8 +736,8 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         TextSize = 11,
         TextColor3 = C.text,
         PlaceholderColor3 = C.textDim2,
-        BackgroundColor3 = C.bg2,
-        BackgroundTransparency = CARD_TRANS,
+        BackgroundColor3 = C.bg3, -- ✅ Search bar nyatu
+        BackgroundTransparency = 0.1,
         BorderSizePixel = 0,
         Size = UDim2.new(1, -8, 0, 24),
         Position = UDim2.new(0, 4, 0, 4),
@@ -806,12 +803,12 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         optionLabel.Text = found or tostring(selectedValue)
     end
 
+    -- ✅ Hapus Card / Background Item
     local function paintRow(row, opt)
         local selected = (opt.value == selectedValue)
         row.ChooseFrame.Size = selected and UDim2.new(0, 3, 0, 16) or UDim2.new(0, 0, 0, 0)
-        row.BackgroundColor3 = selected and C.bg4 or C.bg2
-        row.BackgroundTransparency = selected and CARD_TRANS or 0.5
-        row.OptionText.TextColor3 = selected and C.text or C.textDim
+        row.BackgroundTransparency = 1
+        row.OptionText.TextColor3 = selected and C.accent or C.textDim
         row.OptionText.Text = opt.label
     end
 
@@ -853,16 +850,15 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
             local rowFrame = Library.new("TextButton", {
                 Parent = scrollSelect,
                 Size = UDim2.new(1, 0, 0, ROW_H),
-                BackgroundColor3 = C.bg2,
-                BackgroundTransparency = 0.5,
+                BackgroundTransparency = 1, -- ✅ Transparan
                 BorderSizePixel = 0,
                 Text = "",
                 AutoButtonColor = false,
                 Visible = false,
                 ZIndex = 56
             })
-            Library.new("UICorner", { Parent = rowFrame, CornerRadius = UDim.new(0, 4) })
 
+            -- Accent Bar di kiri
             local chooseFrame = Library.new("Frame", {
                 Parent = rowFrame,
                 Size = UDim2.new(0, 0, 0, 16),
@@ -888,12 +884,17 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
 
             rowFrame.MouseEnter:Connect(function()
                 if rowFrame.Visible then
-                    S.Services.TS:Create(rowFrame, TweenInfo.new(0.15), { BackgroundTransparency = CARD_TRANS - 0.05 }):Play()
+                    optionText.TextColor3 = C.accent
+                    chooseFrame.Size = UDim2.new(0, 3, 0, 16)
                 end
             end)
             rowFrame.MouseLeave:Connect(function()
                 if rowFrame.Visible then
-                    paintRow({ Frame = rowFrame, ChooseFrame = chooseFrame, OptionText = optionText, Index = nil }, filteredOptions[1] or {value = "None", label = "None"})
+                    local opt = filteredOptions[rowPool[i] and rowPool[i].Index or 1]
+                    if not opt or opt.value ~= selectedValue then
+                        optionText.TextColor3 = C.textDim
+                        chooseFrame.Size = UDim2.new(0, 0, 0, 16)
+                    end
                 end
             end)
 
@@ -967,6 +968,13 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         ClosePopup = function() Library._hideDropdown() end
     }
 end
+        
+       
+    
+    
+                
+    
+
     
 -- ============================================================
 -- RESIZE HANDLE (Poco Style + Auto-Hide)
