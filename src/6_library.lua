@@ -1,8 +1,8 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v6.0 - LYNX DROPDOWN + CLEAN CODE)
-  - Dropdown System UPGRADED (UIPageLayout, Anti-Clip, Smooth)
-  - Section Auto-Height FIXED (No more flicker / forceFixSection)
+  [6] LIBRARY (Flow Hub v6.5 - LYNX FINAL EDITION)
+  - Dropdown System (Anti-Clip, Anti-Kursor, Hover Highlight)
+  - Section Auto-Height FIXED (No more flicker)
   - Memory Leak FIXED (Slider & Dropdown connections)
   - RefreshAll UPGRADED (Sync Toggle, Input, Dropdown)
 ============================================================
@@ -570,7 +570,7 @@ function Library.makeButton(parent, name, callback, noHover)
 end
 
 -- ============================================================
--- DROPDOWN SYSTEM (LYNX STYLE)
+-- DROPDOWN SYSTEM (LYNX FINAL STYLE)
 -- ============================================================
 Library._dropdownOverlay = nil
 Library._dropdownPanel = nil
@@ -787,6 +787,12 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
     local searchThread = nil
     local poolBuilt = false
 
+    local function forceReleaseFocus()
+        if searchBox:IsFocused() then
+            searchBox:ReleaseFocus()
+        end
+    end
+
     local function applyFilter(query)
         table.clear(filteredOptions)
         if not query or query == "" then
@@ -823,9 +829,19 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
 
     local function paintRow(row, opt)
         local selected = (opt.value == selectedValue)
-        row.ChooseFrame.Size = selected and UDim2.new(0, 3, 0, 16) or UDim2.new(0, 0, 0, 0)
-        row.BackgroundTransparency = 1
-        row.OptionText.TextColor3 = selected and C.accent or C.textDim
+        if selected then
+            row.Frame.BackgroundColor3 = C.bg3
+            row.Frame.BackgroundTransparency = 0.1
+            row.Highlight.Transparency = 0 
+            row.ChooseFrame.Size = UDim2.new(0, 3, 0, 16)
+            row.OptionText.TextColor3 = C.accent
+        else
+            row.Frame.BackgroundColor3 = C.bg3
+            row.Frame.BackgroundTransparency = 1 
+            row.Highlight.Transparency = 1 
+            row.ChooseFrame.Size = UDim2.new(0, 0, 0, 0)
+            row.OptionText.TextColor3 = C.textDim
+        end
         row.OptionText.Text = opt.label
     end
 
@@ -867,11 +883,21 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
             local rowFrame = Library.new("TextButton", {
                 Parent = scrollSelect,
                 Size = UDim2.new(1, 0, 0, ROW_H),
+                BackgroundColor3 = C.bg3,
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 Text = "",
                 AutoButtonColor = false,
                 Visible = false,
+                ZIndex = 156
+            })
+            Library.new("UICorner", { Parent = rowFrame, CornerRadius = UDim.new(0, 4) })
+
+            local highlight = Library.new("UIStroke", {
+                Parent = rowFrame,
+                Color = C.accent,
+                Thickness = 1,
+                Transparency = 1,
                 ZIndex = 156
             })
 
@@ -898,8 +924,11 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
                 ZIndex = 157
             })
 
+            -- 🔥 HIGHLIGHT SAAT DI-HOVER (PC)
             rowFrame.MouseEnter:Connect(function()
                 if rowFrame.Visible then
+                    rowFrame.BackgroundColor3 = C.bg4
+                    rowFrame.BackgroundTransparency = 0.2
                     optionText.TextColor3 = C.accent
                     chooseFrame.Size = UDim2.new(0, 3, 0, 16)
                 end
@@ -909,6 +938,30 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
                     local rowData = rowPool[i]
                     local opt = rowData and rowData.Index and filteredOptions[rowData.Index] or nil
                     if not opt or opt.value ~= selectedValue then
+                        rowFrame.BackgroundColor3 = C.bg3
+                        rowFrame.BackgroundTransparency = 1
+                        optionText.TextColor3 = C.textDim
+                        chooseFrame.Size = UDim2.new(0, 0, 0, 16)
+                    end
+                end
+            end)
+
+            -- 🔥 HIGHLIGHT SAAT DISENTUH (MOBILE)
+            rowFrame.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Touch and rowFrame.Visible then
+                    rowFrame.BackgroundColor3 = C.bg4
+                    rowFrame.BackgroundTransparency = 0.2
+                    optionText.TextColor3 = C.accent
+                    chooseFrame.Size = UDim2.new(0, 3, 0, 16)
+                end
+            end)
+            rowFrame.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Touch and rowFrame.Visible then
+                    local rowData = rowPool[i]
+                    local opt = rowData and rowData.Index and filteredOptions[rowData.Index] or nil
+                    if not opt or opt.value ~= selectedValue then
+                        rowFrame.BackgroundColor3 = C.bg3
+                        rowFrame.BackgroundTransparency = 1
                         optionText.TextColor3 = C.textDim
                         chooseFrame.Size = UDim2.new(0, 0, 0, 16)
                     end
@@ -933,6 +986,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
 
             table.insert(rowPool, {
                 Frame = rowFrame,
+                Highlight = highlight,
                 ChooseFrame = chooseFrame,
                 OptionText = optionText,
                 Index = nil,
@@ -940,10 +994,18 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         end
     end
 
+    -- 🔥 FIX: Hilangkan kursor saat scroll/drag
+    scrollSelect.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            forceReleaseFocus()
+        end
+    end)
+
     scrollSelect:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-        if searchBox:IsFocused() then searchBox:ReleaseFocus() end
+        forceReleaseFocus()
         refreshVisible()
     end)
+    
     scrollSelect:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshVisible)
 
     dropdownButton.MouseButton1Click:Connect(function()
@@ -951,7 +1013,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         buildPool()
         updateClosedLabel()
         Library._showDropdown(dropdownContainer)
-        if searchBox:IsFocused() then searchBox:ReleaseFocus() end
+        forceReleaseFocus()
         task.defer(refreshVisible)
     end)
 
