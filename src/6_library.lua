@@ -823,23 +823,23 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
 
     -- 🔥 LOGIKA MURNI LYNX: PAINT ROW (TANPA EVENT HOVER)
     local function paintRow(row, opt)
-        local selected = (opt.value == selectedValue)
-        if selected then
-            row.BackgroundColor3 = C.bg3
-            row.BackgroundTransparency = 0.1
-            row.Highlight.Transparency = 0 
-            row.ChooseFrame.Size = UDim2.new(0, 3, 0, 16)
-            row.OptionText.TextColor3 = C.accent
-        else
-            row.BackgroundColor3 = C.bg3
-            row.BackgroundTransparency = 1 
-            row.Highlight.Transparency = 1 
-            row.ChooseFrame.Size = UDim2.new(0, 0, 0, 0)
-            row.OptionText.TextColor3 = C.textDim
-        end
-        row.OptionText.Text = opt.label
+    local selected = (opt.value == selectedValue)
+    if selected then
+        row.BackgroundColor3 = C.bg3
+        row.BackgroundTransparency = 0.1
+        row.Highlight.Transparency = 0      -- 🔥 Kotak muncul
+        row.ChooseFrame.Size = UDim2.new(0, 3, 0, 16)
+        row.OptionText.TextColor3 = C.accent
+    else
+        row.BackgroundColor3 = C.bg3
+        row.BackgroundTransparency = 1
+        row.Highlight.Transparency = 1      -- 🔥 Kotak sembunyi
+        row.ChooseFrame.Size = UDim2.new(0, 0, 0, 0)
+        row.OptionText.TextColor3 = C.textDim
     end
-
+    row.OptionText.Text = opt.label
+  end
+  
     local function refreshVisible()
         if not poolBuilt then return end
         local list = filteredOptions
