@@ -1,10 +1,10 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v5.1 - LYNX DROPDOWN + NEW FEATURES)
-  - Dropdown Overlay TIDAK DIUBAH (Visual Lynx tetep sama)
-  - Poco Resize Handle (Fixed Bug)
-  - UI Scale Support
-  - Toggle Registry (Buat Refresh Config)
+  [6] LIBRARY (Flow Hub v6.0 - LYNX DROPDOWN + CLEAN CODE)
+  - Dropdown System UPGRADED (UIPageLayout, Anti-Clip, Smooth)
+  - Section Auto-Height FIXED (No more flicker / forceFixSection)
+  - Memory Leak FIXED (Slider & Dropdown connections)
+  - RefreshAll UPGRADED (Sync Toggle, Input, Dropdown)
 ============================================================
 ]]
 
@@ -18,32 +18,52 @@ local ITEM_H = 34
 local HEADER_H = 32
 local CARD_BG = C.bg3
 local CARD_TRANS = 0.15
-local POPUP_W = 180
-local POPUP_MAX_H = 200
 
 -- ============================================================
--- TOGGLE REGISTRY (Buat Refresh Config)
+-- REGISTRY (Buat Refresh Config)
 -- ============================================================
 local ToggleRegistry = {}
+local InputRegistry = {}
+local DropdownRegistry = {}
 
 function Library.RefreshAll()
+    -- 1. Refresh Toggles
     for _, entry in pairs(ToggleRegistry) do
-        local path = entry.path
         local currentVal = nil
-        
         if S.Config then
-            local cat = S.Config[path[1]]
-            if cat then currentVal = cat[path[2]] end
+            local cat = S.Config[entry.path[1]]
+            if cat then currentVal = cat[entry.path[2]] end
         end
-        
         if currentVal ~= nil and entry.setState then
-            entry.setState(currentVal, true)
+            entry.setState(currentVal == true, true)
+        end
+    end
+    -- 2. Refresh Inputs
+    for _, entry in pairs(InputRegistry) do
+        local currentVal = nil
+        if S.Config then
+            local cat = S.Config[entry.path[1]]
+            if cat then currentVal = cat[entry.path[2]] end
+        end
+        if currentVal ~= nil and entry.box then
+            entry.box.Text = tostring(currentVal)
+        end
+    end
+    -- 3. Refresh Dropdowns (Jika ada yang pakai config path)
+    for _, entry in pairs(DropdownRegistry) do
+        local currentVal = nil
+        if S.Config then
+            local cat = S.Config[entry.path[1]]
+            if cat then currentVal = cat[entry.path[2]] end
+        end
+        if currentVal ~= nil and entry.setState then
+            entry.setState(currentVal)
         end
     end
 end
 
 -- ============================================================
--- UI SCALE (Fitur Baru)
+-- UI SCALE
 -- ============================================================
 function Library.setUIScale(scale)
     if not S.GUI or not S.GUI.MainFrame then return end
@@ -68,52 +88,7 @@ function Library.new(class, props)
 end
 
 -- ============================================================
--- HELPER: Realtime Section Height (v3.2)
--- ============================================================
-local function updateSectionHeight(card, content)
-    if not card or not card.Parent then return end
-    if not content.Visible then
-        card.Size = UDim2.new(1, 0, 0, HEADER_H)
-        return
-    end
-    local layout = content:FindFirstChildOfClass("UIListLayout")
-    local totalH = 0
-    if layout then
-        totalH = layout.AbsoluteContentSize.Y
-    end
-    card.Size = UDim2.new(1, 0, 0, HEADER_H + totalH + 8)
-end
-
-local function bindAutoHeight(card, content)
-    local layout = content:FindFirstChildOfClass("UIListLayout")
-    if layout then
-        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            updateSectionHeight(card, content)
-        end)
-    end
-
-    local uiScale = card:FindFirstChildOfClass("UIScale")
-    if uiScale then
-        uiScale:GetPropertyChangedSignal("Scale"):Connect(function()
-            updateSectionHeight(card, content)
-        end)
-    end
-
-    content.ChildAdded:Connect(function()
-        task.defer(function() updateSectionHeight(card, content) end)
-    end)
-
-    content.ChildRemoved:Connect(function()
-        task.defer(function() updateSectionHeight(card, content) end)
-    end)
-
-    content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        updateSectionHeight(card, content)
-    end)
-end
-
--- ============================================================
--- SECTION
+-- SECTION (Auto-Height FIXED)
 -- ============================================================
 function Library.makeSection(parent, title, defaultOpen)
     local card = Library.new("Frame", {
@@ -122,14 +97,21 @@ function Library.makeSection(parent, title, defaultOpen)
         BackgroundColor3 = CARD_BG,
         BackgroundTransparency = CARD_TRANS,
         BorderSizePixel = 0,
-        ClipsDescendants = true,
+        ClipsDescendants = false, -- Harus false agar dropdown/item tidak terpotong
         Parent = parent
     })
     Library.new("UICorner", { Parent = card, CornerRadius = UDim.new(0, 6) })
 
+    local categoryLayout = Library.new("UIListLayout", {
+        Parent = card,
+        Padding = UDim.new(0, 0),
+        SortOrder = Enum.SortOrder.LayoutOrder
+    })
+
     local header = Library.new("TextButton", {
         Name = "Header",
         Size = UDim2.new(1, 0, 0, HEADER_H),
+        LayoutOrder = 1,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         AutoButtonColor = false,
@@ -166,7 +148,7 @@ function Library.makeSection(parent, title, defaultOpen)
     local content = Library.new("Frame", {
         Name = "Content",
         Size = UDim2.new(1, 0, 0, 0),
-        Position = UDim2.new(0, 0, 0, HEADER_H),
+        LayoutOrder = 2,
         BackgroundTransparency = 1,
         ClipsDescendants = false,
         Visible = defaultOpen,
@@ -187,18 +169,34 @@ function Library.makeSection(parent, title, defaultOpen)
     })
 
     local isOpen = defaultOpen
-    bindAutoHeight(card, content)
+    
+    local function updateCategoryHeight()
+        if not card or not card.Parent then return end
+        local contentLayout = content:FindFirstChildOfClass("UIListLayout")
+        local contentH = 0
+        if isOpen and content.Visible and contentLayout then
+            contentH = contentLayout.AbsoluteContentSize.Y + 8 -- 8 dari padding atas/bawah
+        end
+        card.Size = UDim2.new(1, 0, 0, HEADER_H + contentH)
+        content.Size = UDim2.new(1, 0, 0, contentH)
+    end
+
+    local function setOpen(state)
+        isOpen = state
+        content.Visible = isOpen
+        arrow.Text = isOpen and "▼" or "▶"
+        updateCategoryHeight()
+    end
+
+    local contentLayout = content:FindFirstChildOfClass("UIListLayout")
+    if contentLayout then
+        contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCategoryHeight)
+    end
+    
+    task.defer(updateCategoryHeight)
 
     header.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        arrow.Text = isOpen and "▼" or "▶"
-        content.Visible = isOpen
-        task.defer(function() updateSectionHeight(card, content) end)
-    end)
-
-    task.defer(function()
-        task.wait(0.15)
-        if defaultOpen then updateSectionHeight(card, content) end
+        setOpen(not isOpen)
     end)
 
     return content
@@ -272,7 +270,7 @@ end
 -- ============================================================
 -- INPUT (Angka)
 -- ============================================================
-function Library.makeInput(parent, name, default, callback)
+function Library.makeInput(parent, name, default, callback, configPath)
     local f = Library.new("Frame", {
         Name = "Input_" .. name,
         Size = UDim2.new(1, 0, 0, ITEM_H),
@@ -311,6 +309,10 @@ function Library.makeInput(parent, name, default, callback)
         local v = tonumber(b.Text)
         if v then pcall(callback, v) else b.Text = tostring(default) end
     end)
+
+    if configPath then
+        table.insert(InputRegistry, { path = configPath, box = b })
+    end
 end
 
 -- ============================================================
@@ -380,7 +382,7 @@ function Library.makeTextInput(parent, name, default, placeholder, callback, isF
 end
 
 -- ============================================================
--- SLIDER (Fitur Baru)
+-- SLIDER (FIXED CONNECTION LEAK)
 -- ============================================================
 function Library.makeSlider(parent, name, min, max, default, callback)
     local f = Library.new("Frame", {
@@ -455,9 +457,11 @@ function Library.makeSlider(parent, name, min, max, default, callback)
 
     local isDragging = false
     local currentVal = default
+    local connChanged, connEnded
 
     local function updateValue(x, triggerCallback)
-        local relX = math.clamp((x - barBG.AbsolutePosition.X) / barBG.AbsoluteSize.X, 0, 1)
+        if not barBG.Parent then return end
+        local relX = math.clamp((x - barBG.AbsolutePosition.X) / math.max(barBG.AbsoluteSize.X, 1), 0, 1)
         local val = math.floor(min + (max - min) * relX + 0.5)
         valLabel.Text = tostring(val)
         fill.Size = UDim2.new(relX, 0, 1, 0)
@@ -466,29 +470,39 @@ function Library.makeSlider(parent, name, min, max, default, callback)
         if triggerCallback then pcall(callback, val) end
     end
 
-    sliderBtn.MouseButton1Down:Connect(function()
+    local function startDrag()
         isDragging = true
         updateValue(S.Services.UIS:GetMouseLocation().X, false)
-    end)
+    end
 
-    sliderBtn.MouseButton1Up:Connect(function()
+    local function stopDrag(fireCallback)
+        if not isDragging then return end
         isDragging = false
-        pcall(callback, currentVal)
-    end)
+        if fireCallback then pcall(callback, currentVal) end
+    end
 
-    S.Services.UIS.InputChanged:Connect(function(input)
-        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+    sliderBtn.MouseButton1Down:Connect(startDrag)
+    sliderBtn.MouseButton1Up:Connect(function() stopDrag(true) end)
+
+    connChanged = S.Services.UIS.InputChanged:Connect(function(input)
+        if not isDragging or not barBG.Parent then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
             updateValue(input.Position.X, false)
         end
     end)
 
-    S.Services.UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            if isDragging then
-                isDragging = false
-                pcall(callback, currentVal)
-            end
+    connEnded = S.Services.UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            stopDrag(true)
         end
+    end)
+
+    f.Destroying:Connect(function()
+        if connChanged then connChanged:Disconnect() end
+        if connEnded then connEnded:Disconnect() end
+        isDragging = false
     end)
 end
 
@@ -556,15 +570,16 @@ function Library.makeButton(parent, name, callback, noHover)
 end
 
 -- ============================================================
--- DROPDOWN (Lynx Style - Fixed Warna & Numpuk)
+-- DROPDOWN SYSTEM (UPGRADED - LYNX STYLE)
 -- ============================================================
 Library._dropdownOverlay = nil
 Library._dropdownPanel = nil
 Library._dropdownFolder = nil
+Library._dropdownPageLayout = nil
 Library._dropdownCount = 0
 
 function Library._initDropdownSystem()
-    if Library._dropdownOverlay then return end
+    if Library._dropdownOverlay and Library._dropdownOverlay.Parent then return end
     
     Library._dropdownOverlay = Library.new("Frame", {
         Parent = S.GUI.MainFrame,
@@ -575,7 +590,7 @@ function Library._initDropdownSystem()
         BorderSizePixel = 0,
         ClipsDescendants = true,
         Visible = false,
-        ZIndex = 50,
+        ZIndex = 150,
         Name = "DropdownOverlay"
     })
 
@@ -586,20 +601,19 @@ function Library._initDropdownSystem()
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Text = "",
-        ZIndex = 51
+        ZIndex = 151
     })
 
-    -- Panel Dropdown (Warna C.bg3 biar nyatu sama Section)
     Library._dropdownPanel = Library.new("Frame", {
         Parent = Library._dropdownOverlay,
         AnchorPoint = Vector2.new(1, 0.5),
         Size = UDim2.new(0, 180, 1, -16),
         Position = UDim2.new(1, 192, 0.5, 0),
-        BackgroundColor3 = C.bg3,              -- ✅ Sama kayak Section
+        BackgroundColor3 = C.bg3,              
         BackgroundTransparency = 0.05,
         BorderSizePixel = 0,
         ClipsDescendants = true,
-        ZIndex = 52,
+        ZIndex = 152,
         Name = "DropdownPanel"
     })
     Library.new("UICorner", { Parent = Library._dropdownPanel, CornerRadius = UDim.new(0, 6) })
@@ -612,12 +626,21 @@ function Library._initDropdownSystem()
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ClipsDescendants = true,
-        ZIndex = 53,
+        ZIndex = 153,
         Name = "DropdownFolder"
     })
-    -- UIPageLayout DIHAPUS (Biar ga numpuk 1111)
 
-    closeOverlay.Activated:Connect(function()
+    Library._dropdownPageLayout = Library.new("UIPageLayout", {
+        Parent = Library._dropdownFolder,
+        EasingDirection = Enum.EasingDirection.InOut,
+        EasingStyle = Enum.EasingStyle.Quad,
+        TweenTime = 0.01,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        FillDirection = Enum.FillDirection.Vertical,
+        Name = "DropdownPageLayout"
+    })
+
+    closeOverlay.MouseButton1Click:Connect(function()
         Library._hideDropdown()
     end)
 end
@@ -625,14 +648,7 @@ end
 function Library._showDropdown(dropdownContainer)
     Library._initDropdownSystem()
     Library._dropdownOverlay.Visible = true
-    
-    -- Sembunyiin semua container, munculin yang dipilih
-    for _, child in pairs(Library._dropdownFolder:GetChildren()) do
-        if child:IsA("Frame") then
-            child.Visible = (child == dropdownContainer)
-        end
-    end
-    
+    Library._dropdownPageLayout:JumpTo(dropdownContainer)
     Library._dropdownOverlay.BackgroundTransparency = 0.95
     Library._dropdownPanel.Position = UDim2.new(1, -11, 0.5, 0)
 end
@@ -645,7 +661,7 @@ function Library._hideDropdown()
     end
 end
 
-function Library.makeDropdown(parent, name, initialOptions, callback)
+function Library.makeDropdown(parent, name, initialOptions, callback, configPath)
     Library._initDropdownSystem()
     local dropdownLayoutOrder = Library._dropdownCount
     Library._dropdownCount = Library._dropdownCount + 1
@@ -670,11 +686,10 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         Parent = f
     })
 
-    -- Select Option (Tombol Pilihan)
     local selectFrame = Library.new("Frame", {
         Parent = f,
         AnchorPoint = Vector2.new(1, 0.5),
-        BackgroundColor3 = C.bg4, -- ✅ Warna sama kayak kotak input
+        BackgroundColor3 = C.bg4,
         BackgroundTransparency = 0.3,
         Position = UDim2.new(1, -12, 0.5, 0),
         Size = UDim2.new(0.48, 0, 0, 22),
@@ -718,14 +733,12 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         ZIndex = 10
     })
 
-    -- Container (Visible = false by default)
     local dropdownContainer = Library.new("Frame", {
         Parent = Library._dropdownFolder,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         LayoutOrder = dropdownLayoutOrder,
-        Visible = false, -- ✅ Cuma muncul pas dipilih
-        ZIndex = 54
+        ZIndex = 154
     })
 
     local searchBox = Library.new("TextBox", {
@@ -736,13 +749,13 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         TextSize = 11,
         TextColor3 = C.text,
         PlaceholderColor3 = C.textDim2,
-        BackgroundColor3 = C.bg3, -- ✅ Search bar nyatu
+        BackgroundColor3 = C.bg3,
         BackgroundTransparency = 0.1,
         BorderSizePixel = 0,
         Size = UDim2.new(1, -8, 0, 24),
         Position = UDim2.new(0, 4, 0, 4),
         ClearTextOnFocus = false,
-        ZIndex = 55
+        ZIndex = 155
     })
     Library.new("UICorner", { Parent = searchBox, CornerRadius = UDim.new(0, 4) })
     Library.new("UIStroke", { Parent = searchBox, Color = C.stroke, Thickness = 1, Transparency = 0.5 })
@@ -760,11 +773,16 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         BackgroundTransparency = 1,
         ScrollBarThickness = 0,
         CanvasSize = UDim2.new(0, 0, 0, 0),
-        ZIndex = 55
+        ZIndex = 155
     })
 
     local allOptions, filteredOptions = {}, {}
     local selectedValue = initialOptions[1] or "None"
+    if configPath and S.Config then
+        local cat = S.Config[configPath[1]]
+        if cat and cat[configPath[2]] then selectedValue = cat[configPath[2]] end
+    end
+
     local rowPool = {}
     local searchThread = nil
     local poolBuilt = false
@@ -777,7 +795,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         end
         local q = string.lower(query)
         for _, opt in ipairs(allOptions) do
-            if string.find(opt.lower, q, 1, true) then
+            if string.find(opt.lower, q, 1, true) ~= nil then
                 filteredOptions[#filteredOptions + 1] = opt
             end
         end
@@ -803,7 +821,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         optionLabel.Text = found or tostring(selectedValue)
     end
 
-    -- ✅ Hapus Card / Background Item
     local function paintRow(row, opt)
         local selected = (opt.value == selectedValue)
         row.ChooseFrame.Size = selected and UDim2.new(0, 3, 0, 16) or UDim2.new(0, 0, 0, 0)
@@ -850,22 +867,21 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
             local rowFrame = Library.new("TextButton", {
                 Parent = scrollSelect,
                 Size = UDim2.new(1, 0, 0, ROW_H),
-                BackgroundTransparency = 1, -- ✅ Transparan
+                BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 Text = "",
                 AutoButtonColor = false,
                 Visible = false,
-                ZIndex = 56
+                ZIndex = 156
             })
 
-            -- Accent Bar di kiri
             local chooseFrame = Library.new("Frame", {
                 Parent = rowFrame,
                 Size = UDim2.new(0, 0, 0, 16),
                 Position = UDim2.new(0, 0, 0.5, -8),
                 BackgroundColor3 = C.accent,
                 BorderSizePixel = 0,
-                ZIndex = 57
+                ZIndex = 157
             })
             Library.new("UICorner", { Parent = chooseFrame, CornerRadius = UDim.new(1, 0) })
 
@@ -879,7 +895,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
                 BackgroundTransparency = 1,
                 Position = UDim2.new(0, 10, 0, 0),
                 Size = UDim2.new(1, -14, 1, 0),
-                ZIndex = 57
+                ZIndex = 157
             })
 
             rowFrame.MouseEnter:Connect(function()
@@ -890,7 +906,8 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
             end)
             rowFrame.MouseLeave:Connect(function()
                 if rowFrame.Visible then
-                    local opt = filteredOptions[rowPool[i] and rowPool[i].Index or 1]
+                    local rowData = rowPool[i]
+                    local opt = rowData and rowData.Index and filteredOptions[rowData.Index] or nil
                     if not opt or opt.value ~= selectedValue then
                         optionText.TextColor3 = C.textDim
                         chooseFrame.Size = UDim2.new(0, 0, 0, 16)
@@ -906,6 +923,11 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
                 selectedValue = opt.value
                 updateClosedLabel()
                 Library._hideDropdown()
+                
+                if configPath and S.Config then
+                    local cat = S.Config[configPath[1]]
+                    if cat then cat[configPath[2]] = opt.value end
+                end
                 pcall(callback, opt.value)
             end)
 
@@ -947,7 +969,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         refreshVisible()
     end)
 
-    return {
+    local controller = {
         UpdateOptions = function(options)
             initialOptions = options
             table.clear(allOptions)
@@ -967,15 +989,14 @@ function Library.makeDropdown(parent, name, initialOptions, callback)
         GetValue = function() return selectedValue end,
         ClosePopup = function() Library._hideDropdown() end
     }
-end
-        
-       
-    
-    
-                
-    
 
-    
+    if configPath then
+        table.insert(DropdownRegistry, { path = configPath, setState = controller.SetValue })
+    end
+
+    return controller
+end
+
 -- ============================================================
 -- RESIZE HANDLE (Poco Style + Auto-Hide)
 -- ============================================================
@@ -997,13 +1018,11 @@ function Library.attachResizeHandle(mainFrame)
         maxW, maxH = 1100, 760
     end
 
-    -- Hapus handle lama & layer lama kalau ada
     local oldHandle = mainFrame:FindFirstChild("ResizeHandle")
     if oldHandle then oldHandle:Destroy() end
     local oldLayer = mainFrame.Parent and mainFrame.Parent:FindFirstChild("ResizeHandleLayer")
     if oldLayer then oldLayer:Destroy() end
 
-    -- Layer Overlay
     local handleLayer = Instance.new("Frame")
     handleLayer.Name = "ResizeHandleLayer"
     handleLayer.Size = UDim2.new(1, 0, 1, 0)
@@ -1011,10 +1030,9 @@ function Library.attachResizeHandle(mainFrame)
     handleLayer.BorderSizePixel = 0
     handleLayer.ClipsDescendants = false
     handleLayer.ZIndex = 9998
-    handleLayer.Active = false -- PENTING: Biar ga ngeblok klik game
+    handleLayer.Active = false
     handleLayer.Parent = mainFrame.Parent
 
-    -- Handle
     local resizeHandle = Instance.new("TextButton")
     resizeHandle.Name = "ResizeHandle"
     resizeHandle.Size = UDim2.new(0, 44, 0, 44)
@@ -1027,7 +1045,6 @@ function Library.attachResizeHandle(mainFrame)
     resizeHandle.Visible = true
     resizeHandle.Parent = handleLayer
 
-    -- Arc Container
     local arcContainer = Instance.new("Frame")
     arcContainer.Size = UDim2.new(0, 24, 0, 24)
     arcContainer.AnchorPoint = Vector2.new(1, 1)
@@ -1037,7 +1054,6 @@ function Library.attachResizeHandle(mainFrame)
     arcContainer.ZIndex = 10000
     arcContainer.Parent = resizeHandle
 
-    -- Curved Ring
     local curvedRing = Instance.new("Frame")
     curvedRing.Size = UDim2.new(0, 34, 0, 34)
     curvedRing.AnchorPoint = Vector2.new(0, 0)
@@ -1056,7 +1072,6 @@ function Library.attachResizeHandle(mainFrame)
     ringCorner.CornerRadius = UDim.new(1, 0)
     ringCorner.Parent = curvedRing
 
-    -- Update Posisi Handle
     local GAP = 14
 
     local function updateHandlePosition()
@@ -1073,7 +1088,6 @@ function Library.attachResizeHandle(mainFrame)
     local updateConn = RunService.RenderStepped:Connect(updateHandlePosition)
     updateHandlePosition()
 
-    -- Auto-Hide
     local isShowing = true
     local hideTimer = nil
     local IDLE_TIME = 5
@@ -1099,7 +1113,6 @@ function Library.attachResizeHandle(mainFrame)
         end)
     end
 
-    -- Resize Logic
     local activeInput = nil
     local resizeStart = nil
     local startSize = nil
@@ -1154,7 +1167,6 @@ function Library.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- Render loop: cek visibility MainFrame
     local renderConn = RunService.RenderStepped:Connect(function()
         if destroyed then return end
         if not mainFrame.Parent then
@@ -1171,7 +1183,6 @@ function Library.attachResizeHandle(mainFrame)
         end
     end)
 
-    -- Cleanup
     local function cleanup()
         if destroyed then return end
         destroyed = true
