@@ -570,97 +570,8 @@ function Library.makeButton(parent, name, callback, noHover)
 end
 
 -- ============================================================
--- DROPDOWN SYSTEM (UPGRADED - LYNX STYLE)
+-- DROPDOWN (FINAL LYNX STYLE - NO CURSOR FOCUS)
 -- ============================================================
-Library._dropdownOverlay = nil
-Library._dropdownPanel = nil
-Library._dropdownFolder = nil
-Library._dropdownPageLayout = nil
-Library._dropdownCount = 0
-
-function Library._initDropdownSystem()
-    if Library._dropdownOverlay and Library._dropdownOverlay.Parent then return end
-    
-    Library._dropdownOverlay = Library.new("Frame", {
-        Parent = S.GUI.MainFrame,
-        Size = UDim2.new(1, 0, 1, -36),           
-        Position = UDim2.new(0, 0, 0, 36),         
-        BackgroundColor3 = C.bg,
-        BackgroundTransparency = 0.95,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        Visible = false,
-        ZIndex = 150,
-        Name = "DropdownOverlay"
-    })
-
-    local closeOverlay = Library.new("TextButton", {
-        Parent = Library._dropdownOverlay,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Text = "",
-        ZIndex = 151
-    })
-
-    Library._dropdownPanel = Library.new("Frame", {
-        Parent = Library._dropdownOverlay,
-        AnchorPoint = Vector2.new(1, 0.5),
-        Size = UDim2.new(0, 180, 1, -16),
-        Position = UDim2.new(1, 192, 0.5, 0),
-        BackgroundColor3 = C.bg3,              
-        BackgroundTransparency = 0.05,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        ZIndex = 152,
-        Name = "DropdownPanel"
-    })
-    Library.new("UICorner", { Parent = Library._dropdownPanel, CornerRadius = UDim.new(0, 6) })
-    Library.new("UIStroke", { Parent = Library._dropdownPanel, Color = C.stroke, Thickness = 1, Transparency = 0.45 })
-
-    Library._dropdownFolder = Library.new("Frame", {
-        Parent = Library._dropdownPanel,
-        Size = UDim2.new(1, -2, 1, 0),
-        Position = UDim2.new(0, 1, 0, 1),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        ZIndex = 153,
-        Name = "DropdownFolder"
-    })
-
-    Library._dropdownPageLayout = Library.new("UIPageLayout", {
-        Parent = Library._dropdownFolder,
-        EasingDirection = Enum.EasingDirection.InOut,
-        EasingStyle = Enum.EasingStyle.Quad,
-        TweenTime = 0.01,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        FillDirection = Enum.FillDirection.Vertical,
-        Name = "DropdownPageLayout"
-    })
-
-    closeOverlay.MouseButton1Click:Connect(function()
-        Library._hideDropdown()
-    end)
-end
-
-function Library._showDropdown(dropdownContainer)
-    Library._initDropdownSystem()
-    Library._dropdownOverlay.Visible = true
-    Library._dropdownPageLayout:JumpTo(dropdownContainer)
-    Library._dropdownOverlay.BackgroundTransparency = 0.95
-    Library._dropdownPanel.Position = UDim2.new(1, -11, 0.5, 0)
-end
-
-function Library._hideDropdown()
-    if Library._dropdownOverlay and Library._dropdownOverlay.Visible then
-        Library._dropdownOverlay.BackgroundTransparency = 0.95
-        Library._dropdownPanel.Position = UDim2.new(1, 192, 0.5, 0)
-        Library._dropdownOverlay.Visible = false
-    end
-end
-
 function Library.makeDropdown(parent, name, initialOptions, callback, configPath)
     Library._initDropdownSystem()
     local dropdownLayoutOrder = Library._dropdownCount
@@ -674,18 +585,20 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         Parent = parent
     })
 
+    -- Label Kiri (Nama Dropdown)
     Library.new("TextLabel", {
         Size = UDim2.new(0.5, -12, 1, 0),
         Position = UDim2.new(0, 12, 0, 0),
         Text = name,
         TextColor3 = C.text,
         TextSize = 11,
-        Font = F.norm,
+        Font = F.norm, -- 🔥 Disamakan pakai F.norm
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
         Parent = f
     })
 
+    -- Kotak Kanan (Select Option)
     local selectFrame = Library.new("Frame", {
         Parent = f,
         AnchorPoint = Vector2.new(1, 0.5),
@@ -701,7 +614,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
 
     local optionLabel = Library.new("TextLabel", {
         Parent = selectFrame,
-        Font = F.bold,
+        Font = F.norm, -- 🔥 Disamakan pakai F.norm
         Text = initialOptions[1] or "Select",
         TextColor3 = C.text,
         TextSize = 11,
@@ -733,6 +646,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         ZIndex = 10
     })
 
+    -- Container di dalam Overlay
     local dropdownContainer = Library.new("Frame", {
         Parent = Library._dropdownFolder,
         Size = UDim2.new(1, 0, 1, 0),
@@ -741,10 +655,11 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         ZIndex = 154
     })
 
+    -- Search Box
     local searchBox = Library.new("TextBox", {
         Parent = dropdownContainer,
         PlaceholderText = "Search...",
-        Font = F.bold,
+        Font = F.norm, -- 🔥 Disamakan pakai F.norm
         Text = "",
         TextSize = 11,
         TextColor3 = C.text,
@@ -888,7 +803,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
             local optionText = Library.new("TextLabel", {
                 Parent = rowFrame,
                 Text = "",
-                Font = F.bold,
+                Font = F.norm, -- 🔥 Disamakan pakai F.norm
                 TextSize = 11,
                 TextColor3 = C.textDim,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -940,7 +855,14 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         end
     end
 
-    scrollSelect:GetPropertyChangedSignal("CanvasPosition"):Connect(refreshVisible)
+    -- 🔥 FIX: Lepas fokus searchBox saat scroll agar kursor | tidak muncul
+    scrollSelect:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+        if searchBox:IsFocused() then
+            searchBox:ReleaseFocus()
+        end
+        refreshVisible()
+    end)
+    
     scrollSelect:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshVisible)
 
     dropdownButton.MouseButton1Click:Connect(function()
@@ -948,6 +870,10 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         buildPool()
         updateClosedLabel()
         Library._showDropdown(dropdownContainer)
+        
+        -- 🔥 FIX: Pastikan tidak ada kursor | saat baru buka
+        if searchBox:IsFocused() then searchBox:ReleaseFocus() end
+        
         task.defer(refreshVisible)
     end)
 
@@ -996,7 +922,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
 
     return controller
 end
-
 -- ============================================================
 -- RESIZE HANDLE (Poco Style + Auto-Hide)
 -- ============================================================
