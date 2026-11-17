@@ -1,9 +1,10 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v7.0 - PURE LYNX LOGIC)
+  [6] LIBRARY (Flow Hub v7.2 - FINAL STABLE)
   - Dropdown System: 100% Logic Lynx (Anti-Double Highlight)
   - Anti-Cursor | (ReleaseFocus on Scroll/Drag)
   - Section Auto-Height FIXED (No more flicker)
+  - Button Spacing Tweak (Lebih rapat)
   - Memory Leak FIXED
 ============================================================
 ]]
@@ -507,20 +508,22 @@ function Library.makeSlider(parent, name, min, max, default, callback)
 end
 
 -- ============================================================
--- BUTTON
+-- BUTTON (SPACING TWEAK - LEBIH RAPAT)
 -- ============================================================
 function Library.makeButton(parent, name, callback, noHover)
+    -- 🔥 Wrapper dibuat lebih pendek (28px) agar jarak antar tombol lebih rapat
     local wrapper = Library.new("Frame", {
         Name = "BtnWrapper_" .. name,
-        Size = UDim2.new(1, 0, 0, ITEM_H),
+        Size = UDim2.new(1, 0, 0, 28), 
         BackgroundTransparency = 1,
         Parent = parent
     })
 
     local b = Library.new("TextButton", {
         Name = "Button_" .. name,
-        Size = UDim2.new(1, -12, 0, ITEM_H - 8),
-        Position = UDim2.new(0, 6, 0.5, -(ITEM_H-8)/2),
+        -- Tombol tetap besar seperti aslinya (ITEM_H - 8 = 26px)
+        Size = UDim2.new(1, -12, 0, ITEM_H - 8), 
+        Position = UDim2.new(0, 6, 0.5, -(ITEM_H - 8)/2), 
         Text = name,
         TextColor3 = C.text,
         TextSize = 11,
@@ -821,25 +824,24 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
         optionLabel.Text = found or tostring(selectedValue)
     end
 
-    -- 🔥 LOGIKA MURNI LYNX: PAINT ROW (TANPA EVENT HOVER)
     local function paintRow(row, opt)
-    local selected = (opt.value == selectedValue)
-    if selected then
-        row.BackgroundColor3 = C.bg3
-        row.BackgroundTransparency = 0.1
-        row.Highlight.Transparency = 0      -- 🔥 Kotak muncul
-        row.ChooseFrame.Size = UDim2.new(0, 3, 0, 16)
-        row.OptionText.TextColor3 = C.accent
-    else
-        row.BackgroundColor3 = C.bg3
-        row.BackgroundTransparency = 1
-        row.Highlight.Transparency = 1      -- 🔥 Kotak sembunyi
-        row.ChooseFrame.Size = UDim2.new(0, 0, 0, 0)
-        row.OptionText.TextColor3 = C.textDim
+        local selected = (opt.value == selectedValue)
+        if selected then
+            row.BackgroundColor3 = C.bg3
+            row.BackgroundTransparency = 0.1
+            row.Highlight.Transparency = 0 
+            row.ChooseFrame.Size = UDim2.new(0, 3, 0, 16)
+            row.OptionText.TextColor3 = C.accent
+        else
+            row.BackgroundColor3 = C.bg3
+            row.BackgroundTransparency = 1 
+            row.Highlight.Transparency = 1 
+            row.ChooseFrame.Size = UDim2.new(0, 0, 0, 0)
+            row.OptionText.TextColor3 = C.textDim
+        end
+        row.OptionText.Text = opt.label
     end
-    row.OptionText.Text = opt.label
-  end
-  
+
     local function refreshVisible()
         if not poolBuilt then return end
         local list = filteredOptions
@@ -863,10 +865,7 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
             if optIndex <= lastVisible then
                 local opt = list[optIndex]
                 row.Frame.Position = UDim2.new(0, 0, 0, (optIndex - 1) * ROW_STRIDE)
-                
-                -- 🔥 PAINT ROW DIPANGGIL SETIAP SAAT (ANTI-BUG)
                 paintRow(row, opt) 
-                
                 row.Frame.Visible = true
                 row.Index = optIndex
             else
@@ -921,8 +920,6 @@ function Library.makeDropdown(parent, name, initialOptions, callback, configPath
                 Size = UDim2.new(1, -14, 1, 0),
                 ZIndex = 157
             })
-
-            -- 🔥 EVENT HOVER (MouseEnter/MouseLeave) DIHAPUS TOTAL
 
             rowFrame.MouseButton1Click:Connect(function()
                 local rowData = rowPool[i]
