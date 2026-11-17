@@ -1,6 +1,6 @@
 --[[
 ============================================================
-  [6] LIBRARY (Flow Hub v7.2 - FINAL STABLE)
+  [6] LIBRARY (Flow Hub v7.5 - FINAL STABLE)
   - Dropdown System: 100% Logic Lynx (Anti-Double Highlight)
   - Anti-Cursor | (ReleaseFocus on Scroll/Drag)
   - Section Auto-Height FIXED (No more flicker)
@@ -511,17 +511,17 @@ end
 -- BUTTON (SPACING TWEAK - LEBIH RAPAT)
 -- ============================================================
 function Library.makeButton(parent, name, callback, noHover)
-    -- 🔥 Wrapper dibuat lebih pendek (28px) agar jarak antar tombol lebih rapat
+    -- 🔥 Wrapper 32px (jarak lebih rapat dari 34px, tapi tetap lega)
     local wrapper = Library.new("Frame", {
         Name = "BtnWrapper_" .. name,
-        Size = UDim2.new(1, 0, 0, 28), 
+        Size = UDim2.new(1, 0, 0, 32), 
         BackgroundTransparency = 1,
         Parent = parent
     })
 
     local b = Library.new("TextButton", {
         Name = "Button_" .. name,
-        -- Tombol tetap besar seperti aslinya (ITEM_H - 8 = 26px)
+        -- Tombol tetap besar (26px)
         Size = UDim2.new(1, -12, 0, ITEM_H - 8), 
         Position = UDim2.new(0, 6, 0.5, -(ITEM_H - 8)/2), 
         Text = name,
